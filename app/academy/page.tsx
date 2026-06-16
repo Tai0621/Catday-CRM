@@ -14,7 +14,7 @@ export default async function AcademyPage({ searchParams }: { searchParams: Prom
   })
 
   const stats = await db.academyEnrollment.groupBy({ by: ['status'], _count: true })
-  const statMap = Object.fromEntries(stats.map(s => [s.status, s._count]))
+  const statMap = Object.fromEntries(stats.map((s: { status: string; _count: number }) => [s.status, s._count]))
 
   async function enroll(data: FormData) {
     'use server'
