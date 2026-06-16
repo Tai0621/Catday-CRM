@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── Customer ───────────────────────────────────────────────────────────────
+
+model Customer {
+  id               String         @id @default(cuid())
+  phone            String         @unique
+  name             String?
+  email            String?
+  address          String?
+  source           String         @default("WalkIn")
+  marketingConsent Boolean        @default(false)
+  needsDetails     Boolean        @default(false)
+  notes            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  cats             Cat[]
+  memberships      Membership[]
+  appointments     Appointment[]
+  transactions     Transaction[]
+  whatsappLeads    WhatsAppLead[]
+}
+
+// source values: GoogleForm | WhatsApp | WalkIn | Referral | Other
+
+// ─── Cat ────────────────────────────────────────────────────────────────────
+
+model Cat {
+  id               String    @id @default(cuid())
+  name             String
+  breed            String?
+  gender           String?   // Male | Female
+  dateOfBirth      DateTime?
+  lifeStage        String?   // Kitten | Adult | Senior
+  healthNotes      String?
+  groomingInterval Int?      // days between sessions; null = use breed/coat default
+  photos           String?   // JSON array of data URLs
+  customerId       String
+  customer         Customer  @relation(fields: [customerId], references: [id])
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  appointments     Appointment[]
+  transactionLines TransactionLine[]
+}
+
+// ─── Membership Tier ────────────────────────────────────────────────────────
+
+model MembershipTier {
+  id               String   @id @default(cuid())
+  name             String   @unique
+  monthlyPrice     Float
+  annualPrice      Float?
+  groomingCredits  Int      @default(0) // sessions per month included
+  boardingDiscount Float    @default(0) // percentage off boarding
+  benefits         String?  // JSON array of benefit strings
+  color            String?  // hex for UI badge
+  sortOrder        Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  memberships      Membership[]
+}
+
+// ─── Membership ──────────────────────────────────────────────────────────────
+
+model Membership {
+  id          String         @id @default(cuid())
+  customerId  String
+  customer    Customer       @relation(fields: [customerId], references: [id])
+  tierId      String
+  tier        MembershipTier @relation(fields: [tierId], references: [id])
+  startDate   DateTime
+  expiryDate  DateTime
+  status      String         @default("Active") // Active | Expired | Cancelled | Paused
+  creditsUsed Int            @default(0)
+  autoRenew   Boolean        @default(false)
+  notes       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+// ─── Room ────────────────────────────────────────────────────────────────────
+
+model Room {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  type        String   @default("Standard") // Standard | Suite | DayStay
+  description String?
+  status      String   @default("Available") // Available | Occupied | Cleaning | Maintenance
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  appointments Appointment[]
+}
+
+// ─── Appointment ─────────────────────────────────────────────────────────────
+
+model Appointment {
+  id          String   @id @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  catId       String
+  cat         Cat      @relation(fields: [catId], references: [id])
+  type        String   // Grooming | Boarding | Bath | Other
+  scheduledAt DateTime
+  endsAt      DateTime?
+  status      String   @default("Scheduled") // Scheduled | CheckedIn | Completed | NoShow | Cancelled
+  roomId      String?
+  room        Room?    @relation(fields: [roomId], references: [id])
+  price       Float?
+  notes       String?
+  staffNotes  String?
+  usedCredit  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─── Transaction ─────────────────────────────────────────────────────────────
+
+model Transaction {
+  id         String   @id @default(cuid())
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  date       DateTime
+  total      Float
+  category   String   // Grooming | Boarding | Membership | Academy | Other
+  reference  String?
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  lines      TransactionLine[]
+}
+
+model TransactionLine {
+  id            String      @id @default(cuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  catId         String?
+  cat           Cat?        @relation(fields: [catId], references: [id])
+  description   String
+  quantity      Int         @default(1)
+  unitPrice     Float
+  subtotal      Float
+}
+
+// ─── WhatsApp ────────────────────────────────────────────────────────────────
+
+model WhatsAppMessage {
+  id          String   @id @default(cuid())
+  externalId  String?  @unique
+  senderPhone String
+  content     String
+  timestamp   DateTime
+  processed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  leads       WhatsAppLead[]
+}
+
+model WhatsAppLead {
+  id             String          @id @default(cuid())
+  messageId      String
+  message        WhatsAppMessage @relation(fields: [messageId], references: [id])
+  customerId     String?
+  customer       Customer?       @relation(fields: [customerId], references: [id])
+  type           String          // BookingRequest | Inquiry | Complaint | Reschedule | Cancellation | Other
+  status         String          @default("Pending") // Pending | Confirmed | Dismissed
+  summary        String
+  proposedAction String?         // JSON: suggested appointment details
+  confidence     Float?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+// ─── Academy ─────────────────────────────────────────────────────────────────
+
+model AcademyEnrollment {
+  id          String   @id @default(cuid())
+  studentName String
+  email       String
+  phone       String?
+  course      String
+  status      String   @default("Pending") // Pending | Active | Completed | Withdrawn
+  enrolledAt  DateTime @default(now())
+  notes       String?
+  updatedAt   DateTime @updatedAt
+}

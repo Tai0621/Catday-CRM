@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/eod-analysis",
+      "schedule": "0 16 * * *"
+    }
+  ],
+  "regions": ["sin1"]
+}
