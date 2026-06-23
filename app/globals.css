@@ -1,26 +1,121 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-espresso: #2D1907;
+  --color-terracotta: #B14919;
+  --color-gold: #E7CE7A;
+  --color-cream: #ECDBB6;
+  --color-teal: #729094;
+  --color-linen: #F2EDE0;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-brand: 'Space Mono', monospace;
+  --font-sans: 'Inter', system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #F2EDE0;
+  color: #2D1907;
+  font-family: var(--font-sans);
+}
+
+/* Brand card — replaces bg-white border-gray-200 rounded-xl */
+.cd-card {
+  background: #ECDBB6;
+  border: 1px solid rgba(45, 25, 7, 0.12);
+  border-radius: 0.75rem;
+}
+
+/* Table header row */
+.cd-thead th {
+  background: rgba(45, 25, 7, 0.06);
+  color: rgba(45, 25, 7, 0.5);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.6rem 1rem;
+  text-align: left;
+}
+
+/* Table row divider */
+.cd-tbody tr {
+  border-bottom: 1px solid rgba(45, 25, 7, 0.06);
+}
+.cd-tbody tr:last-child {
+  border-bottom: none;
+}
+.cd-tbody tr:hover td {
+  background: rgba(45, 25, 7, 0.03);
+}
+
+/* Primary button */
+.cd-btn {
+  background: #B14919;
+  color: #ECDBB6;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: opacity 0.15s;
+}
+.cd-btn:hover { opacity: 0.88; }
+
+/* Secondary button */
+.cd-btn-sec {
+  background: rgba(45, 25, 7, 0.08);
+  color: #2D1907;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: background 0.15s;
+}
+.cd-btn-sec:hover { background: rgba(45, 25, 7, 0.14); }
+
+/* Form input */
+.cd-input {
+  background: #F2EDE0;
+  border: 1px solid rgba(45, 25, 7, 0.2);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #2D1907;
+  width: 100%;
+}
+.cd-input:focus {
+  outline: none;
+  border-color: #B14919;
+  box-shadow: 0 0 0 2px rgba(177, 73, 25, 0.15);
+}
+
+/* Label */
+.cd-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(45, 25, 7, 0.6);
+  margin-bottom: 0.35rem;
+}
+
+/* Section header inside a card */
+.cd-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(45, 25, 7, 0.1);
+}
+
+/* Muted text */
+.cd-muted { color: rgba(45, 25, 7, 0.45); }
+
+/* Link accent */
+.cd-link { color: #B14919; }
+.cd-link:hover { text-decoration: underline; }
+
+/* Pill / badge base */
+.cd-pill {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 500;
 }

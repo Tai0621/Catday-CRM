@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
-import { Geist } from 'next/font/google'
+import { Inter, Space_Mono } from 'next/font/google'
 import './globals.css'
 import { Nav } from './components/Nav'
 import { isAuthenticated } from '@/lib/auth'
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
+const spaceMono = Space_Mono({ weight: ['400', '700'], subsets: ['latin'], variable: '--font-brand' })
 
 export const metadata: Metadata = {
   title: 'Catday CRM',
@@ -15,8 +16,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const authed = await isAuthenticated()
 
   return (
-    <html lang="en" className={`${geist.variable} h-full antialiased`}>
-      <body className="min-h-full bg-gray-50 text-gray-900">
+    <html lang="en" className={`${inter.variable} ${spaceMono.variable} h-full antialiased`}>
+      <body className="min-h-full bg-linen text-espresso">
         {authed ? (
           <div className="flex h-screen overflow-hidden">
             <Nav />

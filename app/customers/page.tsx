@@ -11,13 +11,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   const skip = (page - 1) * perPage
 
   const where = q
-    ? {
-        OR: [
-          { name: { contains: q } },
-          { phone: { contains: q } },
-          { email: { contains: q } },
-        ],
-      }
+    ? { OR: [{ name: { contains: q } }, { phone: { contains: q } }, { email: { contains: q } }] }
     : {}
 
   const [customers, total] = await Promise.all([
@@ -39,51 +33,50 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   return (
     <div className="max-w-5xl mx-auto space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Customers <span className="text-gray-400 font-normal text-base">({total})</span></h1>
-        <Link href="/customers/new" className="bg-rose-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-rose-700">+ New Customer</Link>
+        <h1 className="text-xl font-bold" style={{ color: '#2D1907' }}>
+          Customers <span className="font-normal text-base cd-muted">({total})</span>
+        </h1>
+        <Link href="/customers/new" className="cd-btn">+ New Customer</Link>
       </div>
 
       <form className="flex gap-2">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="Search by name, phone, email…"
-          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300"
-        />
-        <button type="submit" className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">Search</button>
+        <input name="q" defaultValue={q} placeholder="Search by name, phone, email…" className="cd-input flex-1" />
+        <button type="submit" className="cd-btn-sec">Search</button>
       </form>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="cd-card overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-            <tr>
-              <th className="px-4 py-3 text-left">Name</th>
-              <th className="px-4 py-3 text-left">Phone</th>
-              <th className="px-4 py-3 text-left">Cats</th>
-              <th className="px-4 py-3 text-left">Membership</th>
-              <th className="px-4 py-3 text-left">Source</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
+          <thead><tr className="cd-thead">
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Cats</th>
+            <th>Membership</th>
+            <th>Source</th>
+            <th></th>
+          </tr></thead>
+          <tbody className="cd-tbody">
             {customers.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">No customers found</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center cd-muted">No customers found</td></tr>
             )}
             {customers.map(c => (
-              <tr key={c.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium">{c.name ?? <span className="text-gray-400 italic">No name</span>}</td>
-                <td className="px-4 py-3 text-gray-600">{displayPhone(c.phone)}</td>
-                <td className="px-4 py-3 text-gray-600">{c.cats.length}</td>
+              <tr key={c.id}>
+                <td className="px-4 py-3 font-medium" style={{ color: '#2D1907' }}>
+                  {c.name ?? <span className="cd-muted italic">No name</span>}
+                </td>
+                <td className="px-4 py-3 cd-muted">{displayPhone(c.phone)}</td>
+                <td className="px-4 py-3 cd-muted">{c.cats.length}</td>
                 <td className="px-4 py-3">
                   {c.memberships[0] ? (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 font-medium">{c.memberships[0].tier.name}</span>
+                    <span className="cd-pill" style={{ background: 'rgba(177,73,25,0.15)', color: '#B14919' }}>
+                      {c.memberships[0].tier.name}
+                    </span>
                   ) : (
-                    <span className="text-xs text-gray-400">—</span>
+                    <span className="cd-muted text-xs">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-gray-400 text-xs">{c.source}</td>
+                <td className="px-4 py-3 cd-muted text-xs">{c.source}</td>
                 <td className="px-4 py-3">
-                  <Link href={`/customers/${c.id}`} className="text-rose-600 hover:underline text-xs">View</Link>
+                  <Link href={`/customers/${c.id}`} className="text-xs cd-link">View</Link>
                 </td>
               </tr>
             ))}
@@ -93,9 +86,9 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
 
       {totalPages > 1 && (
         <div className="flex gap-2 justify-center text-sm">
-          {page > 1 && <Link href={`?q=${q ?? ''}&page=${page - 1}`} className="px-3 py-1 rounded border hover:bg-gray-50">← Prev</Link>}
-          <span className="px-3 py-1 text-gray-500">{page} / {totalPages}</span>
-          {page < totalPages && <Link href={`?q=${q ?? ''}&page=${page + 1}`} className="px-3 py-1 rounded border hover:bg-gray-50">Next →</Link>}
+          {page > 1 && <Link href={`?q=${q ?? ''}&page=${page - 1}`} className="px-3 py-1 rounded border cd-btn-sec">← Prev</Link>}
+          <span className="px-3 py-1 cd-muted">{page} / {totalPages}</span>
+          {page < totalPages && <Link href={`?q=${q ?? ''}&page=${page + 1}`} className="px-3 py-1 rounded cd-btn-sec">Next →</Link>}
         </div>
       )}
     </div>

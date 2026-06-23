@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { predictNextGrooming } from '@/lib/grooming-reminder'
+import { displayPhone, whatsappUrl } from '@/lib/phone'
 
 export default async function CatDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAuth()
@@ -11,7 +12,11 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
   const cat = await db.cat.findUnique({
     where: { id },
     include: {
-      customer: true,
+      customer: {
+        include: {
+          memberships: { where: { status: 'Active' }, include: { tier: true }, take: 1 },
+        },
+      },
       appointments: { orderBy: { scheduledAt: 'desc' }, include: { room: true } },
     },
   })
@@ -20,27 +25,59 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
   const lastGroomed = cat.appointments.find(a => a.type === 'Grooming' && a.status === 'Completed')?.scheduledAt ?? null
   const nextDue = predictNextGrooming(lastGroomed, cat.breed, cat.groomingInterval)
   const daysUntil = Math.ceil((nextDue.getTime() - Date.now()) / 86400000)
+  const overdue = daysUntil < 0
+  const activeMembership = cat.customer.memberships[0]
+
+  const groomingStyle: React.CSSProperties = overdue
+    ? { background: 'rgba(177,73,25,0.12)', border: '1px solid rgba(177,73,25,0.25)', color: '#B14919' }
+    : daysUntil <= 7
+    ? { background: 'rgba(231,206,122,0.3)', border: '1px solid rgba(231,206,122,0.5)', color: '#7a5c00' }
+    : { background: 'rgba(114,144,148,0.15)', border: '1px solid rgba(114,144,148,0.3)', color: '#729094' }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{cat.name}</h1>
-          <p className="text-sm text-gray-500">
-            Owner: <Link href={`/customers/${cat.customerId}`} className="text-rose-600 hover:underline">{cat.customer.name ?? cat.customer.phone}</Link>
+          <div className="flex items-center gap-2 mb-0.5">
+            <Link href="/cats" className="text-xs cd-muted hover:underline">Cats</Link>
+            <span className="text-xs cd-muted">›</span>
+            <Link href={`/customers/${cat.customerId}`} className="text-xs cd-link">{cat.customer.name ?? cat.customer.phone}</Link>
+            <span className="text-xs cd-muted">›</span>
+            <span className="text-xs cd-muted">{cat.name}</span>
+          </div>
+          <h1 className="text-xl font-bold" style={{ color: '#2D1907' }}>{cat.name}</h1>
+          <p className="text-sm cd-muted">
+            Owner: <Link href={`/customers/${cat.customerId}`} className="cd-link font-medium">{cat.customer.name ?? cat.customer.phone}</Link>
+            {cat.customer.phone && (
+              <> · <a href={whatsappUrl(cat.customer.phone)} target="_blank" rel="noopener noreferrer" className="cd-link">
+                {displayPhone(cat.customer.phone)}
+              </a></>
+            )}
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href={`/appointments/new?catId=${cat.id}&customerId=${cat.customerId}`}
-            className="text-sm bg-rose-600 text-white px-3 py-2 rounded-lg hover:bg-rose-700">
+          <Link href={`/appointments/new?catId=${cat.id}&customerId=${cat.customerId}`} className="cd-btn text-sm">
             + Book Appointment
           </Link>
-          <Link href={`/cats/${id}/edit`} className="text-sm bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200">
-            Edit
-          </Link>
+          <Link href={`/cats/${id}/edit`} className="cd-btn-sec text-sm">Edit</Link>
         </div>
       </div>
 
+      {/* Owner membership banner */}
+      {activeMembership && (
+        <div className="rounded-xl px-4 py-3 flex items-center justify-between"
+          style={{ background: 'rgba(231,206,122,0.3)', border: '1px solid rgba(231,206,122,0.5)' }}>
+          <div className="text-sm" style={{ color: '#2D1907' }}>
+            <span className="font-semibold">{cat.customer.name ?? cat.customer.phone}</span> holds a{' '}
+            <span className="font-semibold">{activeMembership.tier.name}</span> membership
+            {activeMembership.tier.groomingCredits > 0 && ` (${activeMembership.tier.groomingCredits} grooming/mo)`}
+          </div>
+          <Link href={`/customers/${cat.customerId}`} className="text-xs cd-link">View customer →</Link>
+        </div>
+      )}
+
+      {/* Cat info grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <InfoCard label="Breed" value={cat.breed ?? '—'} />
         <InfoCard label="Gender" value={cat.gender ?? '—'} />
@@ -48,52 +85,53 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
         <InfoCard label="DOB" value={cat.dateOfBirth?.toLocaleDateString('en-MY') ?? '—'} />
       </div>
 
-      <div className={`rounded-xl border p-4 ${daysUntil < 0 ? 'bg-red-50 border-red-200' : daysUntil <= 7 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
+      {/* Grooming status */}
+      <div className="rounded-xl p-4" style={groomingStyle}>
         <div className="text-sm font-semibold">
-          {daysUntil < 0
+          {overdue
             ? `Grooming overdue by ${Math.abs(daysUntil)} days`
             : daysUntil === 0
             ? 'Grooming due today!'
             : `Next grooming in ${daysUntil} days`}
         </div>
-        <div className="text-xs mt-0.5 text-gray-600">
+        <div className="text-xs mt-0.5 opacity-75">
           Last groomed: {lastGroomed ? lastGroomed.toLocaleDateString('en-MY') : 'Never'} ·
           Interval: {cat.groomingInterval ? `${cat.groomingInterval}d (custom)` : 'breed default'}
         </div>
       </div>
 
       {cat.healthNotes && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+        <div className="rounded-xl px-4 py-3 text-sm"
+          style={{ background: 'rgba(231,206,122,0.3)', border: '1px solid rgba(231,206,122,0.5)', color: '#2D1907' }}>
           <strong>Health Notes:</strong> {cat.healthNotes}
         </div>
       )}
 
+      {/* Appointment history */}
       <section>
-        <h2 className="font-semibold text-gray-900 mb-3">Appointment History</h2>
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <h2 className="font-semibold mb-3" style={{ color: '#2D1907' }}>Appointment History</h2>
+        <div className="cd-card overflow-hidden">
           {cat.appointments.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-gray-400 text-center">No appointments yet</p>
+            <p className="px-4 py-6 text-sm cd-muted text-center">No appointments yet</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
-                <tr>
-                  <th className="px-4 py-2 text-left">Date</th>
-                  <th className="px-4 py-2 text-left">Type</th>
-                  <th className="px-4 py-2 text-left">Room</th>
-                  <th className="px-4 py-2 text-left">Status</th>
-                  <th className="px-4 py-2 text-left">Price</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
+              <thead><tr className="cd-thead">
+                <th>Date</th>
+                <th>Type</th>
+                <th>Room</th>
+                <th>Status</th>
+                <th>Price</th>
+              </tr></thead>
+              <tbody className="cd-tbody">
                 {cat.appointments.map(a => (
                   <tr key={a.id}>
-                    <td className="px-4 py-2">{a.scheduledAt.toLocaleDateString('en-MY')}</td>
-                    <td className="px-4 py-2">{a.type}</td>
-                    <td className="px-4 py-2 text-gray-500">{a.room?.name ?? '—'}</td>
+                    <td className="px-4 py-2" style={{ color: '#2D1907' }}>{a.scheduledAt.toLocaleDateString('en-MY')}</td>
+                    <td className="px-4 py-2 cd-muted">{a.type}</td>
+                    <td className="px-4 py-2 cd-muted">{a.room?.name ?? '—'}</td>
                     <td className="px-4 py-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass(a.status)}`}>{a.status}</span>
+                      <span className="cd-pill" style={apptStatusStyle(a.status)}>{a.status}</span>
                     </td>
-                    <td className="px-4 py-2 text-gray-600">{a.price != null ? `RM ${a.price.toFixed(2)}` : '—'}</td>
+                    <td className="px-4 py-2 cd-muted">{a.price != null ? `RM ${a.price.toFixed(2)}` : '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -107,20 +145,20 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
 
 function InfoCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl px-4 py-3">
-      <div className="text-xs text-gray-400 mb-0.5">{label}</div>
-      <div className="text-sm font-medium text-gray-900">{value}</div>
+    <div className="cd-card px-4 py-3">
+      <div className="text-xs cd-muted mb-0.5">{label}</div>
+      <div className="text-sm font-medium" style={{ color: '#2D1907' }}>{value}</div>
     </div>
   )
 }
 
-function statusClass(s: string) {
-  const m: Record<string, string> = {
-    Scheduled: 'bg-blue-100 text-blue-700',
-    CheckedIn: 'bg-amber-100 text-amber-700',
-    Completed: 'bg-green-100 text-green-700',
-    NoShow: 'bg-red-100 text-red-700',
-    Cancelled: 'bg-gray-100 text-gray-500',
+function apptStatusStyle(s: string): React.CSSProperties {
+  const m: Record<string, React.CSSProperties> = {
+    Scheduled:  { background: 'rgba(114,144,148,0.2)', color: '#729094' },
+    CheckedIn:  { background: 'rgba(231,206,122,0.35)', color: '#7a5c00' },
+    Completed:  { background: 'rgba(45,25,7,0.12)', color: '#2D1907' },
+    NoShow:     { background: 'rgba(177,73,25,0.15)', color: '#B14919' },
+    Cancelled:  { background: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.4)' },
   }
-  return m[s] ?? 'bg-gray-100 text-gray-500'
+  return m[s] ?? { background: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.4)' }
 }

@@ -18,6 +18,7 @@ model Customer {
   marketingConsent Boolean        @default(false)
   needsDetails     Boolean        @default(false)
   notes            String?
+  pointsBalance    Int            @default(0) // loyalty / royalty engine balance
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
@@ -26,6 +27,7 @@ model Customer {
   appointments     Appointment[]
   transactions     Transaction[]
   whatsappLeads    WhatsAppLead[]
+  loyaltyEntries   LoyaltyEntry[]
 }
 
 // source values: GoogleForm | WhatsApp | WalkIn | Referral | Other
@@ -54,38 +56,58 @@ model Cat {
 // ─── Membership Tier ────────────────────────────────────────────────────────
 
 model MembershipTier {
-  id               String   @id @default(cuid())
-  name             String   @unique
-  monthlyPrice     Float
-  annualPrice      Float?
-  groomingCredits  Int      @default(0) // sessions per month included
-  boardingDiscount Float    @default(0) // percentage off boarding
-  benefits         String?  // JSON array of benefit strings
-  color            String?  // hex for UI badge
-  sortOrder        Int      @default(0)
-  isActive         Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  name                 String   @unique
+  tagline              String?  // short descriptor e.g. "By invitation only"
+  monthlyPrice         Float
+  annualPrice          Float?
+  groomingCredits      Int      @default(0) // sessions per month included
+  boardingDiscount     Float    @default(0) // percentage off boarding
+  qualification        String   @default("Manual") // Auto | Spending | Invitation | Paid | Manual
+  annualSpendThreshold Float?   // ringgit/year to qualify (Spending tiers)
+  pointsMultiplier     Float    @default(1) // loyalty accrual rate
+  cardType             String   @default("Digital") // Digital | Matte | Collectible
+  benefits             String?  // JSON array of benefit strings
+  color                String?  // hex for UI badge
+  sortOrder            Int      @default(0)
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  memberships      Membership[]
+  memberships          Membership[]
 }
 
 // ─── Membership ──────────────────────────────────────────────────────────────
 
 model Membership {
-  id          String         @id @default(cuid())
-  customerId  String
-  customer    Customer       @relation(fields: [customerId], references: [id])
-  tierId      String
-  tier        MembershipTier @relation(fields: [tierId], references: [id])
-  startDate   DateTime
-  expiryDate  DateTime
-  status      String         @default("Active") // Active | Expired | Cancelled | Paused
-  creditsUsed Int            @default(0)
-  autoRenew   Boolean        @default(false)
-  notes       String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id           String         @id @default(cuid())
+  customerId   String
+  customer     Customer       @relation(fields: [customerId], references: [id])
+  tierId       String
+  tier         MembershipTier @relation(fields: [tierId], references: [id])
+  memberNumber Int?           // sequential card number (e.g. Founder Circle #001–100)
+  startDate    DateTime
+  expiryDate   DateTime
+  status       String         @default("Active") // Active | Expired | Cancelled | Paused
+  creditsUsed  Int            @default(0)
+  autoRenew    Boolean        @default(false)
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+// ─── Loyalty (Royalty Engine) ────────────────────────────────────────────────
+
+model LoyaltyEntry {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  points     Int      // positive = earned, negative = redeemed
+  reason     String   // GroomingCompleted | GoogleReview | SocialPost | Referral | EventAttendance | BirthdayCelebration | EarlyBooking | MultiCat | Redemption | Manual
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
 }
 
 // ─── Room ────────────────────────────────────────────────────────────────────
@@ -181,6 +203,29 @@ model WhatsAppLead {
   confidence     Float?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+}
+
+// ─── Business Plan (Breakeven targets) ───────────────────────────────────────
+
+model BusinessPlan {
+  id             String   @id @default("default") // singleton row
+  startMonth     String   // "YYYY-MM" plan start
+  breakevenMonth String   // "YYYY-MM" target breakeven
+  avgSaleValue   Float    @default(0) // RM per closed sale, to convert revenue → sales count
+  currency       String   @default("RM")
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model MonthlyTarget {
+  id            String   @id @default(cuid())
+  month         String   @unique // "YYYY-MM"
+  revenueTarget Float    @default(0)
+  costBudget    Float    @default(0)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 // ─── Academy ─────────────────────────────────────────────────────────────────

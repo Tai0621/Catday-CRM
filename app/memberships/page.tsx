@@ -5,7 +5,6 @@ import Link from 'next/link'
 export default async function MembershipsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   await requireAuth()
   const { status } = await searchParams
-
   const where = status ? { status } : {}
 
   const [memberships, tiers, stats] = await Promise.all([
@@ -23,92 +22,93 @@ export default async function MembershipsPage({ searchParams }: { searchParams: 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Memberships</h1>
+        <h1 className="text-xl font-bold" style={{ color: '#2D1907' }}>Memberships</h1>
         <div className="flex gap-2">
-          <Link href="/memberships/tiers" className="text-sm bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200">Manage Tiers</Link>
-          <Link href="/memberships/new" className="bg-rose-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-rose-700">+ New Membership</Link>
+          <Link href="/memberships/tiers" className="cd-btn-sec text-sm">Manage Tiers</Link>
+          <Link href="/memberships/new" className="cd-btn">+ New Membership</Link>
         </div>
       </div>
 
-      {/* Tier cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {tiers.map(tier => {
           const count = memberships.filter(m => m.tierId === tier.id && m.status === 'Active').length
           const benefits = tier.benefits ? JSON.parse(tier.benefits) as string[] : []
+          const price = tier.monthlyPrice > 0 ? `RM ${tier.monthlyPrice}/mo` : tier.annualPrice ? `RM ${tier.annualPrice}/yr` : 'Free'
           return (
-            <div key={tier.id} className="bg-white rounded-xl border-2 p-4" style={{ borderColor: tier.color ?? '#e5e7eb' }}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-gray-900">{tier.name}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full font-medium text-white" style={{ background: tier.color ?? '#6b7280' }}>
+            <Link key={tier.id} href={`/memberships/tiers/${tier.id}`} className="rounded-xl border-2 p-4 block hover:opacity-90 transition-opacity" style={{ background: '#ECDBB6', borderColor: tier.color ?? 'rgba(45,25,7,0.15)' }}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold" style={{ color: '#2D1907' }}>{tier.name}</span>
+                <span className="cd-pill text-white" style={{ background: tier.color ?? '#2D1907' }}>
                   {count} active
                 </span>
               </div>
-              <div className="text-sm font-semibold text-gray-700">RM {tier.monthlyPrice}/mo</div>
-              {tier.annualPrice && <div className="text-xs text-gray-400">RM {tier.annualPrice}/yr</div>}
+              {tier.tagline && <div className="text-xs italic cd-muted mb-1.5">{tier.tagline}</div>}
+              <div className="text-sm font-semibold" style={{ color: '#2D1907' }}>{price}</div>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                <span className="cd-pill" style={{ background: 'rgba(45,25,7,0.08)', color: 'rgba(45,25,7,0.6)' }}>{tier.cardType} card</span>
+                {tier.pointsMultiplier !== 1 && (
+                  <span className="cd-pill" style={{ background: 'rgba(177,73,25,0.12)', color: '#B14919' }}>{tier.pointsMultiplier}× points</span>
+                )}
+              </div>
               <div className="mt-2 space-y-0.5">
-                {tier.groomingCredits > 0 && (
-                  <div className="text-xs text-gray-600">✓ {tier.groomingCredits} grooming/mo</div>
-                )}
-                {tier.boardingDiscount > 0 && (
-                  <div className="text-xs text-gray-600">✓ {tier.boardingDiscount}% boarding discount</div>
-                )}
-                {benefits.slice(0, 2).map((b, i) => (
-                  <div key={i} className="text-xs text-gray-600">✓ {b}</div>
+                {tier.groomingCredits > 0 && <div className="text-xs cd-muted">✓ {tier.groomingCredits} grooming/mo</div>}
+                {tier.boardingDiscount > 0 && <div className="text-xs cd-muted">✓ {tier.boardingDiscount}% boarding discount</div>}
+                {benefits.slice(0, 3).map((b, i) => (
+                  <div key={i} className="text-xs cd-muted">✓ {b}</div>
                 ))}
               </div>
-            </div>
+              <div className="text-xs mt-2 font-medium" style={{ color: '#B14919' }}>View members →</div>
+            </Link>
           )
         })}
       </div>
 
-      {/* Status filters */}
       <div className="flex gap-2 text-sm">
         {['', 'Active', 'Expired', 'Cancelled', 'Paused'].map(s => (
           <Link key={s} href={s ? `?status=${s}` : '/memberships'}
-            className={`px-3 py-1.5 rounded-lg border transition-colors ${status === s || (!status && !s) ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
+            className="px-3 py-1.5 rounded-lg transition-colors"
+            style={status === s || (!status && !s)
+              ? { background: '#B14919', color: '#ECDBB6', border: '1px solid #B14919' }
+              : { background: 'rgba(45,25,7,0.06)', color: '#2D1907', border: '1px solid rgba(45,25,7,0.12)' }
+            }>
             {s || 'All'} {s && statMap[s] ? `(${statMap[s]})` : ''}
           </Link>
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="cd-card overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-            <tr>
-              <th className="px-4 py-3 text-left">Customer</th>
-              <th className="px-4 py-3 text-left">Tier</th>
-              <th className="px-4 py-3 text-left">Start</th>
-              <th className="px-4 py-3 text-left">Expiry</th>
-              <th className="px-4 py-3 text-left">Status</th>
-              <th className="px-4 py-3 text-left">Credits Used</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
+          <thead><tr className="cd-thead">
+            <th>Customer</th>
+            <th>Tier</th>
+            <th>Start</th>
+            <th>Expiry</th>
+            <th>Status</th>
+            <th>Credits Used</th>
+            <th></th>
+          </tr></thead>
+          <tbody className="cd-tbody">
             {memberships.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No memberships found</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center cd-muted">No memberships found</td></tr>
             )}
             {memberships.map(m => (
-              <tr key={m.id} className="hover:bg-gray-50">
+              <tr key={m.id}>
                 <td className="px-4 py-3 font-medium">
-                  <Link href={`/customers/${m.customerId}`} className="hover:text-rose-600">
+                  <Link href={`/customers/${m.customerId}`} className="cd-link">
                     {m.customer.name ?? m.customer.phone}
                   </Link>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium text-white"
-                    style={{ background: m.tier.color ?? '#6b7280' }}>
-                    {m.tier.name}
-                  </span>
+                  <span className="cd-pill text-white" style={{ background: m.tier.color ?? '#2D1907' }}>{m.tier.name}</span>
                 </td>
-                <td className="px-4 py-3 text-gray-500">{m.startDate.toLocaleDateString('en-MY')}</td>
-                <td className="px-4 py-3 text-gray-500">{m.expiryDate.toLocaleDateString('en-MY')}</td>
+                <td className="px-4 py-3 cd-muted">{m.startDate.toLocaleDateString('en-MY')}</td>
+                <td className="px-4 py-3 cd-muted">{m.expiryDate.toLocaleDateString('en-MY')}</td>
                 <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass(m.status)}`}>{m.status}</span>
+                  <span className="cd-pill" style={membershipStatusStyle(m.status)}>{m.status}</span>
                 </td>
-                <td className="px-4 py-3 text-gray-500">{m.creditsUsed} / {m.tier.groomingCredits}</td>
+                <td className="px-4 py-3 cd-muted">{m.creditsUsed} / {m.tier.groomingCredits}</td>
                 <td className="px-4 py-3">
-                  <Link href={`/memberships/${m.id}`} className="text-xs text-rose-600 hover:underline">Manage</Link>
+                  <Link href={`/memberships/${m.id}`} className="text-xs cd-link">Manage</Link>
                 </td>
               </tr>
             ))}
@@ -119,12 +119,12 @@ export default async function MembershipsPage({ searchParams }: { searchParams: 
   )
 }
 
-function statusClass(s: string) {
-  const m: Record<string, string> = {
-    Active: 'bg-green-100 text-green-700',
-    Expired: 'bg-red-100 text-red-700',
-    Cancelled: 'bg-gray-100 text-gray-500',
-    Paused: 'bg-amber-100 text-amber-700',
+function membershipStatusStyle(s: string): React.CSSProperties {
+  const m: Record<string, React.CSSProperties> = {
+    Active:    { background: 'rgba(114,144,148,0.2)', color: '#729094' },
+    Expired:   { background: 'rgba(177,73,25,0.15)', color: '#B14919' },
+    Cancelled: { background: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.4)' },
+    Paused:    { background: 'rgba(231,206,122,0.35)', color: '#7a5c00' },
   }
-  return m[s] ?? 'bg-gray-100 text-gray-500'
+  return m[s] ?? { background: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.4)' }
 }

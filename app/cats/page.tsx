@@ -19,14 +19,15 @@ export default async function CatsPage({ searchParams }: { searchParams: Promise
   return (
     <div className="max-w-5xl mx-auto space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Cats <span className="text-gray-400 font-normal text-base">({cats.length})</span></h1>
-        <Link href="/cats/new" className="bg-rose-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-rose-700">+ New Cat</Link>
+        <h1 className="text-xl font-bold" style={{ color: '#2D1907' }}>
+          Cats <span className="font-normal text-base cd-muted">({cats.length})</span>
+        </h1>
+        <Link href="/cats/new" className="cd-btn">+ New Cat</Link>
       </div>
 
       <form className="flex gap-2">
-        <input name="q" defaultValue={q} placeholder="Search by name, breed, or owner…"
-          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
-        <button type="submit" className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">Search</button>
+        <input name="q" defaultValue={q} placeholder="Search by name, breed, or owner…" className="cd-input flex-1" />
+        <button type="submit" className="cd-btn-sec">Search</button>
       </form>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -38,15 +39,19 @@ export default async function CatsPage({ searchParams }: { searchParams: Promise
 
           return (
             <Link key={cat.id} href={`/cats/${cat.id}`}
-              className="bg-white border border-gray-200 rounded-xl p-4 hover:border-rose-200 transition-colors">
+              className="cd-card p-4 block hover:opacity-90 transition-opacity">
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <div className="font-semibold text-gray-900">{cat.name}</div>
-                  <div className="text-xs text-gray-500">{cat.breed ?? 'Unknown breed'} · {cat.lifeStage ?? '—'} · {cat.gender ?? '—'}</div>
+                  <div className="font-semibold" style={{ color: '#2D1907' }}>{cat.name}</div>
+                  <div className="text-xs cd-muted">{cat.breed ?? 'Unknown breed'} · {cat.lifeStage ?? '—'} · {cat.gender ?? '—'}</div>
                 </div>
               </div>
-              <div className="text-xs text-gray-400">Owner: {cat.customer.name ?? cat.customer.phone}</div>
-              <div className={`text-xs mt-1 font-medium ${overdue ? 'text-red-500' : daysUntil <= 7 ? 'text-amber-600' : 'text-green-600'}`}>
+              <div className="text-xs cd-muted">
+                Owner: <Link href={`/customers/${cat.customerId}`} className="cd-link" onClick={e => e.stopPropagation()}>{cat.customer.name ?? cat.customer.phone}</Link>
+              </div>
+              <div className="text-xs mt-1 font-medium" style={{
+                color: overdue ? '#B14919' : daysUntil <= 7 ? '#8a6c00' : '#729094'
+              }}>
                 {lastGroomed
                   ? overdue ? `Grooming overdue by ${Math.abs(daysUntil)}d` : `Next grooming in ${daysUntil}d`
                   : 'No grooming history'}
@@ -55,7 +60,7 @@ export default async function CatsPage({ searchParams }: { searchParams: Promise
           )
         })}
         {cats.length === 0 && (
-          <p className="col-span-3 text-sm text-gray-400 text-center py-8">No cats found</p>
+          <p className="col-span-3 text-sm cd-muted text-center py-8">No cats found</p>
         )}
       </div>
     </div>

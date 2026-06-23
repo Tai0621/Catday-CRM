@@ -34,76 +34,76 @@ export default async function RoomsPage() {
     redirect('/rooms')
   }
 
+  const statCards = [
+    { label: 'Available', value: stats.available, bg: 'rgba(114,144,148,0.18)', color: '#2D1907', border: 'rgba(114,144,148,0.3)' },
+    { label: 'Occupied', value: stats.occupied, bg: 'rgba(177,73,25,0.15)', color: '#B14919', border: 'rgba(177,73,25,0.25)' },
+    { label: 'Cleaning', value: stats.cleaning, bg: 'rgba(231,206,122,0.35)', color: '#7a5c00', border: 'rgba(231,206,122,0.5)' },
+    { label: 'Maintenance', value: stats.maintenance, bg: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.5)', border: 'rgba(45,25,7,0.12)' },
+  ]
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Room Tracker</h1>
-        <Link href="/rooms/new" className="bg-rose-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-rose-700">+ Add Room</Link>
+        <h1 className="text-xl font-bold" style={{ color: '#2D1907' }}>Room Tracker</h1>
+        <Link href="/rooms/new" className="cd-btn">+ Add Room</Link>
       </div>
 
       <div className="grid grid-cols-4 gap-3">
-        <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-center">
-          <div className="text-2xl font-bold text-green-700">{stats.available}</div>
-          <div className="text-xs text-green-600">Available</div>
-        </div>
-        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-center">
-          <div className="text-2xl font-bold text-red-700">{stats.occupied}</div>
-          <div className="text-xs text-red-600">Occupied</div>
-        </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-center">
-          <div className="text-2xl font-bold text-amber-700">{stats.cleaning}</div>
-          <div className="text-xs text-amber-600">Cleaning</div>
-        </div>
-        <div className="bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-center">
-          <div className="text-2xl font-bold text-gray-600">{stats.maintenance}</div>
-          <div className="text-xs text-gray-500">Maintenance</div>
-        </div>
+        {statCards.map(s => (
+          <div key={s.label} className="rounded-xl px-4 py-3 text-center"
+            style={{ background: s.bg, border: `1px solid ${s.border}` }}>
+            <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
+            <div className="text-xs" style={{ color: s.color, opacity: 0.75 }}>{s.label}</div>
+          </div>
+        ))}
       </div>
 
       {rooms.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 py-16 text-center">
-          <p className="text-gray-400 mb-3">No rooms set up yet</p>
-          <Link href="/rooms/new" className="text-rose-600 hover:underline text-sm">Add your first room</Link>
+        <div className="cd-card py-16 text-center">
+          <p className="cd-muted mb-3">No rooms set up yet</p>
+          <Link href="/rooms/new" className="cd-link text-sm">Add your first room</Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {rooms.map(room => {
             const currentGuest = room.appointments[0]
+            const { borderColor, badgeStyle } = roomStyles(room.status)
             return (
-              <div key={room.id} className={`bg-white rounded-xl border-2 p-4 space-y-3 ${roomBorderClass(room.status)}`}>
+              <div key={room.id} className="rounded-xl border-2 p-4 space-y-3"
+                style={{ background: '#ECDBB6', borderColor }}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="font-semibold text-gray-900">{room.name}</div>
-                    <div className="text-xs text-gray-400">{room.type}</div>
+                    <div className="font-semibold" style={{ color: '#2D1907' }}>{room.name}</div>
+                    <div className="text-xs cd-muted">{room.type}</div>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${roomBadgeClass(room.status)}`}>
-                    {room.status}
-                  </span>
+                  <span className="cd-pill" style={badgeStyle}>{room.status}</span>
                 </div>
 
                 {currentGuest && (
-                  <div className="bg-gray-50 rounded-lg px-3 py-2 text-sm">
-                    <div className="font-medium">{currentGuest.cat.name}</div>
-                    <div className="text-xs text-gray-500">{currentGuest.customer.name ?? currentGuest.customer.phone}</div>
+                  <div className="rounded-lg px-3 py-2 text-sm" style={{ background: 'rgba(45,25,7,0.06)' }}>
+                    <div className="font-medium" style={{ color: '#2D1907' }}>{currentGuest.cat.name}</div>
+                    <div className="text-xs cd-muted">{currentGuest.customer.name ?? currentGuest.customer.phone}</div>
                   </div>
                 )}
 
-                {room.description && (
-                  <p className="text-xs text-gray-400">{room.description}</p>
-                )}
+                {room.description && <p className="text-xs cd-muted">{room.description}</p>}
 
                 <form action={updateRoomStatus} className="flex gap-1 flex-wrap">
                   <input type="hidden" name="roomId" value={room.id} />
                   {ROOM_STATUSES.map(s => (
                     <button key={s} name="status" value={s} type="submit"
                       disabled={room.status === s}
-                      className={`text-xs px-2 py-1 rounded border transition-colors ${room.status === s ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-default' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}>
+                      className="text-xs px-2 py-1 rounded transition-opacity"
+                      style={room.status === s
+                        ? { background: 'rgba(45,25,7,0.08)', color: 'rgba(45,25,7,0.35)', cursor: 'default', border: '1px solid rgba(45,25,7,0.08)' }
+                        : { background: '#F2EDE0', color: '#2D1907', border: '1px solid rgba(45,25,7,0.2)' }
+                      }>
                       {s}
                     </button>
                   ))}
                 </form>
 
-                <Link href={`/rooms/${room.id}`} className="block text-xs text-rose-600 hover:underline">Edit room →</Link>
+                <Link href={`/rooms/${room.id}`} className="block text-xs cd-link">Edit room →</Link>
               </div>
             )
           })}
@@ -113,22 +113,12 @@ export default async function RoomsPage() {
   )
 }
 
-function roomBorderClass(status: string) {
-  const m: Record<string, string> = {
-    Available: 'border-green-200',
-    Occupied: 'border-red-300',
-    Cleaning: 'border-amber-200',
-    Maintenance: 'border-gray-300',
+function roomStyles(status: string) {
+  const map: Record<string, { borderColor: string; badgeStyle: React.CSSProperties }> = {
+    Available:   { borderColor: 'rgba(114,144,148,0.4)', badgeStyle: { background: 'rgba(114,144,148,0.2)', color: '#729094' } },
+    Occupied:    { borderColor: 'rgba(177,73,25,0.4)',   badgeStyle: { background: 'rgba(177,73,25,0.15)', color: '#B14919' } },
+    Cleaning:    { borderColor: 'rgba(231,206,122,0.6)', badgeStyle: { background: 'rgba(231,206,122,0.4)', color: '#7a5c00' } },
+    Maintenance: { borderColor: 'rgba(45,25,7,0.18)',    badgeStyle: { background: 'rgba(45,25,7,0.08)', color: 'rgba(45,25,7,0.5)' } },
   }
-  return m[status] ?? 'border-gray-200'
-}
-
-function roomBadgeClass(status: string) {
-  const m: Record<string, string> = {
-    Available: 'bg-green-100 text-green-700',
-    Occupied: 'bg-red-100 text-red-700',
-    Cleaning: 'bg-amber-100 text-amber-700',
-    Maintenance: 'bg-gray-100 text-gray-500',
-  }
-  return m[status] ?? 'bg-gray-100 text-gray-500'
+  return map[status] ?? { borderColor: 'rgba(45,25,7,0.18)', badgeStyle: { background: 'rgba(45,25,7,0.08)', color: 'rgba(45,25,7,0.5)' } }
 }
