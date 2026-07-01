@@ -1,59 +1,19 @@
 import { requireAuth } from '@/lib/auth'
-import { db } from '@/lib/db'
-import { buildGroomingPredictions } from '@/lib/grooming-reminder'
+import { getDashboardData } from '@/lib/dashboard'
 import { whatsappUrl } from '@/lib/phone'
-import { MEMBERSHIP_EXPIRY_ALERT_DAYS } from '@/lib/constants'
-import { monthKey, monthLabel, computePacing, type SalesPacing } from '@/lib/plan'
+import { REVENUE_CATEGORIES } from '@/lib/constants'
+import { type SalesPacing } from '@/lib/plan'
 import Link from 'next/link'
+
+const STREAM_COLORS: Record<string, string> = {
+  Grooming: '#B14919', Boarding: '#729094', Retail: '#9c6b3f',
+  Membership: '#B8902B', Academy: '#2D1907', Other: '#a89878',
+}
 
 export default async function DashboardPage() {
   await requireAuth()
-
-  const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000)
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-  const expiryThreshold = new Date(now.getTime() + MEMBERSHIP_EXPIRY_ALERT_DAYS * 24 * 60 * 60 * 1000)
-
-  const [
-    todayAppointments,
-    rooms,
-    cats,
-    expiringMemberships,
-    totalCustomers,
-    pendingLeads,
-    plan,
-    monthTarget,
-    monthRevenueAgg,
-  ] = await Promise.all([
-    db.appointment.findMany({
-      where: { scheduledAt: { gte: todayStart, lt: todayEnd }, status: { not: 'Cancelled' } },
-      include: { customer: true, cat: true, room: true },
-      orderBy: { scheduledAt: 'asc' },
-    }),
-    db.room.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }),
-    db.cat.findMany({
-      include: { customer: true, appointments: { select: { scheduledAt: true, status: true, type: true } } },
-    }),
-    db.membership.findMany({
-      where: { status: 'Active', expiryDate: { lte: expiryThreshold } },
-      include: { customer: true, tier: true },
-      orderBy: { expiryDate: 'asc' },
-    }),
-    db.customer.count(),
-    db.whatsAppLead.count({ where: { status: 'Pending' } }),
-    db.businessPlan.findUnique({ where: { id: 'default' } }),
-    db.monthlyTarget.findUnique({ where: { month: monthKey(now) } }),
-    db.transaction.aggregate({ _sum: { total: true }, where: { date: { gte: monthStart, lt: monthEnd } } }),
-  ])
-
-  const groomingReminders = buildGroomingPredictions(cats)
-  const occupiedRooms = rooms.filter(r => r.status === 'Occupied').length
-
-  const monthRevenue = monthRevenueAgg._sum.total ?? 0
-  const pacing = computePacing(monthTarget?.revenueTarget ?? 0, monthRevenue, plan?.avgSaleValue ?? 0, now)
-  const hasPlan = (monthTarget?.revenueTarget ?? 0) > 0
+  const d = await getDashboardData()
+  const { now, revenue, ops, customer, alerts, panels, breakeven } = d
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -62,26 +22,116 @@ export default async function DashboardPage() {
         <p className="text-sm" style={{ color: '#729094' }}>{now.toLocaleDateString('en-MY', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
       </div>
 
-      <BreakevenWidget hasPlan={hasPlan} pacing={pacing} monthName={monthLabel(monthKey(now))} hasAvgSale={(plan?.avgSaleValue ?? 0) > 0} />
+      <BreakevenWidget hasPlan={breakeven.hasPlan} pacing={breakeven.pacing} monthName={breakeven.monthName} hasAvgSale={breakeven.hasAvgSale} />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard label="Total Customers" value={totalCustomers} href="/customers" color="blue" />
-        <StatCard label="Today's Appointments" value={todayAppointments.length} href="/appointments" color="rose" />
-        <StatCard label="Rooms Occupied" value={`${occupiedRooms}/${rooms.length}`} href="/rooms" color="amber" />
-        <StatCard label="Pending WhatsApp" value={pendingLeads} href="/whatsapp" color="green" />
-      </div>
+      {/* ── Revenue by stream ── */}
+      <section className="cd-card p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+          <h2 className="font-semibold" style={{ color: '#2D1907' }}>Revenue</h2>
+          <div className="flex gap-6">
+            <div className="text-right">
+              <div className="text-xs cd-muted">Today</div>
+              <div className="text-xl font-bold" style={{ color: '#2D1907' }}>RM {revenue.totalToday.toLocaleString()}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs cd-muted">This month</div>
+              <div className="text-xl font-bold" style={{ color: '#B14919' }}>RM {revenue.totalMonth.toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {REVENUE_CATEGORIES.map(cat => (
+            <div key={cat} className="rounded-lg px-3 py-2.5" style={{ background: 'rgba(45,25,7,0.04)', borderLeft: `3px solid ${STREAM_COLORS[cat]}` }}>
+              <div className="text-xs cd-muted">{cat}</div>
+              <div className="text-base font-bold" style={{ color: '#2D1907' }}>RM {(revenue.month[cat] ?? 0).toLocaleString()}</div>
+              <div className="text-xs cd-muted">today RM {(revenue.today[cat] ?? 0).toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
+      </section>
 
+      {/* ── Operations ── */}
+      <section>
+        <SectionTitle>Operations</SectionTitle>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <Tile label="Cats boarding" value={ops.catsBoarding} accent="#729094" href="/rooms" />
+          <Tile label="Grooming today" value={ops.groomingToday} accent="#B14919" href="/appointments" />
+          <Tile label="Occupancy" value={`${ops.occupancyPct}%`} sub={`${ops.occupiedRooms}/${ops.totalRooms} rooms`} accent="#2D1907" href="/rooms" />
+          <Tile label="Rooms free" value={ops.availableRooms} accent="#729094" href="/rooms" />
+          <Tile label="Safety incidents" value={ops.safetyOpen} accent={ops.safetyOpen > 0 ? '#B14919' : '#2D1907'} href="/incidents" />
+          <Tile label="Complaints" value={ops.complaintsOpen} accent={ops.complaintsOpen > 0 ? '#B14919' : '#2D1907'} href="/incidents" />
+        </div>
+      </section>
+
+      {/* ── Customer signals ── */}
+      <section>
+        <SectionTitle>Customers</SectionTitle>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <Tile label="New this month" value={customer.newCustomers} accent="#729094" href="/customers" />
+          <Tile label="Returning" value={customer.returningCustomers} accent="#2D1907" href="/customers" />
+          <Tile label="New memberships" value={customer.monthConversions} accent="#B8902B" href="/memberships" />
+          <Tile label="Birthdays today" value={customer.birthdaysToday.length} accent="#B14919" href="/cats" />
+          <Tile label="Cats due grooming" value={customer.catsDue.length} accent="#B14919" href="/cats" />
+          <Tile label="Total customers" value={customer.totalCustomers} accent="#2D1907" href="/customers" />
+        </div>
+      </section>
+
+      {/* ── Alerts ── */}
+      <section>
+        <SectionTitle>Alerts</SectionTitle>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AlertCard title="VIP arriving today" count={alerts.vipArriving.length} accent="#B8902B">
+            {alerts.vipArriving.length === 0 ? <Empty>No VIP appointments today</Empty> : alerts.vipArriving.map(a => (
+              <AlertRow key={a.id}
+                main={`${a.cat.name} · ${a.customer.name ?? a.customer.phone}`}
+                sub={`${a.scheduledAt.toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })} · ${a.type}`}
+                href={`/customers/${a.customerId}`} />
+            ))}
+          </AlertCard>
+
+          <AlertCard title="Vaccinations expiring" count={alerts.vaccinationsExpiring.length} accent="#B14919">
+            {alerts.vaccinationsExpiring.length === 0 ? <Empty>None expiring in 30 days</Empty> : alerts.vaccinationsExpiring.slice(0, 8).map(c => (
+              <AlertRow key={c.id}
+                main={`${c.name} · ${c.customer.name ?? c.customer.phone}`}
+                sub={`expires ${c.vaccinationExpiry!.toLocaleDateString('en-MY')}`}
+                action={{ href: whatsappUrl(c.customer.phone, `Hi! ${c.name}'s vaccination expires on ${c.vaccinationExpiry!.toLocaleDateString('en-MY')}. Let's schedule a top-up.`), label: 'WhatsApp' }} />
+            ))}
+          </AlertCard>
+
+          <AlertCard title="Boarding check-outs today" count={alerts.checkouts.length} accent="#729094">
+            {alerts.checkouts.length === 0 ? <Empty>No check-outs today</Empty> : alerts.checkouts.map(a => (
+              <AlertRow key={a.id}
+                main={`${a.cat.name} · ${a.customer.name ?? a.customer.phone}`}
+                sub={`${a.room?.name ?? 'Room —'} · out ${a.endsAt?.toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' }) ?? ''}`}
+                href={`/appointments/${a.id}`} />
+            ))}
+          </AlertCard>
+
+          <AlertCard title="Outstanding payments" count={alerts.outstanding.length} accent="#B14919">
+            {alerts.outstanding.length === 0 ? <Empty>All settled</Empty> : alerts.outstanding.map(a => (
+              <AlertRow key={a.id}
+                main={`${a.cat.name} · ${a.customer.name ?? a.customer.phone}`}
+                sub={`${a.type} · ${a.scheduledAt.toLocaleDateString('en-MY')}`}
+                right={a.price != null ? `RM ${a.price.toFixed(2)}` : undefined}
+                href={`/appointments/${a.id}`} />
+            ))}
+          </AlertCard>
+        </div>
+        <p className="text-xs cd-muted mt-2">Low-inventory alerts arrive with the Inventory module (Phase 4).</p>
+      </section>
+
+      {/* ── Existing operational panels ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="rounded-xl overflow-hidden" style={{ background: '#ECDBB6', border: '1px solid rgba(45,25,7,0.12)' }}>
-          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(45,25,7,0.1)' }}>
+        <section className="cd-card overflow-hidden">
+          <div className="cd-section-header">
             <h2 className="font-semibold" style={{ color: '#2D1907' }}>Today&apos;s Appointments</h2>
             <Link href="/appointments/new" className="text-xs px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity" style={{ background: '#B14919', color: '#ECDBB6' }}>+ Book</Link>
           </div>
-          {todayAppointments.length === 0 ? (
-            <p className="px-5 py-8 text-sm text-center" style={{ color: 'rgba(45,25,7,0.4)' }}>No appointments today</p>
+          {panels.todayAppointments.length === 0 ? (
+            <p className="px-5 py-8 text-sm text-center cd-muted">No appointments today</p>
           ) : (
             <ul className="divide-y" style={{ borderColor: 'rgba(45,25,7,0.08)' }}>
-              {todayAppointments.map(appt => (
+              {panels.todayAppointments.map(appt => (
                 <li key={appt.id} className="px-5 py-3 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium" style={{ color: '#2D1907' }}>
@@ -99,18 +149,18 @@ export default async function DashboardPage() {
           )}
         </section>
 
-        <section className="rounded-xl overflow-hidden" style={{ background: '#ECDBB6', border: '1px solid rgba(45,25,7,0.12)' }}>
-          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(45,25,7,0.1)' }}>
+        <section className="cd-card overflow-hidden">
+          <div className="cd-section-header">
             <h2 className="font-semibold" style={{ color: '#2D1907' }}>Room Occupancy</h2>
             <Link href="/rooms" className="text-xs hover:underline" style={{ color: '#B14919' }}>Manage</Link>
           </div>
-          {rooms.length === 0 ? (
-            <p className="px-5 py-8 text-sm text-center" style={{ color: 'rgba(45,25,7,0.4)' }}>
+          {panels.rooms.length === 0 ? (
+            <p className="px-5 py-8 text-sm text-center cd-muted">
               No rooms set up yet · <Link href="/rooms/new" style={{ color: '#B14919' }}>Add room</Link>
             </p>
           ) : (
             <div className="p-5 grid grid-cols-3 gap-2">
-              {rooms.map(room => (
+              {panels.rooms.map(room => (
                 <div key={room.id} className="rounded-lg px-3 py-2 text-xs font-medium" style={roomStatusStyle(room.status)}>
                   <div className="font-semibold truncate">{room.name}</div>
                   <div className="opacity-70">{room.type} · {room.status}</div>
@@ -120,17 +170,17 @@ export default async function DashboardPage() {
           )}
         </section>
 
-        <section className="rounded-xl overflow-hidden" style={{ background: '#ECDBB6', border: '1px solid rgba(45,25,7,0.12)' }}>
-          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(45,25,7,0.1)' }}>
+        <section className="cd-card overflow-hidden">
+          <div className="cd-section-header">
             <h2 className="font-semibold" style={{ color: '#2D1907' }}>
-              Grooming Reminders <span className="text-xs font-normal" style={{ color: 'rgba(45,25,7,0.4)' }}>next 7 days</span>
+              Grooming Reminders <span className="text-xs font-normal cd-muted">next 7 days</span>
             </h2>
           </div>
-          {groomingReminders.length === 0 ? (
-            <p className="px-5 py-8 text-sm text-center" style={{ color: 'rgba(45,25,7,0.4)' }}>No grooming due soon</p>
+          {panels.groomingReminders.length === 0 ? (
+            <p className="px-5 py-8 text-sm text-center cd-muted">No grooming due soon</p>
           ) : (
             <ul className="divide-y" style={{ borderColor: 'rgba(45,25,7,0.08)' }}>
-              {groomingReminders.slice(0, 8).map(r => (
+              {panels.groomingReminders.slice(0, 8).map(r => (
                 <li key={r.catId} className="px-5 py-3 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium" style={{ color: '#2D1907' }}>
@@ -140,13 +190,9 @@ export default async function DashboardPage() {
                       {r.isOverdue ? `Overdue by ${Math.abs(r.daysUntilDue)}d` : `Due in ${r.daysUntilDue}d`}
                     </p>
                   </div>
-                  <a
-                    href={whatsappUrl(r.customerPhone, `Hi! Just a reminder that ${r.catName} is due for grooming. Would you like to book a session?`)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs px-2.5 py-1 rounded hover:opacity-90 transition-opacity"
-                    style={{ background: '#729094', color: '#F2EDE0' }}
-                  >
+                  <a href={whatsappUrl(r.customerPhone, `Hi! Just a reminder that ${r.catName} is due for grooming. Would you like to book a session?`)}
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-xs px-2.5 py-1 rounded hover:opacity-90 transition-opacity" style={{ background: '#729094', color: '#F2EDE0' }}>
                     WhatsApp
                   </a>
                 </li>
@@ -155,32 +201,26 @@ export default async function DashboardPage() {
           )}
         </section>
 
-        <section className="rounded-xl overflow-hidden" style={{ background: '#ECDBB6', border: '1px solid rgba(45,25,7,0.12)' }}>
-          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(45,25,7,0.1)' }}>
+        <section className="cd-card overflow-hidden">
+          <div className="cd-section-header">
             <h2 className="font-semibold" style={{ color: '#2D1907' }}>
-              Memberships Expiring <span className="text-xs font-normal" style={{ color: 'rgba(45,25,7,0.4)' }}>next 14 days</span>
+              Memberships Expiring <span className="text-xs font-normal cd-muted">next 14 days</span>
             </h2>
             <Link href="/memberships" className="text-xs hover:underline" style={{ color: '#B14919' }}>All</Link>
           </div>
-          {expiringMemberships.length === 0 ? (
-            <p className="px-5 py-8 text-sm text-center" style={{ color: 'rgba(45,25,7,0.4)' }}>No memberships expiring soon</p>
+          {panels.expiringMemberships.length === 0 ? (
+            <p className="px-5 py-8 text-sm text-center cd-muted">No memberships expiring soon</p>
           ) : (
             <ul className="divide-y" style={{ borderColor: 'rgba(45,25,7,0.08)' }}>
-              {expiringMemberships.map(m => (
+              {panels.expiringMemberships.map(m => (
                 <li key={m.id} className="px-5 py-3 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium" style={{ color: '#2D1907' }}>{m.customer.name ?? m.customer.phone}</p>
-                    <p className="text-xs" style={{ color: 'rgba(45,25,7,0.45)' }}>
-                      {m.tier.name} · expires {m.expiryDate.toLocaleDateString('en-MY')}
-                    </p>
+                    <p className="text-xs cd-muted">{m.tier.name} · expires {m.expiryDate.toLocaleDateString('en-MY')}</p>
                   </div>
-                  <a
-                    href={whatsappUrl(m.customer.phone, `Hi! Your ${m.tier.name} membership is expiring on ${m.expiryDate.toLocaleDateString('en-MY')}. Would you like to renew?`)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs px-2.5 py-1 rounded hover:opacity-90 transition-opacity"
-                    style={{ background: '#E7CE7A', color: '#2D1907' }}
-                  >
+                  <a href={whatsappUrl(m.customer.phone, `Hi! Your ${m.tier.name} membership is expiring on ${m.expiryDate.toLocaleDateString('en-MY')}. Would you like to renew?`)}
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-xs px-2.5 py-1 rounded hover:opacity-90 transition-opacity" style={{ background: '#E7CE7A', color: '#2D1907' }}>
                     Remind
                   </a>
                 </li>
@@ -191,6 +231,64 @@ export default async function DashboardPage() {
       </div>
     </div>
   )
+}
+
+// ── Small presentational helpers ──
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <h2 className="font-semibold mb-3" style={{ color: '#2D1907' }}>{children}</h2>
+}
+
+function Tile({ label, value, sub, accent, href }: { label: string; value: number | string; sub?: string; accent: string; href?: string }) {
+  const inner = (
+    <>
+      <span className="text-2xl font-bold" style={{ color: accent }}>{value}</span>
+      <span className="text-xs cd-muted">{label}</span>
+      {sub && <span className="text-xs cd-muted opacity-70">{sub}</span>}
+    </>
+  )
+  const cls = 'cd-card px-4 py-3 flex flex-col gap-0.5 hover:opacity-90 transition-opacity'
+  return href ? <Link href={href} className={cls}>{inner}</Link> : <div className={cls}>{inner}</div>
+}
+
+function AlertCard({ title, count, accent, children }: { title: string; count: number; accent: string; children: React.ReactNode }) {
+  return (
+    <div className="cd-card overflow-hidden">
+      <div className="cd-section-header">
+        <h3 className="font-semibold text-sm" style={{ color: '#2D1907' }}>{title}</h3>
+        {count > 0 && <span className="cd-pill text-white" style={{ background: accent }}>{count}</span>}
+      </div>
+      <ul className="divide-y" style={{ borderColor: 'rgba(45,25,7,0.08)' }}>{children}</ul>
+    </div>
+  )
+}
+
+function AlertRow({ main, sub, right, href, action }: {
+  main: string; sub?: string; right?: string; href?: string
+  action?: { href: string; label: string }
+}) {
+  const body = (
+    <div className="min-w-0">
+      <p className="text-sm font-medium truncate" style={{ color: '#2D1907' }}>{main}</p>
+      {sub && <p className="text-xs cd-muted truncate">{sub}</p>}
+    </div>
+  )
+  return (
+    <li className="px-5 py-2.5 flex items-center justify-between gap-3">
+      {href ? <Link href={href} className="min-w-0 flex-1 hover:opacity-80">{body}</Link> : <div className="min-w-0 flex-1">{body}</div>}
+      {right && <span className="text-sm font-medium whitespace-nowrap" style={{ color: '#B14919' }}>{right}</span>}
+      {action && (
+        <a href={action.href} target="_blank" rel="noopener noreferrer"
+          className="text-xs px-2.5 py-1 rounded hover:opacity-90 transition-opacity whitespace-nowrap" style={{ background: '#729094', color: '#F2EDE0' }}>
+          {action.label}
+        </a>
+      )}
+    </li>
+  )
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return <li className="px-5 py-6 text-sm text-center cd-muted">{children}</li>
 }
 
 function BreakevenWidget({ hasPlan, pacing, monthName, hasAvgSale }: {
@@ -256,21 +354,6 @@ function WidgetMetric({ label, value }: { label: string; value: string }) {
       <div className="text-lg font-bold" style={{ color: '#F2EDE0' }}>{value}</div>
       <div className="text-xs" style={{ color: 'rgba(236,219,182,0.65)' }}>{label}</div>
     </div>
-  )
-}
-
-function StatCard({ label, value, href, color }: { label: string; value: number | string; href: string; color: string }) {
-  const styles: Record<string, React.CSSProperties> = {
-    blue:  { background: '#2D1907', color: '#ECDBB6', borderColor: 'transparent' },
-    rose:  { background: '#B14919', color: '#ECDBB6', borderColor: 'transparent' },
-    amber: { background: '#E7CE7A', color: '#2D1907', borderColor: 'transparent' },
-    green: { background: '#729094', color: '#ECDBB6', borderColor: 'transparent' },
-  }
-  return (
-    <Link href={href} className="rounded-xl border p-4 flex flex-col gap-1 hover:opacity-85 transition-opacity" style={styles[color]}>
-      <span className="text-2xl font-bold">{value}</span>
-      <span className="text-xs font-medium opacity-80">{label}</span>
-    </Link>
   )
 }
 

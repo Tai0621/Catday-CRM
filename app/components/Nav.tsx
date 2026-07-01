@@ -12,6 +12,7 @@ const links = [
   { href: '/cats', label: 'Cats', icon: '◈' },
   { href: '/memberships', label: 'Memberships', icon: '◆' },
   { href: '/rooms', label: 'Rooms', icon: '▦' },
+  { href: '/incidents', label: 'Incidents', icon: '⚠' },
   { href: '/revenue', label: 'Revenue', icon: '◐' },
   { href: '/whatsapp', label: 'WhatsApp', icon: '◎' },
   { href: '/academy', label: 'Academy', icon: '◑' },

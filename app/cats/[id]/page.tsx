@@ -1,6 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { predictNextGrooming } from '@/lib/grooming-reminder'
 import { displayPhone, whatsappUrl } from '@/lib/phone'
@@ -21,6 +21,13 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
     },
   })
   if (!cat) notFound()
+
+  async function setVaccination(data: FormData) {
+    'use server'
+    const v = data.get('vaccinationExpiry') as string
+    await db.cat.update({ where: { id }, data: { vaccinationExpiry: v ? new Date(v) : null } })
+    redirect(`/cats/${id}`)
+  }
 
   const lastGroomed = cat.appointments.find(a => a.type === 'Grooming' && a.status === 'Completed')?.scheduledAt ?? null
   const nextDue = predictNextGrooming(lastGroomed, cat.breed, cat.groomingInterval)
@@ -98,6 +105,22 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
           Last groomed: {lastGroomed ? lastGroomed.toLocaleDateString('en-MY') : 'Never'} ·
           Interval: {cat.groomingInterval ? `${cat.groomingInterval}d (custom)` : 'breed default'}
         </div>
+      </div>
+
+      {/* Vaccination */}
+      <div className="cd-card p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold" style={{ color: '#2D1907' }}>Vaccination</div>
+          <div className="text-xs cd-muted">
+            {cat.vaccinationExpiry ? `Expires ${cat.vaccinationExpiry.toLocaleDateString('en-MY')}` : 'No expiry recorded'}
+          </div>
+        </div>
+        <form action={setVaccination} className="flex items-center gap-2">
+          <input name="vaccinationExpiry" type="date"
+            defaultValue={cat.vaccinationExpiry ? cat.vaccinationExpiry.toISOString().split('T')[0] : ''}
+            className="cd-input" style={{ width: 'auto' }} />
+          <button type="submit" className="cd-btn-sec text-sm">Save</button>
+        </form>
       </div>
 
       {cat.healthNotes && (

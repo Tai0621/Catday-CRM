@@ -42,6 +42,7 @@ model Cat {
   dateOfBirth      DateTime?
   lifeStage        String?   // Kitten | Adult | Senior
   healthNotes      String?
+  vaccinationExpiry DateTime? // drives the "vaccination expiring" dashboard alert
   groomingInterval Int?      // days between sessions; null = use breed/coat default
   photos           String?   // JSON array of data URLs
   customerId       String
@@ -141,6 +142,7 @@ model Appointment {
   roomId      String?
   room        Room?    @relation(fields: [roomId], references: [id])
   price       Float?
+  paid        Boolean  @default(false) // drives the "outstanding payments" dashboard alert
   notes       String?
   staffNotes  String?
   usedCredit  Boolean  @default(false)
@@ -203,6 +205,19 @@ model WhatsAppLead {
   confidence     Float?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+}
+
+// ─── Incident (Safety incidents & complaints) ────────────────────────────────
+
+model Incident {
+  id          String    @id @default(cuid())
+  type        String    // Safety | Complaint
+  description String
+  customerId  String?
+  catId       String?
+  resolved    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // ─── Business Plan (Breakeven targets) ───────────────────────────────────────

@@ -12,6 +12,7 @@ export default async function NewCatPage({ searchParams }: { searchParams: Promi
   async function create(data: FormData) {
     'use server'
     const dob = data.get('dateOfBirth') as string
+    const vax = data.get('vaccinationExpiry') as string
     await db.cat.create({
       data: {
         name: data.get('name') as string,
@@ -19,6 +20,7 @@ export default async function NewCatPage({ searchParams }: { searchParams: Promi
         gender: (data.get('gender') as string) || null,
         lifeStage: (data.get('lifeStage') as string) || null,
         dateOfBirth: dob ? new Date(dob) : null,
+        vaccinationExpiry: vax ? new Date(vax) : null,
         healthNotes: (data.get('healthNotes') as string) || null,
         groomingInterval: data.get('groomingInterval') ? parseInt(data.get('groomingInterval') as string, 10) : null,
         customerId: data.get('customerId') as string,
@@ -59,7 +61,10 @@ export default async function NewCatPage({ searchParams }: { searchParams: Promi
             </select>
           </div>
         </div>
-        <Field label="Date of Birth" name="dateOfBirth" type="date" />
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Date of Birth" name="dateOfBirth" type="date" />
+          <Field label="Vaccination Expiry" name="vaccinationExpiry" type="date" />
+        </div>
         <Field label="Custom Grooming Interval (days)" name="groomingInterval" type="number" placeholder="Leave blank to use breed default" />
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Health Notes</label>

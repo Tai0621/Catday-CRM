@@ -62,8 +62,14 @@ export const GOLD_SPEND_THRESHOLD = 3000
 // Founder Circle — first N members get a numbered collectible card
 export const FOUNDER_CIRCLE_LIMIT = 100
 
-export const REVENUE_CATEGORIES = ['Grooming', 'Boarding', 'Membership', 'Academy', 'Other'] as const
+export const REVENUE_CATEGORIES = ['Grooming', 'Boarding', 'Retail', 'Membership', 'Academy', 'Other'] as const
 export type RevenueCategory = typeof REVENUE_CATEGORIES[number]
+
+export const INCIDENT_TYPES = ['Safety', 'Complaint'] as const
+export type IncidentType = typeof INCIDENT_TYPES[number]
+
+// Dashboard alert windows (days)
+export const VACCINATION_ALERT_DAYS = 30
 
 export const LEAD_TYPES = ['BookingRequest', 'Inquiry', 'Complaint', 'Reschedule', 'Cancellation', 'Other'] as const
 export type LeadType = typeof LEAD_TYPES[number]

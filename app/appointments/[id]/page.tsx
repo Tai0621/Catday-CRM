@@ -18,7 +18,6 @@ export default async function AppointmentDetailPage({ params }: { params: Promis
     'use server'
     const newStatus = data.get('status') as string
     await db.appointment.update({ where: { id }, data: { status: newStatus } })
-    // Mark room as occupied/available based on status
     if (appt!.roomId) {
       if (newStatus === 'CheckedIn') {
         await db.room.update({ where: { id: appt!.roomId }, data: { status: 'Occupied' } })
@@ -26,6 +25,12 @@ export default async function AppointmentDetailPage({ params }: { params: Promis
         await db.room.update({ where: { id: appt!.roomId }, data: { status: 'Cleaning' } })
       }
     }
+    redirect(`/appointments/${id}`)
+  }
+
+  async function togglePaid() {
+    'use server'
+    await db.appointment.update({ where: { id }, data: { paid: !appt!.paid } })
     redirect(`/appointments/${id}`)
   }
 
@@ -40,14 +45,10 @@ export default async function AppointmentDetailPage({ params }: { params: Promis
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">
-            {appt.type} — {appt.cat.name}
-          </h1>
-          <p className="text-sm text-gray-500">
-            {appt.scheduledAt.toLocaleString('en-MY', { dateStyle: 'full', timeStyle: 'short' })}
-          </p>
+          <h1 className="text-xl font-bold" style={{ color: '#2D1907' }}>{appt.type} — {appt.cat.name}</h1>
+          <p className="text-sm cd-muted">{appt.scheduledAt.toLocaleString('en-MY', { dateStyle: 'full', timeStyle: 'short' })}</p>
         </div>
-        <span className={`text-sm px-3 py-1 rounded-full font-medium ${statusClass(appt.status)}`}>{appt.status}</span>
+        <span className="cd-pill" style={statusStyle(appt.status)}>{appt.status}</span>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -58,18 +59,37 @@ export default async function AppointmentDetailPage({ params }: { params: Promis
       </div>
 
       {appt.notes && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-sm text-blue-800">
+        <div className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(114,144,148,0.15)', border: '1px solid rgba(114,144,148,0.3)', color: '#2D1907' }}>
           <strong>Customer notes:</strong> {appt.notes}
         </div>
       )}
 
+      {/* Payment */}
+      <section className="cd-card p-5 flex items-center justify-between">
+        <div>
+          <h2 className="font-semibold" style={{ color: '#2D1907' }}>Payment</h2>
+          <p className="text-sm cd-muted">
+            {appt.price != null ? `RM ${appt.price.toFixed(2)} · ` : 'No price set · '}
+            <span style={{ color: appt.paid ? '#729094' : '#B14919', fontWeight: 600 }}>{appt.paid ? 'Paid' : 'Outstanding'}</span>
+          </p>
+        </div>
+        <form action={togglePaid}>
+          <button type="submit" className={appt.paid ? 'cd-btn-sec' : 'cd-btn'}>
+            {appt.paid ? 'Mark unpaid' : 'Mark paid'}
+          </button>
+        </form>
+      </section>
+
       {/* Status update */}
-      <section className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-        <h2 className="font-semibold text-gray-900">Update Status</h2>
+      <section className="cd-card p-5 space-y-3">
+        <h2 className="font-semibold" style={{ color: '#2D1907' }}>Update Status</h2>
         <form action={updateStatus} className="flex gap-2 flex-wrap">
           {APPOINTMENT_STATUSES.map(s => (
             <button key={s} name="status" value={s} type="submit"
-              className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${appt.status === s ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>
+              className="text-sm px-3 py-1.5 rounded-lg transition-colors"
+              style={appt.status === s
+                ? { background: '#B14919', color: '#ECDBB6', border: '1px solid #B14919' }
+                : { background: '#F2EDE0', color: '#2D1907', border: '1px solid rgba(45,25,7,0.2)' }}>
               {s}
             </button>
           ))}
@@ -77,40 +97,37 @@ export default async function AppointmentDetailPage({ params }: { params: Promis
       </section>
 
       {/* Staff notes */}
-      <section className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-        <h2 className="font-semibold text-gray-900">Staff Notes</h2>
+      <section className="cd-card p-5 space-y-3">
+        <h2 className="font-semibold" style={{ color: '#2D1907' }}>Staff Notes</h2>
         <form action={addNote} className="space-y-2">
           <textarea name="staffNotes" rows={3} defaultValue={appt.staffNotes ?? ''}
-            placeholder="Grooming notes, observations…"
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
-          <button type="submit" className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-200">Save Notes</button>
+            placeholder="Grooming notes, observations…" className="cd-input" style={{ resize: 'none' }} />
+          <button type="submit" className="cd-btn-sec">Save Notes</button>
         </form>
       </section>
 
-      <div className="flex gap-3">
-        <Link href="/appointments" className="text-sm text-gray-500 hover:text-gray-700">← Back to appointments</Link>
-      </div>
+      <Link href="/appointments" className="text-sm cd-muted hover:underline">← Back to appointments</Link>
     </div>
   )
 }
 
 function InfoCard({ label, value, href }: { label: string; value: string; href?: string }) {
   const content = (
-    <div className="bg-white border border-gray-200 rounded-xl px-4 py-3">
-      <div className="text-xs text-gray-400 mb-0.5">{label}</div>
-      <div className="text-sm font-medium text-gray-900">{value}</div>
+    <div className="cd-card px-4 py-3">
+      <div className="text-xs cd-muted mb-0.5">{label}</div>
+      <div className="text-sm font-medium" style={{ color: '#2D1907' }}>{value}</div>
     </div>
   )
   return href ? <Link href={href}>{content}</Link> : content
 }
 
-function statusClass(s: string) {
-  const m: Record<string, string> = {
-    Scheduled: 'bg-blue-100 text-blue-700',
-    CheckedIn: 'bg-amber-100 text-amber-700',
-    Completed: 'bg-green-100 text-green-700',
-    NoShow: 'bg-red-100 text-red-700',
-    Cancelled: 'bg-gray-100 text-gray-500',
+function statusStyle(s: string): React.CSSProperties {
+  const m: Record<string, React.CSSProperties> = {
+    Scheduled:  { background: 'rgba(114,144,148,0.2)', color: '#729094' },
+    CheckedIn:  { background: 'rgba(231,206,122,0.35)', color: '#7a5c00' },
+    Completed:  { background: 'rgba(45,25,7,0.12)', color: '#2D1907' },
+    NoShow:     { background: 'rgba(177,73,25,0.15)', color: '#B14919' },
+    Cancelled:  { background: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.4)' },
   }
-  return m[s] ?? 'bg-gray-100 text-gray-500'
+  return m[s] ?? { background: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.4)' }
 }
