@@ -28,6 +28,12 @@ if (!authCookie) { console.log('? No auth cookie returned, cannot test dashboard
 
 const dash = await fetch(`${BASE}/`, { headers: { Cookie: authCookie }, redirect: 'manual' })
 console.log(`GET / (authenticated) -> HTTP ${dash.status}`)
-if (dash.status === 200) console.log('✓ Dashboard loads — database connection OK. Everything works.')
+if (dash.status === 200) console.log('✓ Dashboard loads — database connection OK.')
 else if (dash.status >= 500) console.log('✗ Dashboard 500 — DB token still broken.')
 else console.log(`? Unexpected: ${dash.status} ${dash.headers.get('location') ?? ''}`)
+
+// 3) Intelligence Round pages
+for (const path of ['/actions', '/ask', '/customers']) {
+  const r = await fetch(`${BASE}${path}`, { headers: { Cookie: authCookie }, redirect: 'manual' })
+  console.log(`GET ${path} -> HTTP ${r.status} ${r.status === 200 ? '✓' : '✗'}`)
+}

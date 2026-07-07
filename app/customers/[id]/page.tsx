@@ -7,6 +7,7 @@ import { displayPhone, whatsappUrl } from '@/lib/phone'
 import { predictNextGrooming } from '@/lib/grooming-reminder'
 import { awardPoints, trailingAnnualSpend, goldProgress } from '@/lib/loyalty'
 import { POINTS_REASON_LABELS, GOLD_SPEND_THRESHOLD } from '@/lib/constants'
+import { buildCustomerIntel, segmentStyle } from '@/lib/intelligence'
 import { AwardPointsForm } from './AwardPointsForm'
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -31,6 +32,17 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   })
 
   if (!customer) notFound()
+
+  const [allAppts, allTx] = await Promise.all([
+    db.appointment.findMany({ where: { customerId: id }, select: { scheduledAt: true, status: true } }),
+    db.transaction.findMany({ where: { customerId: id }, select: { total: true } }),
+  ])
+  const intel = buildCustomerIntel({
+    createdAt: customer.createdAt,
+    appointments: allAppts,
+    transactions: allTx,
+    memberships: customer.memberships.map(m => ({ status: m.status, tier: { name: m.tier.name } })),
+  })
 
   const activeMembership = customer.memberships.find(m => m.status === 'Active')
   const tierName = activeMembership?.tier.name ?? 'Essential'
@@ -69,6 +81,17 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           <Link href={`/customers/${id}/edit`} className="cd-btn-sec text-sm">Edit</Link>
           <Link href={`/appointments/new?customerId=${id}`} className="cd-btn text-sm">+ Book</Link>
         </div>
+      </div>
+
+      {/* Intelligence strip */}
+      <div className="cd-card px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+        <span className="cd-pill text-sm" style={segmentStyle(intel.segment)}>{intel.segment}</span>
+        <IntelStat label="Lifetime value" value={`RM ${intel.ltv.toFixed(0)}`} />
+        <IntelStat label="Visits" value={String(intel.visits)} />
+        <IntelStat label="Avg ticket" value={intel.avgTicket > 0 ? `RM ${intel.avgTicket.toFixed(0)}` : '—'} />
+        <IntelStat label="Visit cadence" value={`~${intel.personalCadenceDays}d`} />
+        <IntelStat label="Last visit" value={intel.daysSinceLastVisit === null ? 'Never' : intel.daysSinceLastVisit === 0 ? 'Today' : `${intel.daysSinceLastVisit}d ago`}
+          accent={intel.churnRisk === 'Lost' ? '#B14919' : intel.churnRisk === 'At-risk' ? '#8a6c00' : undefined} />
       </div>
 
       {/* Membership card + loyalty */}
@@ -239,6 +262,15 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           )}
         </div>
       </section>
+    </div>
+  )
+}
+
+function IntelStat({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <div>
+      <div className="text-xs cd-muted">{label}</div>
+      <div className="text-sm font-semibold" style={{ color: accent ?? '#2D1907' }}>{value}</div>
     </div>
   )
 }

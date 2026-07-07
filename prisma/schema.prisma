@@ -220,6 +220,22 @@ model Incident {
   updatedAt   DateTime  @updatedAt
 }
 
+// ─── Action Inbox log (Done/Dismissed/Snoozed decisions) ─────────────────────
+
+model ActionLog {
+  id          String    @id @default(cuid())
+  actionKey   String    // "type:refId" — identifies the underlying suggestion
+  type        String    // OutstandingPayment | VipArrival | RebookCheckout | WinBack | MembershipExpiry | VaccinationExpiry | GroomingDue | Birthday | GoldEligible
+  customerId  String?
+  catId       String?
+  status      String    // Done | Dismissed | Snoozed
+  snoozeUntil DateTime?
+  note        String?
+  createdAt   DateTime  @default(now())
+
+  @@index([actionKey])
+}
+
 // ─── Business Plan (Breakeven targets) ───────────────────────────────────────
 
 model BusinessPlan {

@@ -71,6 +71,18 @@ export type IncidentType = typeof INCIDENT_TYPES[number]
 // Dashboard alert windows (days)
 export const VACCINATION_ALERT_DAYS = 30
 
+// ── Action Inbox ──
+export const ACTION_TYPES = [
+  'OutstandingPayment', 'VipArrival', 'RebookCheckout', 'WinBack',
+  'MembershipExpiry', 'VaccinationExpiry', 'GroomingDue', 'Birthday', 'GoldEligible',
+] as const
+export type ActionType = typeof ACTION_TYPES[number]
+
+export const WINBACK_INACTIVE_DAYS = 90       // owner doc: win-back automation trigger
+export const BIRTHDAY_LOOKAHEAD_DAYS = 7      // birthday actions surface a week ahead
+export const ACTION_DISMISS_WINDOW_DAYS = 30  // dismissed/done actions stay hidden this long
+export const ACTION_SNOOZE_DAYS = 7
+
 export const LEAD_TYPES = ['BookingRequest', 'Inquiry', 'Complaint', 'Reschedule', 'Cancellation', 'Other'] as const
 export type LeadType = typeof LEAD_TYPES[number]
 
