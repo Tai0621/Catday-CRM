@@ -3,12 +3,18 @@ import { db } from '@/lib/db'
 import { buildActionQueue, type ActionCard } from '@/lib/actions'
 import { whatsappUrl } from '@/lib/phone'
 import { ACTION_SNOOZE_DAYS } from '@/lib/constants'
+import { SEGMENTS, SEGMENT_LIST, type SegmentKey } from '@/lib/segments'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 
-export default async function ActionsPage() {
+export default async function ActionsPage({ searchParams }: { searchParams: Promise<{ seg?: string }> }) {
   await requireAuth()
-  const queue = await buildActionQueue()
+  const { seg } = await searchParams
+  const activeSeg = (seg && seg in SEGMENTS ? seg : null) as SegmentKey | null
+  const fullQueue = await buildActionQueue()
+  const queue = activeSeg ? fullQueue.filter(a => a.segment === activeSeg) : fullQueue
+  const countBySeg = new Map<SegmentKey, number>()
+  for (const a of fullQueue) countBySeg.set(a.segment, (countBySeg.get(a.segment) ?? 0) + 1)
 
   async function logAction(data: FormData) {
     'use server'
@@ -43,10 +49,36 @@ export default async function ActionsPage() {
         </p>
       </div>
 
+      {/* Segment filter — colour-coded by business area, so each role can work its own lane */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Link href="/actions"
+          className="cd-pill"
+          style={!activeSeg
+            ? { background: '#2D1907', color: '#ECDBB6' }
+            : { background: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.6)' }}>
+          All · {fullQueue.length}
+        </Link>
+        {SEGMENT_LIST.map(s => {
+          const n = countBySeg.get(s.key) ?? 0
+          if (n === 0 && activeSeg !== s.key) return null
+          const on = activeSeg === s.key
+          return (
+            <Link key={s.key} href={`/actions?seg=${s.key}`}
+              className="cd-pill inline-flex items-center gap-1.5"
+              style={on ? { background: s.color, color: '#F2EDE0' } : { background: s.bg, color: s.text }}>
+              <span className="rounded-full" style={{ width: 6, height: 6, background: on ? '#F2EDE0' : s.color }} />
+              {s.label} · {n}
+            </Link>
+          )
+        })}
+      </div>
+
       {queue.length === 0 && (
         <div className="cd-card py-16 text-center">
           <div className="text-3xl mb-2">🐾</div>
-          <p className="cd-muted text-sm">Inbox zero. Check back tomorrow — the queue rebuilds itself from live data.</p>
+          <p className="cd-muted text-sm">
+            {activeSeg ? 'Nothing pending in this segment.' : 'Inbox zero. Check back tomorrow — the queue rebuilds itself from live data.'}
+          </p>
         </div>
       )}
 
@@ -65,14 +97,18 @@ export default async function ActionsPage() {
             </div>
             <div className="space-y-2">
               {items.map(a => (
-                <div key={a.key} className="cd-card p-4 flex flex-wrap items-center gap-3">
+                <div key={a.key} className="cd-card p-4 flex flex-wrap items-center gap-3"
+                  style={{ borderLeft: `3px solid ${SEGMENTS[a.segment].color}` }}>
                   <div className="flex-1 min-w-0" style={{ minWidth: '14rem' }}>
                     <p className="text-sm font-semibold truncate" style={{ color: '#2D1907' }}>
                       {a.customerId ? (
                         <Link href={`/customers/${a.customerId}`} className="hover:underline">{a.title}</Link>
                       ) : a.title}
                     </p>
-                    <p className="text-xs cd-muted truncate">{a.reason}</p>
+                    <p className="text-xs truncate">
+                      <span className="font-medium" style={{ color: SEGMENTS[a.segment].text }}>{SEGMENTS[a.segment].label}</span>
+                      <span className="cd-muted"> · {a.reason}</span>
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-1.5 flex-wrap">

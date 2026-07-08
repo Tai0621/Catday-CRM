@@ -19,6 +19,7 @@ model Customer {
   needsDetails     Boolean        @default(false)
   notes            String?
   pointsBalance    Int            @default(0) // loyalty / royalty engine balance
+  walletBalance    Float          @default(0) // Cat Day Wallet stored value (RM)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
@@ -28,6 +29,7 @@ model Customer {
   transactions     Transaction[]
   whatsappLeads    WhatsAppLead[]
   loyaltyEntries   LoyaltyEntry[]
+  walletEntries    WalletEntry[]
 }
 
 // source values: GoogleForm | WhatsApp | WalkIn | Referral | Other
@@ -41,9 +43,11 @@ model Cat {
   gender           String?   // Male | Female
   dateOfBirth      DateTime?
   lifeStage        String?   // Kitten | Adult | Senior
+  coatType         String?   // Short | Long — sets the default rebooking cycle (owner plan: Long 15-20d, Short ~30d)
+  foundingNumber   Int?      @unique // Founding Cats permanent number CAT-001…CAT-100
   healthNotes      String?
   vaccinationExpiry DateTime? // drives the "vaccination expiring" dashboard alert
-  groomingInterval Int?      // days between sessions; null = use breed/coat default
+  groomingInterval Int?      // days between sessions; null = use coat/breed default
   photos           String?   // JSON array of data URLs
   customerId       String
   customer         Customer  @relation(fields: [customerId], references: [id])
@@ -52,6 +56,27 @@ model Cat {
 
   appointments     Appointment[]
   transactionLines TransactionLine[]
+  assessments      CatAssessment[]
+}
+
+// ─── Cat Assessment (美容师诊断建档 — groomer diagnosis record per visit) ────
+
+model CatAssessment {
+  id            String   @id @default(cuid())
+  catId         String
+  cat           Cat      @relation(fields: [catId], references: [id])
+  skinCondition String?  // Healthy | Dry | Flaky | Oily | Irritated
+  coatCondition String?  // Healthy | Dry | Oily | Matted | Heavy shedding
+  earCondition  String?  // Clean | Waxy | Needs attention
+  nailCondition String?  // Trimmed | Due | Overgrown
+  stressLevel   String?  // Low | Medium | High
+  weightKg      Float?
+  findings      String?  // objective diagnosis notes — no upselling, per SOP
+  carePlan      String?  // quarterly home-care plan handed to the owner
+  rebookDays    Int?     // recommended next-visit cycle; copied to Cat.groomingInterval
+  createdAt     DateTime @default(now())
+
+  @@index([catId])
 }
 
 // ─── Membership Tier ────────────────────────────────────────────────────────
@@ -105,6 +130,20 @@ model LoyaltyEntry {
   customer   Customer @relation(fields: [customerId], references: [id])
   points     Int      // positive = earned, negative = redeemed
   reason     String   // GroomingCompleted | GoogleReview | SocialPost | Referral | EventAttendance | BirthdayCelebration | EarlyBooking | MultiCat | Redemption | Manual
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
+}
+
+// ─── Cat Day Wallet (储值 stored value — liability until spent) ──────────────
+
+model WalletEntry {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  amount     Float    // positive = top-up/bonus, negative = payment from wallet
+  kind       String   // TopUp | Bonus | Spend | Adjustment
   note       String?
   createdAt  DateTime @default(now())
 

@@ -7,7 +7,7 @@ export type LifeStage = typeof LIFE_STAGES[number]
 export const GENDERS = ['Male', 'Female'] as const
 export type Gender = typeof GENDERS[number]
 
-export const APPOINTMENT_TYPES = ['Grooming', 'Boarding', 'Bath', 'Other'] as const
+export const APPOINTMENT_TYPES = ['Grooming', 'Boarding', 'Bath', 'Diagnosis', 'Other'] as const
 export type AppointmentType = typeof APPOINTMENT_TYPES[number]
 
 export const APPOINTMENT_STATUSES = ['Scheduled', 'CheckedIn', 'Completed', 'NoShow', 'Cancelled'] as const
@@ -75,6 +75,7 @@ export const VACCINATION_ALERT_DAYS = 30
 export const ACTION_TYPES = [
   'OutstandingPayment', 'VipArrival', 'RebookCheckout', 'WinBack',
   'MembershipExpiry', 'VaccinationExpiry', 'GroomingDue', 'Birthday', 'GoldEligible',
+  'PrivateClubEligible', 'VipCheckIn',
 ] as const
 export type ActionType = typeof ACTION_TYPES[number]
 
@@ -107,3 +108,30 @@ export const GROOMING_INTERVALS: Record<string, number> = {
 
 export const GROOMING_REMINDER_WINDOW_DAYS = 7
 export const MEMBERSHIP_EXPIRY_ALERT_DAYS = 14
+
+// ── Coat-based rebooking cycles (owner plan: long-hair de-mat/SPA 15-20d, short-hair ~30d) ──
+export const COAT_TYPES = ['Short', 'Long'] as const
+export type CoatType = typeof COAT_TYPES[number]
+export const COAT_CYCLE_DAYS: Record<string, number> = { Long: 18, Short: 30 }
+
+// ── Cat Day Wallet (储值) top-up packages — opening offer ──
+export const WALLET_PACKAGES = [
+  { pay: 500, bonus: 50 },
+  { pay: 1000, bonus: 150 },
+  { pay: 3000, bonus: 500 },
+] as const
+export const WALLET_KINDS = ['TopUp', 'Bonus', 'Spend', 'Adjustment'] as const
+
+// ── Private Club entry (owner plan: RM1000 lifetime spend OR 3+ completed visits) ──
+export const PRIVATE_CLUB_TIER = 'Black Circle'
+export const PRIVATE_CLUB_SPEND = 1000
+export const PRIVATE_CLUB_VISITS = 3
+
+// ── Groomer assessment (建档) dropdown options — fixed vocabulary keeps records comparable ──
+export const ASSESSMENT_OPTIONS = {
+  skinCondition: ['Healthy', 'Dry', 'Flaky', 'Oily', 'Irritated'],
+  coatCondition: ['Healthy', 'Dry', 'Oily', 'Matted', 'Heavy shedding'],
+  earCondition: ['Clean', 'Waxy', 'Needs attention'],
+  nailCondition: ['Trimmed', 'Due', 'Overgrown'],
+  stressLevel: ['Low', 'Medium', 'High'],
+} as const

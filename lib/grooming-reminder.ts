@@ -1,4 +1,4 @@
-import { GROOMING_INTERVALS, GROOMING_REMINDER_WINDOW_DAYS } from './constants'
+import { GROOMING_INTERVALS, GROOMING_REMINDER_WINDOW_DAYS, COAT_CYCLE_DAYS } from './constants'
 
 export interface GroomingPrediction {
   catId: string
@@ -12,8 +12,14 @@ export interface GroomingPrediction {
   isOverdue: boolean
 }
 
-function intervalForBreed(breed: string | null | undefined, customInterval?: number | null): number {
+// Priority: groomer-set cycle > coat type (owner plan: Long 18d, Short 30d) > breed table > default
+function intervalForBreed(
+  breed: string | null | undefined,
+  customInterval?: number | null,
+  coatType?: string | null,
+): number {
   if (customInterval) return customInterval
+  if (coatType && COAT_CYCLE_DAYS[coatType]) return COAT_CYCLE_DAYS[coatType]
   if (!breed) return GROOMING_INTERVALS['default']
   return GROOMING_INTERVALS[breed] ?? GROOMING_INTERVALS['default']
 }
@@ -22,8 +28,9 @@ export function predictNextGrooming(
   lastDate: Date | null,
   breed: string | null | undefined,
   customInterval?: number | null,
+  coatType?: string | null,
 ): Date {
-  const interval = intervalForBreed(breed, customInterval)
+  const interval = intervalForBreed(breed, customInterval, coatType)
   const base = lastDate ?? new Date()
   return new Date(base.getTime() + interval * 24 * 60 * 60 * 1000)
 }
@@ -32,6 +39,7 @@ type CatWithAppointments = {
   id: string
   name: string
   breed: string | null
+  coatType?: string | null
   groomingInterval: number | null
   customerId: string
   customer: {
@@ -57,7 +65,7 @@ export function buildGroomingPredictions(cats: CatWithAppointments[]): GroomingP
       .sort((a, b) => b.scheduledAt.getTime() - a.scheduledAt.getTime())
 
     const lastGroomedAt = completedGroomings[0]?.scheduledAt ?? null
-    const nextDueAt = predictNextGrooming(lastGroomedAt, cat.breed, cat.groomingInterval)
+    const nextDueAt = predictNextGrooming(lastGroomedAt, cat.breed, cat.groomingInterval, cat.coatType)
     const daysUntilDue = Math.ceil((nextDueAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
 
     if (nextDueAt <= windowEnd) {

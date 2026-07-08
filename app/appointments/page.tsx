@@ -2,6 +2,7 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import Link from 'next/link'
 import { APPOINTMENT_TYPES, APPOINTMENT_STATUSES } from '@/lib/constants'
+import { apptTypeStyle } from '@/lib/segments'
 import { DatePicker } from './DatePicker'
 
 export default async function AppointmentsPage({
@@ -80,7 +81,9 @@ export default async function AppointmentsPage({
                 </td>
                 <td className="px-4 py-3" style={{ color: '#2D1907' }}>{a.cat.name}</td>
                 <td className="px-4 py-3 cd-muted">{a.customer.name ?? a.customer.phone}</td>
-                <td className="px-4 py-3 cd-muted">{a.type}</td>
+                <td className="px-4 py-3">
+                  <span className="cd-pill" style={apptTypeStyle(a.type)}>{a.type}</span>
+                </td>
                 <td className="px-4 py-3 cd-muted">{a.room?.name ?? '—'}</td>
                 <td className="px-4 py-3">
                   <span className="cd-pill" style={apptStatusStyle(a.status)}>{a.status}</span>

@@ -2,7 +2,8 @@ import { requireAuth } from '@/lib/auth'
 import { getDashboardData } from '@/lib/dashboard'
 import { buildActionQueue } from '@/lib/actions'
 import { whatsappUrl } from '@/lib/phone'
-import { REVENUE_CATEGORIES } from '@/lib/constants'
+import { REVENUE_CATEGORIES, FOUNDER_CIRCLE_LIMIT } from '@/lib/constants'
+import { SEGMENTS } from '@/lib/segments'
 import { type SalesPacing } from '@/lib/plan'
 import Link from 'next/link'
 
@@ -14,7 +15,7 @@ const STREAM_COLORS: Record<string, string> = {
 export default async function DashboardPage() {
   await requireAuth()
   const [d, actionQueue] = await Promise.all([getDashboardData(), buildActionQueue()])
-  const { now, revenue, ops, customer, alerts, panels, breakeven } = d
+  const { now, revenue, ops, customer, alerts, panels, breakeven, prive } = d
   const topActions = actionQueue.slice(0, 5)
 
   return (
@@ -40,9 +41,13 @@ export default async function DashboardPage() {
           <ul className="divide-y" style={{ borderColor: 'rgba(45,25,7,0.08)' }}>
             {topActions.map(a => (
               <li key={a.key} className="px-5 py-2.5 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: '#2D1907' }}>{a.title}</p>
-                  <p className="text-xs cd-muted truncate">{a.reason}</p>
+                <div className="min-w-0 flex items-center gap-2.5">
+                  <span className="rounded-full shrink-0" title={SEGMENTS[a.segment].label}
+                    style={{ width: 7, height: 7, background: SEGMENTS[a.segment].color }} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: '#2D1907' }}>{a.title}</p>
+                    <p className="text-xs cd-muted truncate">{a.reason}</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-1.5 whitespace-nowrap">
                   <span className="cd-pill" style={a.band === 'Do now'
@@ -111,6 +116,25 @@ export default async function DashboardPage() {
           <Tile label="Birthdays today" value={customer.birthdaysToday.length} accent="#B14919" href="/cats" />
           <Tile label="Cats due grooming" value={customer.catsDue.length} accent="#B14919" href="/cats" />
           <Tile label="Total customers" value={customer.totalCustomers} accent="#2D1907" href="/customers" />
+        </div>
+      </section>
+
+      {/* ── Cat Day Prive — membership economy ── */}
+      <section>
+        <SectionTitle>
+          <span className="inline-flex items-center gap-2">
+            <span className="rounded-full" style={{ width: 7, height: 7, background: SEGMENTS.membership.color }} />
+            Cat Day Prive
+          </span>
+        </SectionTitle>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Tile label={`Founding Cats (of ${FOUNDER_CIRCLE_LIMIT})`} value={`${prive.foundingCount}/${FOUNDER_CIRCLE_LIMIT}`}
+            sub={prive.foundingCount >= FOUNDER_CIRCLE_LIMIT ? 'Fully subscribed — permanent circle' : `${FOUNDER_CIRCLE_LIMIT - prive.foundingCount} numbers left`}
+            accent={SEGMENTS.community.color} href="/cats" />
+          <Tile label="Private Club members" value={prive.privateClubCount}
+            sub="RM1000 spend or 3 visits to qualify" accent={SEGMENTS.membership.color} href="/memberships" />
+          <Tile label="Wallet balance held" value={`RM ${prive.walletLiability.toLocaleString()}`}
+            sub="Stored value not yet spent (liability)" accent={SEGMENTS.business.color} href="/customers" />
         </div>
       </section>
 

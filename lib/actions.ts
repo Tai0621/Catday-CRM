@@ -1,6 +1,7 @@
 import { db } from './db'
 import { buildGroomingPredictions } from './grooming-reminder'
 import { trailingAnnualSpend } from './loyalty'
+import { ACTION_SEGMENT, type SegmentKey } from './segments'
 import {
   type ActionType,
   WINBACK_INACTIVE_DAYS,
@@ -9,6 +10,9 @@ import {
   VACCINATION_ALERT_DAYS,
   MEMBERSHIP_EXPIRY_ALERT_DAYS,
   GOLD_SPEND_THRESHOLD,
+  PRIVATE_CLUB_TIER,
+  PRIVATE_CLUB_SPEND,
+  PRIVATE_CLUB_VISITS,
 } from './constants'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -17,6 +21,7 @@ const VIP_TIERS = ['Gold', 'Black Circle']
 export interface ActionCard {
   key: string
   type: ActionType
+  segment: SegmentKey // business area — drives colour coding in the UI
   priority: number // 1 (most urgent) … 9
   band: 'Do now' | 'This week' | 'Opportunities'
   title: string
@@ -35,8 +40,8 @@ function band(priority: number): ActionCard['band'] {
   return 'Opportunities'
 }
 
-function card(c: Omit<ActionCard, 'band'>): ActionCard {
-  return { ...c, band: band(c.priority) }
+function card(c: Omit<ActionCard, 'band' | 'segment'>): ActionCard {
+  return { ...c, band: band(c.priority), segment: ACTION_SEGMENT[c.type] }
 }
 
 /** Days until the next occurrence of a birthday (0 = today). */
@@ -63,6 +68,7 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
     cats,
     expiringMemberships,
     logs,
+    lifetimeSpendGroups,
   ] = await Promise.all([
     db.appointment.findMany({
       where: { status: 'Completed', paid: false, price: { not: null } },
@@ -97,7 +103,15 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
       include: { customer: true, tier: true },
     }),
     db.actionLog.findMany({ where: { createdAt: { gte: logWindow } }, orderBy: { createdAt: 'desc' } }),
+    db.transaction.groupBy({ by: ['customerId'], _sum: { total: true } }),
   ])
+
+  const lifetimeSpend = new Map<string, number>()
+  for (const g of lifetimeSpendGroups) {
+    if (g.customerId) lifetimeSpend.set(g.customerId, g._sum.total ?? 0)
+  }
+  // Households with a Founding Cat get the same white-glove treatment as Private Club
+  const foundingCustomerIds = new Set(cats.filter(c => c.foundingNumber != null).map(c => c.customerId))
 
   // Hidden keys: Done/Dismissed within window, or snoozed into the future
   const hidden = new Set<string>()
@@ -154,7 +168,12 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
   }
 
   // 4 · Win-back (inactive 90+ days, no future booking)
+  // Owner rule: Private Club / Founding Cat households never get automated blasts —
+  // they get the personal monthly check-in (rule below) instead.
   for (const c of customers) {
+    const isWhiteGlove = foundingCustomerIds.has(c.id) ||
+      c.memberships.some(m => m.tier.name === PRIVATE_CLUB_TIER)
+    if (isWhiteGlove) continue
     const last = c.appointments[0]?.scheduledAt
     if (!last || last > winbackCutoff) continue
     if (c.appointments.some(a => a.scheduledAt > now)) continue
@@ -178,6 +197,22 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
       customerId: m.customerId, phone: m.customer.phone,
       waMessage: `Hi! Your ${m.tier.name} membership expires on ${m.expiryDate.toLocaleDateString('en-MY')}. Renew now to keep your member benefits running without a gap 🐾`,
       href: `/memberships/${m.id}`,
+    }))
+  }
+
+  // 5b · Monthly personal check-in for Private Club / Founding Cat households.
+  // Marking it Done hides it for 30 days, which naturally produces the monthly cadence.
+  for (const c of customers) {
+    const isWhiteGlove = foundingCustomerIds.has(c.id) ||
+      c.memberships.some(m => m.tier.name === PRIVATE_CLUB_TIER)
+    if (!isWhiteGlove) continue
+    const catName = c.cats[0]?.name ?? 'your cat'
+    out.push(card({
+      key: `VipCheckIn:${c.id}`, type: 'VipCheckIn', priority: 5,
+      title: `Personal check-in — ${c.name ?? c.phone}`,
+      reason: 'Private Club / Founding Cat family · monthly one-to-one, never auto-blast',
+      customerId: c.id, phone: c.phone,
+      waMessage: `Hi ${c.name ?? ''}! A personal hello from Cat Day — how has ${catName} been doing? If there's anything we can prepare for your next visit, just let us know 🐾`,
     }))
   }
 
@@ -228,6 +263,23 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
       key: `GoldEligible:${c.id}`, type: 'GoldEligible', priority: 9,
       title: `Gold-eligible — ${c.name ?? c.phone}`,
       reason: `RM ${spend.toFixed(0)} spent in 12 months (threshold RM ${GOLD_SPEND_THRESHOLD})`,
+      customerId: c.id,
+      href: `/memberships/new`,
+    }))
+  }
+
+  // 9b · Private Club eligible (RM1000 lifetime spend OR 3+ visits, not yet in the club)
+  for (const c of customers) {
+    if (c.memberships.some(m => m.tier.name === PRIVATE_CLUB_TIER)) continue
+    const spend = lifetimeSpend.get(c.id) ?? 0
+    const visits = c.appointments.filter(a => a.scheduledAt <= now).length
+    if (spend < PRIVATE_CLUB_SPEND && visits < PRIVATE_CLUB_VISITS) continue
+    out.push(card({
+      key: `PrivateClubEligible:${c.id}`, type: 'PrivateClubEligible', priority: 9,
+      title: `Private Club invite — ${c.name ?? c.phone}`,
+      reason: spend >= PRIVATE_CLUB_SPEND
+        ? `RM ${spend.toFixed(0)} lifetime spend (threshold RM ${PRIVATE_CLUB_SPEND})`
+        : `${visits} visits (threshold ${PRIVATE_CLUB_VISITS})`,
       customerId: c.id,
       href: `/memberships/new`,
     }))

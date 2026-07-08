@@ -41,6 +41,9 @@ export async function getDashboardData() {
     outstanding,
     plan,
     monthTarget,
+    foundingCount,
+    privateClubCount,
+    walletAgg,
   ] = await Promise.all([
     db.transaction.groupBy({ by: ['category'], where: { date: { gte: todayStart, lt: todayEnd } }, _sum: { total: true } }),
     db.transaction.groupBy({ by: ['category'], where: { date: { gte: monthStart, lt: monthEnd } }, _sum: { total: true } }),
@@ -84,6 +87,9 @@ export async function getDashboardData() {
     }),
     db.businessPlan.findUnique({ where: { id: 'default' } }),
     db.monthlyTarget.findUnique({ where: { month: monthKey(now) } }),
+    db.cat.count({ where: { foundingNumber: { not: null } } }),
+    db.membership.count({ where: { status: 'Active', tier: { name: 'Black Circle' } } }),
+    db.customer.aggregate({ _sum: { walletBalance: true } }),
   ])
 
   // ── Revenue by stream ──
@@ -143,6 +149,11 @@ export async function getDashboardData() {
       pendingLeads,
     },
     alerts: { vipArriving, vaccinationsExpiring, checkouts, outstanding },
+    prive: {
+      foundingCount,
+      privateClubCount,
+      walletLiability: walletAgg._sum.walletBalance ?? 0,
+    },
     panels: { todayAppointments, rooms, groomingReminders, expiringMemberships },
     breakeven: {
       pacing,

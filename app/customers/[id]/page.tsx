@@ -6,8 +6,13 @@ import Link from 'next/link'
 import { displayPhone, whatsappUrl } from '@/lib/phone'
 import { predictNextGrooming } from '@/lib/grooming-reminder'
 import { awardPoints, trailingAnnualSpend, goldProgress } from '@/lib/loyalty'
-import { POINTS_REASON_LABELS, GOLD_SPEND_THRESHOLD } from '@/lib/constants'
+import { topUpWallet, spendWallet } from '@/lib/wallet'
+import {
+  POINTS_REASON_LABELS, GOLD_SPEND_THRESHOLD, WALLET_PACKAGES,
+  PRIVATE_CLUB_TIER, PRIVATE_CLUB_SPEND, PRIVATE_CLUB_VISITS,
+} from '@/lib/constants'
 import { buildCustomerIntel, segmentStyle } from '@/lib/intelligence'
+import { SEGMENTS } from '@/lib/segments'
 import { AwardPointsForm } from './AwardPointsForm'
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -28,6 +33,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
       appointments: { include: { cat: true, room: true }, orderBy: { scheduledAt: 'desc' }, take: 10 },
       transactions: { where: { date: { gte: yearAgo } }, select: { date: true, total: true } },
       loyaltyEntries: { orderBy: { createdAt: 'desc' }, take: 8 },
+      walletEntries: { orderBy: { createdAt: 'desc' }, take: 5 },
     },
   })
 
@@ -59,6 +65,29 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     if (points !== 0) await awardPoints(id, points, reason, note)
     revalidatePath(`/customers/${id}`)
   }
+
+  async function walletTopUp(data: FormData) {
+    'use server'
+    const amount = parseFloat((data.get('amount') as string) || '0')
+    const bonus = parseFloat((data.get('bonus') as string) || '0')
+    if (amount > 0) await topUpWallet(id, amount, Math.max(0, bonus))
+    revalidatePath(`/customers/${id}`)
+  }
+
+  async function walletSpend(data: FormData) {
+    'use server'
+    const amount = parseFloat((data.get('amount') as string) || '0')
+    const note = ((data.get('note') as string) || '').trim() || undefined
+    try {
+      if (amount > 0) await spendWallet(id, amount, note)
+    } catch {
+      // insufficient balance — nothing charged
+    }
+    revalidatePath(`/customers/${id}`)
+  }
+
+  const isPrivateClub = customer.memberships.some(m => m.status === 'Active' && m.tier.name === PRIVATE_CLUB_TIER)
+  const clubEligible = !isPrivateClub && (intel.ltv >= PRIVATE_CLUB_SPEND || intel.visits >= PRIVATE_CLUB_VISITS)
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -124,7 +153,73 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           </div>
           <AwardPointsForm action={award} />
         </div>
+
+        {/* Cat Day Wallet (stored value) */}
+        <div className="cd-card p-5 space-y-3 md:col-span-2" style={{ borderLeft: `3px solid ${SEGMENTS.membership.color}` }}>
+          <div className="flex items-baseline justify-between">
+            <span className="text-xs uppercase tracking-wider" style={{ color: SEGMENTS.membership.text }}>Cat Day Wallet</span>
+            <span className="text-2xl font-bold" style={{ color: SEGMENTS.membership.text }}>
+              RM {customer.walletBalance.toFixed(2)}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {WALLET_PACKAGES.map(p => (
+              <form key={p.pay} action={walletTopUp}>
+                <input type="hidden" name="amount" value={p.pay} />
+                <input type="hidden" name="bonus" value={p.bonus} />
+                <button type="submit" className="text-xs px-3 py-1.5 rounded-lg font-medium"
+                  style={{ background: SEGMENTS.membership.bg, color: SEGMENTS.membership.text, border: `1px solid ${SEGMENTS.membership.color}55` }}>
+                  Top up RM {p.pay} <span style={{ opacity: 0.75 }}>+{p.bonus} free</span>
+                </button>
+              </form>
+            ))}
+            <form action={walletTopUp} className="flex items-center gap-1.5">
+              <input name="amount" type="number" min="1" step="0.01" placeholder="Custom RM" className="cd-input" style={{ width: '7rem' }} />
+              <input type="hidden" name="bonus" value="0" />
+              <button type="submit" className="cd-btn-sec text-xs">Top up</button>
+            </form>
+          </div>
+          <form action={walletSpend} className="flex flex-wrap items-center gap-1.5 pt-1" style={{ borderTop: '1px solid rgba(45,25,7,0.08)' }}>
+            <input name="amount" type="number" min="0.01" step="0.01" placeholder="Charge RM" className="cd-input" style={{ width: '7rem' }} />
+            <input name="note" placeholder="What for? e.g. Grooming — Mochi" className="cd-input" style={{ width: '14rem' }} />
+            <button type="submit" className="cd-btn text-xs">Pay from wallet</button>
+            <span className="text-xs cd-muted">Charges are declined if the balance is too low.</span>
+          </form>
+          {customer.walletEntries.length > 0 && (
+            <div className="space-y-1 pt-1">
+              {customer.walletEntries.map(e => (
+                <div key={e.id} className="flex items-center justify-between text-xs">
+                  <span className="cd-muted">
+                    {e.createdAt.toLocaleDateString('en-MY')} · {e.kind}{e.note ? ` — ${e.note}` : ''}
+                  </span>
+                  <span className="font-semibold" style={{ color: e.amount >= 0 ? '#5c6b3c' : '#B14919' }}>
+                    {e.amount >= 0 ? '+' : ''}RM {Math.abs(e.amount).toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Private Club */}
+      {isPrivateClub && (
+        <div className="rounded-xl px-4 py-3 text-sm flex items-center justify-between"
+          style={{ background: 'linear-gradient(135deg, #2D1907 0%, #4a2d10 100%)', color: '#E7CE7A' }}>
+          <span><strong>Private Club member</strong> — no automated blasts. Personal one-to-one care only (see monthly check-in in Actions).</span>
+        </div>
+      )}
+      {clubEligible && (
+        <div className="rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2"
+          style={{ background: SEGMENTS.membership.bg, border: `1px solid ${SEGMENTS.membership.color}55` }}>
+          <span className="text-sm" style={{ color: '#2D1907' }}>
+            <strong>Private Club eligible</strong> — {intel.ltv >= PRIVATE_CLUB_SPEND
+              ? `RM ${intel.ltv.toFixed(0)} lifetime spend`
+              : `${intel.visits} visits`} (threshold: RM {PRIVATE_CLUB_SPEND} or {PRIVATE_CLUB_VISITS} visits). Invite personally, never by broadcast.
+          </span>
+          <Link href="/memberships/new" className="text-xs cd-link font-medium">Create {PRIVATE_CLUB_TIER} membership →</Link>
+        </div>
+      )}
 
       {/* Gold eligibility */}
       {!isGoldOrAbove && (
@@ -178,7 +273,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {customer.cats.map(cat => {
               const lastGroomed = cat.appointments[0]?.scheduledAt ?? null
-              const nextDue = predictNextGrooming(lastGroomed, cat.breed, cat.groomingInterval)
+              const nextDue = predictNextGrooming(lastGroomed, cat.breed, cat.groomingInterval, cat.coatType)
               const daysUntil = Math.ceil((nextDue.getTime() - Date.now()) / 86400000)
               const overdue = daysUntil < 0
 
@@ -187,7 +282,14 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                   className="cd-card px-4 py-3 block hover:opacity-90 transition-opacity">
                   <div className="flex items-start justify-between">
                     <div>
-                      <div className="font-semibold" style={{ color: '#2D1907' }}>{cat.name}</div>
+                      <div className="font-semibold flex items-center gap-1.5" style={{ color: '#2D1907' }}>
+                        {cat.name}
+                        {cat.foundingNumber != null && (
+                          <span className="cd-pill" style={{ background: 'rgba(231,206,122,0.45)', color: '#8a6c00' }}>
+                            ★ #{String(cat.foundingNumber).padStart(3, '0')}
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs cd-muted">{cat.breed ?? 'Unknown breed'} · {cat.lifeStage ?? '—'} · {cat.gender ?? '—'}</div>
                     </div>
                     <span className="text-xs font-medium" style={{ color: overdue ? '#B14919' : daysUntil <= 7 ? '#8a6c00' : '#729094' }}>

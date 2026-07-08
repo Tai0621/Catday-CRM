@@ -4,32 +4,42 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 
-const sections: { header: string; links: { href: string; label: string; icon: string }[] }[] = [
+// seg = business-segment colour dot: grooming terracotta, boarding teal,
+// membership gold, community moss, business cream (matches lib/segments.ts)
+const SEG_COLORS: Record<string, string> = {
+  grooming: '#C86A3C',
+  boarding: '#729094',
+  membership: '#E7CE7A',
+  community: '#98A86B',
+  business: '#ECDBB6',
+}
+
+const sections: { header: string; links: { href: string; label: string; icon: string; seg?: string }[] }[] = [
   {
     header: 'Today',
     links: [
-      { href: '/', label: 'Dashboard', icon: '⊞' },
+      { href: '/', label: 'Dashboard', icon: '⊞', seg: 'business' },
       { href: '/actions', label: 'Actions', icon: '◎' },
-      { href: '/appointments', label: 'Appointments', icon: '◷' },
-      { href: '/rooms', label: 'Rooms', icon: '▦' },
+      { href: '/appointments', label: 'Appointments', icon: '◷', seg: 'grooming' },
+      { href: '/rooms', label: 'Rooms', icon: '▦', seg: 'boarding' },
     ],
   },
   {
     header: 'Customers',
     links: [
-      { href: '/customers', label: 'Customers', icon: '◉' },
-      { href: '/cats', label: 'Cats', icon: '◈' },
-      { href: '/memberships', label: 'Memberships', icon: '◆' },
-      { href: '/whatsapp', label: 'WhatsApp', icon: '✆' },
+      { href: '/customers', label: 'Customers', icon: '◉', seg: 'community' },
+      { href: '/cats', label: 'Cats', icon: '◈', seg: 'grooming' },
+      { href: '/memberships', label: 'Memberships', icon: '◆', seg: 'membership' },
+      { href: '/whatsapp', label: 'WhatsApp', icon: '✆', seg: 'community' },
       { href: '/incidents', label: 'Incidents', icon: '⚠' },
     ],
   },
   {
     header: 'Business',
     links: [
-      { href: '/revenue', label: 'Revenue', icon: '◐' },
-      { href: '/plan', label: 'Financial Plan', icon: '◔' },
-      { href: '/academy', label: 'Academy', icon: '◑' },
+      { href: '/revenue', label: 'Revenue', icon: '◐', seg: 'business' },
+      { href: '/plan', label: 'Financial Plan', icon: '◔', seg: 'business' },
+      { href: '/academy', label: 'Academy', icon: '◑', seg: 'business' },
       { href: '/ask', label: 'Ask AI', icon: '✦' },
     ],
   },
@@ -68,7 +78,7 @@ export function Nav() {
             )}
             {collapsed && <div className="mx-3 my-2" style={{ borderTop: '1px solid rgba(236,219,182,0.12)' }} />}
             <div className="space-y-0.5">
-              {section.links.map(({ href, label, icon }) => {
+              {section.links.map(({ href, label, icon, seg }) => {
                 const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
                 return (
                   <Link
@@ -83,7 +93,10 @@ export function Nav() {
                     onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'rgba(236,219,182,0.65)' }}
                   >
                     <span className="text-sm w-4 text-center">{icon}</span>
-                    {!collapsed && <span>{label}</span>}
+                    {!collapsed && <span className="flex-1">{label}</span>}
+                    {!collapsed && seg && !active && (
+                      <span className="rounded-full" style={{ width: 5, height: 5, background: SEG_COLORS[seg], opacity: 0.85 }} />
+                    )}
                   </Link>
                 )
               })}
