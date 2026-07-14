@@ -2,66 +2,139 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-// seg = business-segment colour dot: grooming terracotta, boarding teal,
-// membership gold, community moss, business cream (matches lib/segments.ts)
-const SEG_COLORS: Record<string, string> = {
-  grooming: '#C86A3C',
-  boarding: '#729094',
-  membership: '#E7CE7A',
-  community: '#98A86B',
-  business: '#ECDBB6',
-}
+type NavLink = { href: string; label: string; icon: string }
+type NavSegment = { key: string; header: string; color: string; links: NavLink[] }
 
-type NavLink = { href: string; label: string; icon: string; seg?: string; managerOnly?: boolean }
+// Pinned above the segments — the owner's daily spine, not tied to one segment
+const PINNED: NavLink[] = [
+  { href: '/', label: 'Dashboard', icon: '⊞' },
+  { href: '/actions', label: 'Action Inbox', icon: '◎' },
+  { href: '/ask', label: 'Ask AI', icon: '✦' },
+]
 
-const sections: { header: string; links: NavLink[] }[] = [
+// The six business segments — the OS map. Colours match lib/segments.ts.
+const SEGMENTS: NavSegment[] = [
   {
-    header: 'Today',
+    key: 'ops', header: 'Operations & Sales', color: '#C86A3C',
     links: [
-      { href: '/', label: 'Dashboard', icon: '⊞', seg: 'business', managerOnly: true },
-      { href: '/actions', label: 'Actions', icon: '◎' },
-      { href: '/board', label: 'Service Board', icon: '◫', seg: 'grooming' },
-      { href: '/runsheet', label: 'Run Sheet', icon: '☰', seg: 'boarding' },
-      { href: '/appointments', label: 'Appointments', icon: '◷', seg: 'grooming' },
-      { href: '/rooms', label: 'Rooms', icon: '▦', seg: 'boarding' },
-      { href: '/sale', label: 'Quick Sale', icon: '⬒', seg: 'business' },
+      { href: '/board', label: 'Service Board', icon: '◫' },
+      { href: '/runsheet', label: 'Run Sheet', icon: '☰' },
+      { href: '/appointments', label: 'Appointments', icon: '◷' },
+      { href: '/rooms/calendar', label: 'Room Calendar', icon: '▤' },
+      { href: '/rooms', label: 'Rooms', icon: '▦' },
+      { href: '/sale', label: 'Quick Sale', icon: '⬒' },
+      { href: '/cashup', label: 'Cash-up', icon: '▣' },
+      { href: '/services', label: 'Service Menu', icon: '✂' },
     ],
   },
   {
-    header: 'Customers',
+    key: 'hr', header: 'Human Resource', color: '#729094',
     links: [
-      { href: '/customers', label: 'Customers', icon: '◉', seg: 'community' },
-      { href: '/cats', label: 'Cats', icon: '◈', seg: 'grooming' },
-      { href: '/memberships', label: 'Memberships', icon: '◆', seg: 'membership' },
-      { href: '/whatsapp', label: 'WhatsApp', icon: '✆', seg: 'community', managerOnly: true },
+      { href: '/staff', label: 'Staff & PINs', icon: '♟' },
+    ],
+  },
+  {
+    key: 'finance', header: 'Finance', color: '#ECDBB6',
+    links: [
+      { href: '/revenue', label: 'Revenue', icon: '◐' },
+      { href: '/plan', label: 'Financial Plan', icon: '◔' },
+    ],
+  },
+  {
+    key: 'crm', header: 'Customers · CRM', color: '#98A86B',
+    links: [
+      { href: '/customers', label: 'Customers', icon: '◉' },
+      { href: '/cats', label: 'Cats', icon: '◈' },
+      { href: '/memberships', label: 'Memberships', icon: '◆' },
+      { href: '/whatsapp', label: 'WhatsApp', icon: '✆' },
       { href: '/incidents', label: 'Incidents', icon: '⚠' },
     ],
   },
   {
-    header: 'Business',
+    key: 'marketing', header: 'Marketing', color: '#E7CE7A',
     links: [
-      { href: '/revenue', label: 'Revenue', icon: '◐', seg: 'business', managerOnly: true },
-      { href: '/cashup', label: 'Cash-up', icon: '▣', seg: 'business', managerOnly: true },
-      { href: '/plan', label: 'Financial Plan', icon: '◔', seg: 'business', managerOnly: true },
-      { href: '/services', label: 'Services', icon: '✂', seg: 'grooming', managerOnly: true },
-      { href: '/staff', label: 'Staff', icon: '♟', seg: 'business', managerOnly: true },
-      { href: '/academy', label: 'Academy', icon: '◑', seg: 'business', managerOnly: true },
-      { href: '/ask', label: 'Ask AI', icon: '✦', managerOnly: true },
+      { href: '/academy', label: 'Academy', icon: '◑' },
     ],
   },
+  {
+    key: 'admin', header: 'Administrative', color: 'rgba(236,219,182,0.45)',
+    links: [], // documents, SOP library, vendors, settings — next rounds
+  },
 ]
+
+// Staff see a flat, focused lane — no segment tree
+const STAFF_LINKS: NavLink[] = [
+  { href: '/actions', label: 'Action Inbox', icon: '◎' },
+  { href: '/board', label: 'Service Board', icon: '◫' },
+  { href: '/runsheet', label: 'Run Sheet', icon: '☰' },
+  { href: '/appointments', label: 'Appointments', icon: '◷' },
+  { href: '/rooms', label: 'Rooms', icon: '▦' },
+  { href: '/sale', label: 'Quick Sale', icon: '⬒' },
+  { href: '/customers', label: 'Customers', icon: '◉' },
+  { href: '/cats', label: 'Cats', icon: '◈' },
+  { href: '/memberships', label: 'Memberships', icon: '◆' },
+  { href: '/incidents', label: 'Incidents', icon: '⚠' },
+]
+
+const STORE_KEY = 'cd-nav-open'
+
+function isActive(href: string, pathname: string) {
+  if (href === '/') return pathname === '/'
+  if (href === '/rooms' && pathname.startsWith('/rooms/calendar')) return false // calendar has its own entry
+  return pathname.startsWith(href)
+}
 
 export function Nav({ isManager, userName }: { isManager: boolean; userName?: string }) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
-  const visibleSections = sections
-    .map(s => ({ ...s, links: s.links.filter(l => isManager || !l.managerOnly) }))
-    .filter(s => s.links.length > 0)
+
+  // Open segments: start with the one holding the current page, then merge the
+  // user's saved preference after mount (avoids SSR hydration mismatch).
+  const activeSegment = SEGMENTS.find(s => s.links.some(l => isActive(l.href, pathname)))?.key
+  const [open, setOpen] = useState<string[]>(activeSegment ? [activeSegment] : ['ops'])
+  useEffect(() => {
+    try {
+      const stored: string[] = JSON.parse(localStorage.getItem(STORE_KEY) ?? '[]')
+      setOpen(prev => [...new Set([...stored, ...prev])])
+    } catch { /* first visit */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    const seg = SEGMENTS.find(s => s.links.some(l => isActive(l.href, pathname)))?.key
+    if (seg) setOpen(prev => (prev.includes(seg) ? prev : [...prev, seg]))
+  }, [pathname])
+
+  function toggle(key: string) {
+    setOpen(prev => {
+      const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(next)) } catch { /* private mode */ }
+      return next
+    })
+  }
+
+  const linkRow = (l: NavLink, indent = false) => {
+    const active = isActive(l.href, pathname)
+    return (
+      <Link
+        key={l.href}
+        href={l.href}
+        className={`flex items-center gap-2.5 py-1.5 text-sm rounded mx-1 transition-all ${indent && !collapsed ? 'pl-7 pr-3' : 'px-3'}`}
+        style={active
+          ? { background: '#B14919', color: '#ECDBB6', fontWeight: 600 }
+          : { color: 'rgba(236,219,182,0.65)' }}
+        onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = '#ECDBB6' }}
+        onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'rgba(236,219,182,0.65)' }}
+      >
+        <span className="text-sm w-4 text-center">{l.icon}</span>
+        {!collapsed && <span className="flex-1 truncate">{l.label}</span>}
+      </Link>
+    )
+  }
 
   return (
-    <aside className={`flex flex-col transition-all duration-200 ${collapsed ? 'w-14' : 'w-52'}`}
+    <aside className={`flex flex-col transition-all duration-200 ${collapsed ? 'w-14' : 'w-56'}`}
       style={{ background: '#2D1907' }}>
       <div className="flex items-center justify-between px-3 py-4" style={{ borderBottom: '1px solid rgba(236,219,182,0.15)' }}>
         {!collapsed && (
@@ -79,41 +152,56 @@ export function Nav({ isManager, userName }: { isManager: boolean; userName?: st
       </div>
 
       <nav className="flex-1 py-2 overflow-y-auto">
-        {visibleSections.map(section => (
-          <div key={section.header} className="mb-1">
-            {!collapsed && (
-              <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase"
-                style={{ color: 'rgba(236,219,182,0.35)', letterSpacing: '0.15em' }}>
-                {section.header}
+        {!isManager ? (
+          // ── Staff: flat lane ──
+          <div className="space-y-0.5">{STAFF_LINKS.map(l => linkRow(l))}</div>
+        ) : collapsed ? (
+          // ── Manager, collapsed rail: pinned + everything as icons ──
+          <div className="space-y-0.5">
+            {PINNED.map(l => linkRow(l))}
+            {SEGMENTS.filter(s => s.links.length > 0).map(s => (
+              <div key={s.key}>
+                <div className="mx-3 my-2" style={{ borderTop: '1px solid rgba(236,219,182,0.12)' }} />
+                {s.links.map(l => linkRow(l))}
               </div>
-            )}
-            {collapsed && <div className="mx-3 my-2" style={{ borderTop: '1px solid rgba(236,219,182,0.12)' }} />}
-            <div className="space-y-0.5">
-              {section.links.map(({ href, label, icon, seg }) => {
-                const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className="flex items-center gap-2.5 px-3 py-1.5 text-sm rounded mx-1 transition-all"
-                    style={active
-                      ? { background: '#B14919', color: '#ECDBB6', fontWeight: 600 }
-                      : { color: 'rgba(236,219,182,0.65)' }
-                    }
-                    onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = '#ECDBB6' }}
-                    onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'rgba(236,219,182,0.65)' }}
-                  >
-                    <span className="text-sm w-4 text-center">{icon}</span>
-                    {!collapsed && <span className="flex-1">{label}</span>}
-                    {!collapsed && seg && !active && (
-                      <span className="rounded-full" style={{ width: 5, height: 5, background: SEG_COLORS[seg], opacity: 0.85 }} />
-                    )}
-                  </Link>
-                )
-              })}
-            </div>
+            ))}
           </div>
-        ))}
+        ) : (
+          // ── Manager: pinned essentials + six segment dropdowns ──
+          <>
+            <div className="space-y-0.5 mb-2">{PINNED.map(l => linkRow(l))}</div>
+            <div className="mx-3 mb-1" style={{ borderTop: '1px solid rgba(236,219,182,0.12)' }} />
+            {SEGMENTS.map(s => {
+              const isOpen = open.includes(s.key)
+              const hasActive = s.links.some(l => isActive(l.href, pathname))
+              const empty = s.links.length === 0
+              return (
+                <div key={s.key} className="mb-0.5">
+                  <button
+                    onClick={() => !empty && toggle(s.key)}
+                    className="w-full flex items-center gap-2 px-3 pt-2.5 pb-1.5 text-[11px] font-semibold uppercase transition-colors"
+                    style={{
+                      color: hasActive ? '#ECDBB6' : 'rgba(236,219,182,0.5)',
+                      letterSpacing: '0.1em',
+                      cursor: empty ? 'default' : 'pointer',
+                    }}
+                  >
+                    <span className="rounded-full shrink-0" style={{ width: 7, height: 7, background: s.color }} />
+                    <span className="flex-1 text-left truncate">{s.header}</span>
+                    {empty
+                      ? <span className="text-[9px] normal-case font-normal" style={{ color: 'rgba(236,219,182,0.35)', letterSpacing: 0 }}>soon</span>
+                      : <span className="text-[10px]" style={{ opacity: 0.6 }}>{isOpen ? '▾' : '▸'}</span>}
+                  </button>
+                  {isOpen && !empty && (
+                    <div className="space-y-0.5 pb-1">
+                      {s.links.map(l => linkRow(l, true))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </>
+        )}
       </nav>
 
       <div className="px-3 py-3 space-y-1.5" style={{ borderTop: '1px solid rgba(236,219,182,0.15)' }}>
