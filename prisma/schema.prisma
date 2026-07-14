@@ -45,6 +45,7 @@ model Cat {
   lifeStage        String?   // Kitten | Adult | Senior
   coatType         String?   // Short | Long — sets the default rebooking cycle (owner plan: Long 15-20d, Short ~30d)
   foundingNumber   Int?      @unique // Founding Cats permanent number CAT-001…CAT-100
+  careNotes        String?   // boarding care instructions: feeding, medication, quirks
   healthNotes      String?
   vaccinationExpiry DateTime? // drives the "vaccination expiring" dashboard alert
   groomingInterval Int?      // days between sessions; null = use coat/breed default
@@ -136,6 +137,69 @@ model LoyaltyEntry {
   @@index([customerId])
 }
 
+// ─── Staff (individual PIN logins, roles drive staff vs management views) ────
+
+model Staff {
+  id        String   @id @default(cuid())
+  name      String
+  role      String   // Manager | FrontDesk | Groomer | Boarding
+  pinHash   String   @unique // sha256 of the personal PIN
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments Appointment[]
+  careTasks    CareTask[]
+}
+
+// ─── Service menu (single source of truth for prices & durations) ────────────
+
+model Service {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  category    String   // Grooming | Bath | Diagnosis | Boarding | AddOn
+  durationMin Int      @default(60)
+  price       Float
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  appointments Appointment[]
+}
+
+// ─── Boarding run sheet (daily care checklist per stay) ──────────────────────
+
+model CareTask {
+  id            String    @id @default(cuid())
+  date          String    // "YYYY-MM-DD"
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  catId         String
+  task          String
+  done          Boolean   @default(false)
+  staffId       String?
+  staff         Staff?    @relation(fields: [staffId], references: [id])
+  doneAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@unique([date, appointmentId, task])
+}
+
+// ─── Daily cash-up (front desk reconciliation, bridge to Finance) ────────────
+
+model CashUp {
+  id         String   @id @default(cuid())
+  date       String   @unique // "YYYY-MM-DD"
+  expectedRM Float
+  countedRM  Float
+  variance   Float
+  note       String?
+  staffName  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
 // ─── Cat Day Wallet (储值 stored value — liability until spent) ──────────────
 
 model WalletEntry {
@@ -174,19 +238,26 @@ model Appointment {
   customer    Customer @relation(fields: [customerId], references: [id])
   catId       String
   cat         Cat      @relation(fields: [catId], references: [id])
-  type        String   // Grooming | Boarding | Bath | Other
+  type        String   // Grooming | Boarding | Bath | Diagnosis | Other
+  serviceId   String?
+  service     Service? @relation(fields: [serviceId], references: [id])
+  staffId     String?  // allocated groomer / carer
+  staff       Staff?   @relation(fields: [staffId], references: [id])
   scheduledAt DateTime
   endsAt      DateTime?
-  status      String   @default("Scheduled") // Scheduled | CheckedIn | Completed | NoShow | Cancelled
+  status      String   @default("Scheduled") // Scheduled | CheckedIn | InService | QualityCheck | Ready | Completed | NoShow | Cancelled
   roomId      String?
   room        Room?    @relation(fields: [roomId], references: [id])
   price       Float?
+  depositRM   Float?   // taken at booking (mainly boarding)
   paid        Boolean  @default(false) // drives the "outstanding payments" dashboard alert
   notes       String?
   staffNotes  String?
   usedCredit  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  careTasks   CareTask[]
 }
 
 // ─── Transaction ─────────────────────────────────────────────────────────────
@@ -197,7 +268,8 @@ model Transaction {
   customer   Customer? @relation(fields: [customerId], references: [id])
   date       DateTime
   total      Float
-  category   String   // Grooming | Boarding | Membership | Academy | Other
+  category   String   // Grooming | Boarding | Retail | Membership | Academy | Other
+  method     String?  // Cash | Card | QR | Wallet — drives the daily cash-up
   reference  String?
   notes      String?
   createdAt  DateTime @default(now())

@@ -1,20 +1,35 @@
 import { NextResponse } from 'next/server'
-import { hashPassword } from '@/lib/auth'
+import { hashPassword, makeSessionToken } from '@/lib/auth'
+import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
 
+// One field, two doors: the owner password opens the management view,
+// a personal staff PIN opens that person's staff view.
 export async function POST(req: Request) {
   const data = await req.formData()
-  const password = data.get('password') as string
+  const provided = ((data.get('password') as string) ?? '').trim()
 
-  const expected = hashPassword(process.env.APP_PASSWORD ?? '')
-  const provided = hashPassword(password)
+  let token: string | null = null
+  let landing = '/'
 
-  if (provided !== expected) {
+  if (provided && provided === (process.env.APP_PASSWORD ?? '')) {
+    token = makeSessionToken({ kind: 'manager', name: 'Owner' })
+  } else if (provided) {
+    const staff = await db.staff.findFirst({
+      where: { pinHash: hashPassword(provided), active: true },
+    })
+    if (staff) {
+      token = makeSessionToken({ kind: 'staff', staffId: staff.id, name: staff.name, role: staff.role })
+      landing = staff.role === 'Manager' ? '/' : '/board'
+    }
+  }
+
+  if (!token) {
     return NextResponse.redirect(new URL('/login?error=1', req.url))
   }
 
   const jar = await cookies()
-  jar.set('auth', provided, {
+  jar.set('auth', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -22,5 +37,5 @@ export async function POST(req: Request) {
     path: '/',
   })
 
-  return NextResponse.redirect(new URL('/', req.url))
+  return NextResponse.redirect(new URL(landing, req.url))
 }

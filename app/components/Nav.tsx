@@ -14,14 +14,19 @@ const SEG_COLORS: Record<string, string> = {
   business: '#ECDBB6',
 }
 
-const sections: { header: string; links: { href: string; label: string; icon: string; seg?: string }[] }[] = [
+type NavLink = { href: string; label: string; icon: string; seg?: string; managerOnly?: boolean }
+
+const sections: { header: string; links: NavLink[] }[] = [
   {
     header: 'Today',
     links: [
-      { href: '/', label: 'Dashboard', icon: '⊞', seg: 'business' },
+      { href: '/', label: 'Dashboard', icon: '⊞', seg: 'business', managerOnly: true },
       { href: '/actions', label: 'Actions', icon: '◎' },
+      { href: '/board', label: 'Service Board', icon: '◫', seg: 'grooming' },
+      { href: '/runsheet', label: 'Run Sheet', icon: '☰', seg: 'boarding' },
       { href: '/appointments', label: 'Appointments', icon: '◷', seg: 'grooming' },
       { href: '/rooms', label: 'Rooms', icon: '▦', seg: 'boarding' },
+      { href: '/sale', label: 'Quick Sale', icon: '⬒', seg: 'business' },
     ],
   },
   {
@@ -30,24 +35,30 @@ const sections: { header: string; links: { href: string; label: string; icon: st
       { href: '/customers', label: 'Customers', icon: '◉', seg: 'community' },
       { href: '/cats', label: 'Cats', icon: '◈', seg: 'grooming' },
       { href: '/memberships', label: 'Memberships', icon: '◆', seg: 'membership' },
-      { href: '/whatsapp', label: 'WhatsApp', icon: '✆', seg: 'community' },
+      { href: '/whatsapp', label: 'WhatsApp', icon: '✆', seg: 'community', managerOnly: true },
       { href: '/incidents', label: 'Incidents', icon: '⚠' },
     ],
   },
   {
     header: 'Business',
     links: [
-      { href: '/revenue', label: 'Revenue', icon: '◐', seg: 'business' },
-      { href: '/plan', label: 'Financial Plan', icon: '◔', seg: 'business' },
-      { href: '/academy', label: 'Academy', icon: '◑', seg: 'business' },
-      { href: '/ask', label: 'Ask AI', icon: '✦' },
+      { href: '/revenue', label: 'Revenue', icon: '◐', seg: 'business', managerOnly: true },
+      { href: '/cashup', label: 'Cash-up', icon: '▣', seg: 'business', managerOnly: true },
+      { href: '/plan', label: 'Financial Plan', icon: '◔', seg: 'business', managerOnly: true },
+      { href: '/services', label: 'Services', icon: '✂', seg: 'grooming', managerOnly: true },
+      { href: '/staff', label: 'Staff', icon: '♟', seg: 'business', managerOnly: true },
+      { href: '/academy', label: 'Academy', icon: '◑', seg: 'business', managerOnly: true },
+      { href: '/ask', label: 'Ask AI', icon: '✦', managerOnly: true },
     ],
   },
 ]
 
-export function Nav() {
+export function Nav({ isManager, userName }: { isManager: boolean; userName?: string }) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
+  const visibleSections = sections
+    .map(s => ({ ...s, links: s.links.filter(l => isManager || !l.managerOnly) }))
+    .filter(s => s.links.length > 0)
 
   return (
     <aside className={`flex flex-col transition-all duration-200 ${collapsed ? 'w-14' : 'w-52'}`}
@@ -68,7 +79,7 @@ export function Nav() {
       </div>
 
       <nav className="flex-1 py-2 overflow-y-auto">
-        {sections.map(section => (
+        {visibleSections.map(section => (
           <div key={section.header} className="mb-1">
             {!collapsed && (
               <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase"
@@ -105,7 +116,12 @@ export function Nav() {
         ))}
       </nav>
 
-      <div className="px-3 py-3" style={{ borderTop: '1px solid rgba(236,219,182,0.15)' }}>
+      <div className="px-3 py-3 space-y-1.5" style={{ borderTop: '1px solid rgba(236,219,182,0.15)' }}>
+        {!collapsed && userName && (
+          <div className="text-xs truncate" style={{ color: 'rgba(236,219,182,0.55)' }}>
+            {userName}{!isManager && ' · staff'}
+          </div>
+        )}
         <form action="/api/logout" method="POST">
           <button
             type="submit"

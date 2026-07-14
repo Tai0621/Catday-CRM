@@ -105,6 +105,9 @@ function apptStatusStyle(s: string): React.CSSProperties {
   const m: Record<string, React.CSSProperties> = {
     Scheduled:  { background: 'rgba(114,144,148,0.2)', color: '#729094' },
     CheckedIn:  { background: 'rgba(231,206,122,0.35)', color: '#7a5c00' },
+    InService:  { background: 'rgba(177,73,25,0.15)', color: '#B14919' },
+    QualityCheck: { background: 'rgba(231,206,122,0.5)', color: '#7a5c00' },
+    Ready:      { background: 'rgba(122,138,79,0.22)', color: '#5c6b3c' },
     Completed:  { background: 'rgba(45,25,7,0.12)', color: '#2D1907' },
     NoShow:     { background: 'rgba(177,73,25,0.15)', color: '#B14919' },
     Cancelled:  { background: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.4)' },

@@ -10,8 +10,19 @@ export type Gender = typeof GENDERS[number]
 export const APPOINTMENT_TYPES = ['Grooming', 'Boarding', 'Bath', 'Diagnosis', 'Other'] as const
 export type AppointmentType = typeof APPOINTMENT_TYPES[number]
 
-export const APPOINTMENT_STATUSES = ['Scheduled', 'CheckedIn', 'Completed', 'NoShow', 'Cancelled'] as const
+export const APPOINTMENT_STATUSES = ['Scheduled', 'CheckedIn', 'InService', 'QualityCheck', 'Ready', 'Completed', 'NoShow', 'Cancelled'] as const
 export type AppointmentStatus = typeof APPOINTMENT_STATUSES[number]
+
+// Service-board flow (grooming/bath/diagnosis) — order matters
+export const BOARD_FLOW = ['Scheduled', 'CheckedIn', 'InService', 'QualityCheck', 'Ready', 'Completed'] as const
+export const BOARD_COLUMN_LABELS: Record<string, string> = {
+  Scheduled: 'Waiting', CheckedIn: 'Checked in', InService: 'In service',
+  QualityCheck: 'Quality check', Ready: 'Ready for pickup',
+}
+export const BOARD_ADVANCE_LABELS: Record<string, string> = {
+  Scheduled: 'Check in', CheckedIn: 'Start', InService: 'Quality check',
+  QualityCheck: 'Mark ready', Ready: 'Picked up',
+}
 
 export const ROOM_TYPES = ['Standard', 'Suite', 'DayStay'] as const
 export type RoomType = typeof ROOM_TYPES[number]
@@ -126,6 +137,35 @@ export const WALLET_KINDS = ['TopUp', 'Bonus', 'Spend', 'Adjustment'] as const
 export const PRIVATE_CLUB_TIER = 'Black Circle'
 export const PRIVATE_CLUB_SPEND = 1000
 export const PRIVATE_CLUB_VISITS = 3
+
+// ── Staff & roles (Manager sees everything; others get the staff view) ──
+export const STAFF_ROLES = ['Manager', 'FrontDesk', 'Groomer', 'Boarding'] as const
+export type StaffRole = typeof STAFF_ROLES[number]
+export const STAFF_ROLE_LABELS: Record<string, string> = {
+  Manager: 'Store Manager', FrontDesk: 'Front Desk', Groomer: 'Groomer', Boarding: 'Boarding Care',
+}
+
+// ── Service menu categories ──
+export const SERVICE_CATEGORIES = ['Grooming', 'Bath', 'Diagnosis', 'Boarding', 'AddOn'] as const
+
+// ── Slot engine: store hours & granularity (manager can tune here) ──
+export const OPEN_HOUR = 10
+export const CLOSE_HOUR = 19
+export const SLOT_STEP_MIN = 30
+
+// ── Payment methods (drives the daily cash-up) ──
+export const PAY_METHODS = ['Cash', 'Card', 'QR', 'Wallet'] as const
+export type PayMethod = typeof PAY_METHODS[number]
+
+// ── Boarding run-sheet standard tasks (generated daily per occupied room) ──
+export const CARE_TASKS = [
+  'Morning feeding',
+  'Litter refresh',
+  'Playtime & enrichment',
+  'Evening feeding',
+  'Photo update to owner',
+] as const
+export const CARE_TASK_MEDICATION = 'Medication / special care'
 
 // ── Groomer assessment (建档) dropdown options — fixed vocabulary keeps records comparable ──
 export const ASSESSMENT_OPTIONS = {
