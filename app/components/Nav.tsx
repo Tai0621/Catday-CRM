@@ -5,7 +5,11 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 type NavLink = { href: string; label: string; icon: string }
-type NavSegment = { key: string; header: string; color: string; links: NavLink[] }
+// A segment's links can be split into named sub-groups (e.g. Grooming / Boarding / Sales)
+type NavGroup = { sub?: string; subColor?: string; links: NavLink[] }
+type NavSegment = { key: string; header: string; color: string; groups: NavGroup[] }
+
+const segmentLinks = (s: NavSegment) => s.groups.flatMap(g => g.links)
 
 // Pinned above the segments — the owner's daily spine, not tied to one segment
 const PINNED: NavLink[] = [
@@ -18,49 +22,64 @@ const PINNED: NavLink[] = [
 const SEGMENTS: NavSegment[] = [
   {
     key: 'ops', header: 'Operations & Sales', color: '#C86A3C',
-    links: [
-      { href: '/board', label: 'Service Board', icon: '◫' },
-      { href: '/runsheet', label: 'Run Sheet', icon: '☰' },
-      { href: '/appointments', label: 'Appointments', icon: '◷' },
-      { href: '/rooms/calendar', label: 'Room Calendar', icon: '▤' },
-      { href: '/rooms', label: 'Rooms', icon: '▦' },
-      { href: '/sale', label: 'Quick Sale', icon: '⬒' },
-      { href: '/cashup', label: 'Cash-up', icon: '▣' },
-      { href: '/services', label: 'Service Menu', icon: '✂' },
+    groups: [
+      {
+        sub: 'Grooming', subColor: '#C86A3C',
+        links: [
+          { href: '/board', label: 'Service Board', icon: '◫' },
+          { href: '/appointments', label: 'Appointments', icon: '◷' },
+          { href: '/services', label: 'Service Menu', icon: '✂' },
+        ],
+      },
+      {
+        sub: 'Boarding', subColor: '#729094',
+        links: [
+          { href: '/runsheet', label: 'Run Sheet', icon: '☰' },
+          { href: '/rooms/calendar', label: 'Room Calendar', icon: '▤' },
+          { href: '/rooms', label: 'Rooms', icon: '▦' },
+        ],
+      },
+      {
+        sub: 'Sales', subColor: '#ECDBB6',
+        links: [
+          { href: '/sale', label: 'Quick Sale', icon: '⬒' },
+          { href: '/cashup', label: 'Cash-up', icon: '▣' },
+        ],
+      },
     ],
   },
   {
     key: 'hr', header: 'Human Resource', color: '#729094',
-    links: [
+    groups: [{ links: [
       { href: '/staff', label: 'Staff & PINs', icon: '♟' },
-    ],
+    ] }],
   },
   {
     key: 'finance', header: 'Finance', color: '#ECDBB6',
-    links: [
+    groups: [{ links: [
       { href: '/revenue', label: 'Revenue', icon: '◐' },
       { href: '/plan', label: 'Financial Plan', icon: '◔' },
-    ],
+    ] }],
   },
   {
     key: 'crm', header: 'Customers · CRM', color: '#98A86B',
-    links: [
+    groups: [{ links: [
       { href: '/customers', label: 'Customers', icon: '◉' },
       { href: '/cats', label: 'Cats', icon: '◈' },
       { href: '/memberships', label: 'Memberships', icon: '◆' },
       { href: '/whatsapp', label: 'WhatsApp', icon: '✆' },
       { href: '/incidents', label: 'Incidents', icon: '⚠' },
-    ],
+    ] }],
   },
   {
     key: 'marketing', header: 'Marketing', color: '#E7CE7A',
-    links: [
+    groups: [{ links: [
       { href: '/academy', label: 'Academy', icon: '◑' },
-    ],
+    ] }],
   },
   {
     key: 'admin', header: 'Administrative', color: 'rgba(236,219,182,0.45)',
-    links: [], // documents, SOP library, vendors, settings — next rounds
+    groups: [], // documents, SOP library, vendors, settings — next rounds
   },
 ]
 
@@ -92,7 +111,7 @@ export function Nav({ isManager, userName }: { isManager: boolean; userName?: st
 
   // Open segments: start with the one holding the current page, then merge the
   // user's saved preference after mount (avoids SSR hydration mismatch).
-  const activeSegment = SEGMENTS.find(s => s.links.some(l => isActive(l.href, pathname)))?.key
+  const activeSegment = SEGMENTS.find(s => segmentLinks(s).some(l => isActive(l.href, pathname)))?.key
   const [open, setOpen] = useState<string[]>(activeSegment ? [activeSegment] : ['ops'])
   useEffect(() => {
     try {
@@ -102,7 +121,7 @@ export function Nav({ isManager, userName }: { isManager: boolean; userName?: st
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   useEffect(() => {
-    const seg = SEGMENTS.find(s => s.links.some(l => isActive(l.href, pathname)))?.key
+    const seg = SEGMENTS.find(s => segmentLinks(s).some(l => isActive(l.href, pathname)))?.key
     if (seg) setOpen(prev => (prev.includes(seg) ? prev : [...prev, seg]))
   }, [pathname])
 
@@ -159,10 +178,10 @@ export function Nav({ isManager, userName }: { isManager: boolean; userName?: st
           // ── Manager, collapsed rail: pinned + everything as icons ──
           <div className="space-y-0.5">
             {PINNED.map(l => linkRow(l))}
-            {SEGMENTS.filter(s => s.links.length > 0).map(s => (
+            {SEGMENTS.filter(s => segmentLinks(s).length > 0).map(s => (
               <div key={s.key}>
                 <div className="mx-3 my-2" style={{ borderTop: '1px solid rgba(236,219,182,0.12)' }} />
-                {s.links.map(l => linkRow(l))}
+                {segmentLinks(s).map(l => linkRow(l))}
               </div>
             ))}
           </div>
@@ -173,8 +192,8 @@ export function Nav({ isManager, userName }: { isManager: boolean; userName?: st
             <div className="mx-3 mb-1" style={{ borderTop: '1px solid rgba(236,219,182,0.12)' }} />
             {SEGMENTS.map(s => {
               const isOpen = open.includes(s.key)
-              const hasActive = s.links.some(l => isActive(l.href, pathname))
-              const empty = s.links.length === 0
+              const hasActive = segmentLinks(s).some(l => isActive(l.href, pathname))
+              const empty = segmentLinks(s).length === 0
               return (
                 <div key={s.key} className="mb-0.5">
                   <button
@@ -193,8 +212,19 @@ export function Nav({ isManager, userName }: { isManager: boolean; userName?: st
                       : <span className="text-[10px]" style={{ opacity: 0.6 }}>{isOpen ? '▾' : '▸'}</span>}
                   </button>
                   {isOpen && !empty && (
-                    <div className="space-y-0.5 pb-1">
-                      {s.links.map(l => linkRow(l, true))}
+                    <div className="pb-1">
+                      {s.groups.map((g, gi) => (
+                        <div key={g.sub ?? gi} className="space-y-0.5">
+                          {g.sub && (
+                            <div className="flex items-center gap-1.5 pl-7 pr-3 pt-1.5 pb-0.5 text-[10px] uppercase"
+                              style={{ color: 'rgba(236,219,182,0.4)', letterSpacing: '0.12em' }}>
+                              <span className="rounded-full shrink-0" style={{ width: 5, height: 5, background: g.subColor ?? s.color, opacity: 0.9 }} />
+                              {g.sub}
+                            </div>
+                          )}
+                          {g.links.map(l => linkRow(l, true))}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
