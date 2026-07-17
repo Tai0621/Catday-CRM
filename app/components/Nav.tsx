@@ -27,7 +27,6 @@ const SEGMENTS: NavSegment[] = [
         sub: 'Grooming', subColor: '#C86A3C',
         links: [
           { href: '/board', label: 'Service Board', icon: '◫' },
-          { href: '/appointments', label: 'Appointments', icon: '◷' },
           { href: '/services', label: 'Service Menu', icon: '✂' },
         ],
       },
@@ -42,6 +41,7 @@ const SEGMENTS: NavSegment[] = [
       {
         sub: 'Sales', subColor: '#ECDBB6',
         links: [
+          { href: '/appointments', label: 'Appointments', icon: '◷' },
           { href: '/pos', label: 'POS Checkout', icon: '⬚' },
           { href: '/products', label: 'Products', icon: '⬢' },
           { href: '/cashup', label: 'Cash-up', icon: '▣' },
