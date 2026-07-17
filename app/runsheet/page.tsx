@@ -72,6 +72,7 @@ export default async function RunSheetPage() {
   const seg = SEGMENTS.boarding
   const totalTasks = tasks.length
   const doneTasks = tasks.filter(t => t.done).length
+  const donePct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
@@ -89,6 +90,24 @@ export default async function RunSheetPage() {
         </div>
         <Link href="/rooms/calendar" className="cd-btn-sec text-sm">Room calendar</Link>
       </div>
+
+      {/* Today's care progress */}
+      {totalTasks > 0 && (
+        <div className="cd-card px-4 py-3">
+          <div className="flex items-baseline justify-between mb-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: seg.text }}>
+              Today&apos;s care progress
+            </span>
+            <span className="text-sm font-bold" style={{ color: donePct === 100 ? '#5c6b3c' : '#2D1907' }}>
+              {donePct === 100 ? 'All done 🐾' : `${doneTasks}/${totalTasks} · ${donePct}%`}
+            </span>
+          </div>
+          <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(45,25,7,0.08)' }}>
+            <div className="h-full rounded-full transition-all"
+              style={{ width: `${donePct}%`, background: donePct === 100 ? '#7A8A4F' : seg.color }} />
+          </div>
+        </div>
+      )}
 
       {stays.length === 0 ? (
         <div className="cd-card py-16 text-center">
@@ -123,6 +142,17 @@ export default async function RunSheetPage() {
                   </div>
                   <span className="cd-pill" style={{ background: seg.bg, color: seg.text }}>{doneCount}/{list.length}</span>
                 </div>
+
+                {/* Per-room progress */}
+                {list.length > 0 && (
+                  <div className="h-1.5" style={{ background: 'rgba(45,25,7,0.06)' }}>
+                    <div className="h-full transition-all"
+                      style={{
+                        width: `${Math.round((doneCount / list.length) * 100)}%`,
+                        background: doneCount === list.length ? '#7A8A4F' : seg.color,
+                      }} />
+                  </div>
+                )}
 
                 {(s.cat.careNotes || s.cat.healthNotes) && (
                   <div className="px-4 py-2 text-xs" style={{ background: 'rgba(231,206,122,0.3)', color: '#2D1907' }}>
