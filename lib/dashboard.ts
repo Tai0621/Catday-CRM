@@ -58,7 +58,13 @@ export async function getDashboardData() {
     }),
     db.room.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }),
     db.cat.findMany({
-      include: { customer: true, appointments: { select: { scheduledAt: true, status: true, type: true } } },
+      // select keeps base64 photo blobs out of this whole-table scan
+      select: {
+        id: true, name: true, breed: true, coatType: true, groomingInterval: true,
+        dateOfBirth: true, vaccinationExpiry: true, customerId: true,
+        customer: { select: { id: true, name: true, phone: true } },
+        appointments: { select: { scheduledAt: true, status: true, type: true } },
+      },
     }),
     db.customer.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } }),
     db.membership.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } }),

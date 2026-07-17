@@ -9,9 +9,12 @@ export default async function CatsPage({ searchParams }: { searchParams: Promise
 
   const cats = await db.cat.findMany({
     where: q ? { OR: [{ name: { contains: q } }, { breed: { contains: q } }, { customer: { name: { contains: q } } }] } : {},
-    include: {
-      customer: true,
-      appointments: { where: { type: 'Grooming', status: 'Completed' }, orderBy: { scheduledAt: 'desc' }, take: 1 },
+    // select (not include): keeps the base64 photo blobs out of the list query
+    select: {
+      id: true, name: true, breed: true, gender: true, lifeStage: true,
+      coatType: true, groomingInterval: true, customerId: true,
+      customer: { select: { name: true, phone: true } },
+      appointments: { where: { type: 'Grooming', status: 'Completed' }, orderBy: { scheduledAt: 'desc' }, take: 1, select: { scheduledAt: true } },
     },
     orderBy: { name: 'asc' },
   })
@@ -33,7 +36,7 @@ export default async function CatsPage({ searchParams }: { searchParams: Promise
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {cats.map(cat => {
           const lastGroomed = cat.appointments[0]?.scheduledAt ?? null
-          const nextDue = predictNextGrooming(lastGroomed, cat.breed, cat.groomingInterval)
+          const nextDue = predictNextGrooming(lastGroomed, cat.breed, cat.groomingInterval, cat.coatType)
           const daysUntil = Math.ceil((nextDue.getTime() - Date.now()) / 86400000)
           const overdue = daysUntil < 0
 

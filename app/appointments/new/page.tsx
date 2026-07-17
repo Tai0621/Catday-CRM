@@ -21,7 +21,10 @@ export default async function NewAppointmentPage({
 
   const [customers, cats, rooms, services, groomers] = await Promise.all([
     db.customer.findMany({ orderBy: { name: 'asc' } }),
-    db.cat.findMany({ include: { customer: true }, orderBy: { name: 'asc' } }),
+    db.cat.findMany({
+      select: { id: true, name: true, customer: { select: { name: true, phone: true } } },
+      orderBy: { name: 'asc' },
+    }),
     db.room.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }),
     db.service.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' } }),
     db.staff.findMany({ where: { active: true, role: { in: ['Groomer', 'Boarding'] } }, orderBy: { name: 'asc' } }),

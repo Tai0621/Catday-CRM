@@ -69,6 +69,7 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
     expiringMemberships,
     logs,
     lifetimeSpendGroups,
+    futureAppts,
   ] = await Promise.all([
     db.appointment.findMany({
       where: { status: 'Completed', paid: false, price: { not: null } },
@@ -96,7 +97,13 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
       },
     }),
     db.cat.findMany({
-      include: { customer: true, appointments: { select: { scheduledAt: true, status: true, type: true } } },
+      // select keeps base64 photo blobs out of this whole-table scan
+      select: {
+        id: true, name: true, breed: true, coatType: true, groomingInterval: true,
+        dateOfBirth: true, vaccinationExpiry: true, foundingNumber: true, customerId: true,
+        customer: { select: { id: true, name: true, phone: true } },
+        appointments: { select: { scheduledAt: true, status: true, type: true } },
+      },
     }),
     db.membership.findMany({
       where: { status: 'Active', expiryDate: { lte: expiryThreshold } },
@@ -104,6 +111,10 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
     }),
     db.actionLog.findMany({ where: { createdAt: { gte: logWindow } }, orderBy: { createdAt: 'desc' } }),
     db.transaction.groupBy({ by: ['customerId'], _sum: { total: true } }),
+    db.appointment.findMany({
+      where: { scheduledAt: { gt: todayEnd }, status: { in: ['Scheduled', 'CheckedIn'] } },
+      select: { customerId: true },
+    }),
   ])
 
   const lifetimeSpend = new Map<string, number>()
@@ -150,12 +161,7 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
   }
 
   // 3 · Boarding checkout today with no future booking
-  const futureByCustomer = new Set(
-    (await db.appointment.findMany({
-      where: { scheduledAt: { gt: todayEnd }, status: { in: ['Scheduled', 'CheckedIn'] } },
-      select: { customerId: true },
-    })).map(a => a.customerId),
-  )
+  const futureByCustomer = new Set(futureAppts.map(a => a.customerId))
   for (const a of checkoutsToday) {
     if (futureByCustomer.has(a.customerId)) continue
     out.push(card({
