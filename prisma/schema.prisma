@@ -283,10 +283,28 @@ model TransactionLine {
   transaction   Transaction @relation(fields: [transactionId], references: [id])
   catId         String?
   cat           Cat?        @relation(fields: [catId], references: [id])
+  productId     String?
+  product       Product?    @relation(fields: [productId], references: [id])
   description   String
   quantity      Int         @default(1)
   unitPrice     Float
   subtotal      Float
+}
+
+// ─── Retail products (POS catalog — also the seed of the Inventory round) ────
+
+model Product {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  price     Float
+  stockQty  Int      @default(0)
+  sku       String?
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines     TransactionLine[]
 }
 
 // ─── WhatsApp ────────────────────────────────────────────────────────────────

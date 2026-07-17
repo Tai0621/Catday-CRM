@@ -61,6 +61,7 @@ export const POINTS_REASONS: { reason: string; label: string; points: number }[]
   { reason: 'MultiCat', label: 'Multi-cat family visit', points: 50 },
   { reason: 'Manual', label: 'Manual adjustment', points: 0 },
   { reason: 'Redemption', label: 'Redeemed a reward', points: 0 },
+  { reason: 'Purchase', label: 'Purchase (POS checkout)', points: 0 }, // variable: RM spent × tier multiplier
 ]
 
 export const POINTS_REASON_LABELS: Record<string, string> = Object.fromEntries(

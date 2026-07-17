@@ -108,7 +108,13 @@ export default async function RunSheetPage() {
                     <div className="font-semibold text-sm flex items-center gap-2" style={{ color: '#2D1907' }}>
                       {s.room?.name ?? 'No room'} · <Link href={`/cats/${s.catId}`} className="hover:underline">{s.cat.name}</Link>
                       {checkoutToday && (
-                        <span className="cd-pill" style={{ background: 'rgba(177,73,25,0.15)', color: '#B14919' }}>checks out today</span>
+                        <>
+                          <span className="cd-pill" style={{ background: 'rgba(177,73,25,0.15)', color: '#B14919' }}>checks out today</span>
+                          <Link href={`/pos?customerId=${s.customerId}`}
+                            className="cd-pill font-medium" style={{ background: '#2D1907', color: '#ECDBB6' }}>
+                            Checkout →
+                          </Link>
+                        </>
                       )}
                     </div>
                     <div className="text-xs cd-muted">

@@ -62,22 +62,41 @@ export default async function NewAppointmentPage({
       ? (service.category === 'Boarding' ? service.price * nights : service.price)
       : null
 
-    await db.appointment.create({
+    const depositRM = data.get('depositRM') ? parseFloat(data.get('depositRM') as string) : null
+    const type = service ? CATEGORY_TYPE[service.category] ?? 'Other' : (data.get('type') as string) || 'Other'
+    const customerId = data.get('customerId') as string
+
+    const appt = await db.appointment.create({
       data: {
-        customerId: data.get('customerId') as string,
+        customerId,
         catId: data.get('catId') as string,
-        type: service ? CATEGORY_TYPE[service.category] ?? 'Other' : (data.get('type') as string) || 'Other',
+        type,
         serviceId,
         staffId: (data.get('staffId') as string) || null,
         scheduledAt,
         endsAt,
         roomId: (data.get('roomId') as string) || null,
         price,
-        depositRM: data.get('depositRM') ? parseFloat(data.get('depositRM') as string) : null,
+        depositRM,
         notes: (data.get('notes') as string) || null,
         status: 'Scheduled',
       },
     })
+    // Deposits are money received today — record them so cash-up balances.
+    // The POS credits the deposit against the bill at checkout.
+    if (depositRM && depositRM > 0) {
+      await db.transaction.create({
+        data: {
+          customerId,
+          date: new Date(),
+          total: depositRM,
+          category: type === 'Boarding' ? 'Boarding' : type === 'Other' ? 'Other' : 'Grooming',
+          method: (data.get('depositMethod') as string) || 'Cash',
+          reference: `DEP-${appt.id.slice(-8).toUpperCase()}`,
+          notes: `Deposit — booking ${scheduledAt.toLocaleDateString('en-MY')}`,
+        },
+      })
+    }
     redirect('/appointments')
   }
 
@@ -179,6 +198,14 @@ export default async function NewAppointmentPage({
             <label className="cd-label">Deposit (RM)</label>
             <input name="depositRM" type="number" step="0.01" placeholder="0" className="cd-input" />
           </div>
+        </div>
+        <div>
+          <label className="cd-label">Deposit paid by (if any)</label>
+          <select name="depositMethod" className="cd-input" style={{ width: '10rem' }}>
+            <option value="Cash">Cash</option>
+            <option value="Card">Card</option>
+            <option value="QR">QR</option>
+          </select>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>

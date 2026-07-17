@@ -119,3 +119,10 @@ body {
   border-radius: 9999px;
   font-weight: 500;
 }
+
+/* Receipt printing: only the page content, on white */
+@media print {
+  aside, .no-print { display: none !important; }
+  main { padding: 0 !important; overflow: visible !important; }
+  body { background: #fff !important; }
+}

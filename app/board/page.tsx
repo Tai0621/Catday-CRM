@@ -152,11 +152,18 @@ export default async function BoardPage() {
                         </Link>
                       )}
                       {a.status === 'Ready' && (
-                        <a href={whatsappUrl(a.customer.phone, `Hi! ${a.cat.name} is all done and looking fabulous — ready for pickup whenever you are 🐾✨`)}
-                          target="_blank" rel="noopener noreferrer"
-                          className="text-xs px-2 py-1 rounded-lg" style={{ background: '#729094', color: '#F2EDE0' }}>
-                          WhatsApp
-                        </a>
+                        <>
+                          <a href={whatsappUrl(a.customer.phone, `Hi! ${a.cat.name} is all done and looking fabulous — ready for pickup whenever you are 🐾✨`)}
+                            target="_blank" rel="noopener noreferrer"
+                            className="text-xs px-2 py-1 rounded-lg" style={{ background: '#729094', color: '#F2EDE0' }}>
+                            WhatsApp
+                          </a>
+                          <Link href={`/pos?customerId=${a.customerId}`}
+                            className="text-xs px-2 py-1 rounded-lg font-medium"
+                            style={{ background: '#2D1907', color: '#ECDBB6' }}>
+                            Checkout
+                          </Link>
+                        </>
                       )}
                       {a.status === 'Scheduled' && (
                         <form action={markNoShow}>
