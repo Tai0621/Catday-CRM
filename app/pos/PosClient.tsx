@@ -9,7 +9,11 @@ interface CustomerOpt {
   walletBalance: number; pointsBalance: number
   tierName: string | null; multiplier: number
 }
-interface ApptOpt { id: string; customerId: string; catId: string; type: string; price: number; deposit: number; label: string }
+interface ApptOpt {
+  id: string; customerId: string; catId: string; type: string
+  gross: number; deposit: number; net: number
+  needsPrice: boolean; billable: boolean; label: string
+}
 interface ProductOpt { id: string; name: string; price: number; stockQty: number }
 interface ServiceOpt { id: string; name: string; price: number; category: string }
 
@@ -25,15 +29,19 @@ export function PosClient({ preselectCustomerId, customers, appointments, produc
 }) {
   const router = useRouter()
 
+  const apptToItem = (a: ApptOpt): CheckoutItem => ({
+    kind: 'appointment' as const,
+    refId: a.id,
+    catId: a.catId,
+    label: a.deposit > 0 ? `${a.label} · deposit RM${a.deposit.toFixed(0)} credited` : a.label,
+    qty: 1,
+    unitPrice: a.needsPrice ? 0 : a.net,
+    needsPrice: a.needsPrice,
+  })
+
+  // Only the clearly-finished visits auto-load; in-progress ones are offered as chips.
   const apptItemsFor = (custId: string): CheckoutItem[] =>
-    appointments.filter(a => a.customerId === custId).map(a => ({
-      kind: 'appointment' as const,
-      refId: a.id,
-      catId: a.catId,
-      label: a.deposit > 0 ? `${a.label} · deposit RM${a.deposit.toFixed(0)} credited` : a.label,
-      qty: 1,
-      unitPrice: Math.max(0, a.price - a.deposit),
-    }))
+    appointments.filter(a => a.customerId === custId && a.billable).map(apptToItem)
 
   const [customerId, setCustomerId] = useState<string>(preselectCustomerId ?? '')
   const [items, setItems] = useState<CheckoutItem[]>(preselectCustomerId ? apptItemsFor(preselectCustomerId) : [])
@@ -46,6 +54,7 @@ export function PosClient({ preselectCustomerId, customers, appointments, produc
 
   const customer = customers.find(c => c.id === customerId) ?? null
   const total = useMemo(() => Math.round(items.reduce((s, i) => s + i.qty * i.unitPrice, 0) * 100) / 100, [items])
+  const hasUnpriced = items.some(i => i.needsPrice && i.unitPrice <= 0)
   const walletMax = customer ? Math.min(customer.walletBalance, total) : 0
   const walletAmount = Math.max(0, Math.min(parseFloat(walletInput) || 0, walletMax))
   const remainder = Math.round((total - walletAmount) * 100) / 100
@@ -78,6 +87,17 @@ export function PosClient({ preselectCustomerId, customers, appointments, produc
       .map((x, i) => (i === idx ? { ...x, qty: x.qty + delta } : x))
       .filter(x => x.qty > 0))
   }
+
+  function setItemPrice(idx: number, value: string) {
+    const price = Math.max(0, parseFloat(value) || 0)
+    setItems(prev => prev.map((x, i) => (i === idx ? { ...x, unitPrice: price } : x)))
+  }
+
+  // Today's visits for this customer that aren't auto-billed yet (in progress /
+  // not advanced on the board) — offered as one-tap adds, and any already in the basket.
+  const pendingAppts = customer
+    ? appointments.filter(a => a.customerId === customer.id && !a.billable && !items.some(i => i.refId === a.id))
+    : []
 
   async function charge() {
     setBusy(true)
@@ -126,6 +146,20 @@ export function PosClient({ preselectCustomerId, customers, appointments, produc
                 <span className="cd-pill" style={{ background: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.6)' }}>
                   {customer.pointsBalance.toLocaleString()} pts
                 </span>
+              </div>
+            )}
+            {pendingAppts.length > 0 && (
+              <div className="pt-1">
+                <div className="text-xs cd-muted mb-1.5">Also booked today — tap to add if done:</div>
+                <div className="flex flex-wrap gap-2">
+                  {pendingAppts.map(a => (
+                    <button key={a.id} disabled={busy} onClick={() => addItem(apptToItem(a))}
+                      className="text-xs px-2.5 py-1.5 rounded-lg text-left"
+                      style={{ background: 'rgba(231,206,122,0.28)', color: '#7a5c00', border: '1px solid rgba(231,206,122,0.6)' }}>
+                      + {a.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -183,11 +217,25 @@ export function PosClient({ preselectCustomerId, customers, appointments, produc
               <p className="px-4 py-6 text-sm cd-muted text-center">Empty — pick a customer or tap items</p>
             ) : (
               <ul>
-                {items.map((i, idx) => (
+                {items.map((i, idx) => {
+                  // Stays rendered while the cashier types — keying it off the price
+                  // would unmount the input on the first digit.
+                  const askPrice = i.kind === 'appointment' && !!i.needsPrice
+                  const unpriced = askPrice && i.unitPrice <= 0
+                  return (
                   <li key={idx} className="px-4 py-2 flex items-center gap-2" style={{ borderTop: '1px solid rgba(45,25,7,0.06)' }}>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm truncate" style={{ color: '#2D1907' }}>{i.label}</div>
-                      <div className="text-xs cd-muted">RM {i.unitPrice.toFixed(2)}{i.qty > 1 && ` × ${i.qty}`}</div>
+                      {askPrice ? (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-xs" style={{ color: unpriced ? '#B14919' : 'rgba(45,25,7,0.45)' }}>Set price RM</span>
+                          <input type="number" min="0" step="0.5" placeholder="0.00"
+                            onChange={e => setItemPrice(idx, e.target.value)}
+                            className="cd-input" style={{ width: '5.5rem', padding: '0.15rem 0.4rem', fontSize: '0.8rem' }} />
+                        </div>
+                      ) : (
+                        <div className="text-xs cd-muted">RM {i.unitPrice.toFixed(2)}{i.qty > 1 && ` × ${i.qty}`}</div>
+                      )}
                     </div>
                     {i.kind !== 'appointment' && (
                       <div className="flex items-center gap-1">
@@ -198,11 +246,12 @@ export function PosClient({ preselectCustomerId, customers, appointments, produc
                     {i.kind === 'appointment' && (
                       <button onClick={() => bumpQty(idx, -1)} className="text-xs cd-link">remove</button>
                     )}
-                    <div className="text-sm font-semibold w-20 text-right" style={{ color: '#2D1907' }}>
+                    <div className="text-sm font-semibold w-20 text-right" style={{ color: unpriced ? 'rgba(45,25,7,0.35)' : '#2D1907' }}>
                       RM {(i.qty * i.unitPrice).toFixed(2)}
                     </div>
                   </li>
-                ))}
+                  )
+                })}
               </ul>
             )}
           </div>
@@ -248,10 +297,15 @@ export function PosClient({ preselectCustomerId, customers, appointments, produc
             {error && (
               <p className="text-xs rounded-lg px-3 py-2" style={{ background: 'rgba(177,73,25,0.12)', color: '#B14919' }}>{error}</p>
             )}
+            {hasUnpriced && (
+              <p className="text-xs rounded-lg px-3 py-2" style={{ background: 'rgba(231,206,122,0.28)', color: '#7a5c00' }}>
+                Set the price on the highlighted visit before charging.
+              </p>
+            )}
 
-            <button onClick={charge} disabled={busy || items.length === 0}
+            <button onClick={charge} disabled={busy || items.length === 0 || hasUnpriced}
               className="cd-btn w-full text-base py-3"
-              style={busy || items.length === 0 ? { opacity: 0.5 } : undefined}>
+              style={busy || items.length === 0 || hasUnpriced ? { opacity: 0.5 } : undefined}>
               {busy ? 'Charging…' : remainder > 0
                 ? `Charge RM ${remainder.toFixed(2)} (${method})${walletAmount > 0 ? ' + wallet' : ''}`
                 : total > 0 ? `Charge RM ${total.toFixed(2)} from wallet` : 'Charge'}

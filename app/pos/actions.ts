@@ -11,6 +11,7 @@ export interface CheckoutItem {
   qty: number
   unitPrice: number
   catId?: string
+  needsPrice?: boolean // UI flag: price couldn't be derived, cashier confirms it (server ignores)
 }
 
 export interface CheckoutPayload {
