@@ -40,17 +40,23 @@ export default async function CatsPage({ searchParams }: { searchParams: Promise
           const daysUntil = Math.ceil((nextDue.getTime() - Date.now()) / 86400000)
           const overdue = daysUntil < 0
 
+          // Card is a div with a stretched link overlay — a Link card with a nested
+          // owner Link (plus an onClick) is invalid in a server component and
+          // crashed this page as soon as one cat existed.
           return (
-            <Link key={cat.id} href={`/cats/${cat.id}`}
-              className="cd-card p-4 block hover:opacity-90 transition-opacity">
+            <div key={cat.id} className="cd-card p-4 relative hover:opacity-90 transition-opacity">
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <div className="font-semibold" style={{ color: '#2D1907' }}>{cat.name}</div>
+                  <Link href={`/cats/${cat.id}`} className="font-semibold" style={{ color: '#2D1907' }}>
+                    {cat.name}
+                    {/* stretched hit area: the whole card opens the cat */}
+                    <span className="absolute inset-0" aria-hidden />
+                  </Link>
                   <div className="text-xs cd-muted">{cat.breed ?? 'Unknown breed'} · {cat.lifeStage ?? '—'} · {cat.gender ?? '—'}</div>
                 </div>
               </div>
               <div className="text-xs cd-muted">
-                Owner: <Link href={`/customers/${cat.customerId}`} className="cd-link" onClick={e => e.stopPropagation()}>{cat.customer.name ?? cat.customer.phone}</Link>
+                Owner: <Link href={`/customers/${cat.customerId}`} className="cd-link relative z-10">{cat.customer.name ?? cat.customer.phone}</Link>
               </div>
               <div className="text-xs mt-1 font-medium" style={{
                 color: overdue ? '#B14919' : daysUntil <= 7 ? '#8a6c00' : '#729094'
@@ -59,7 +65,7 @@ export default async function CatsPage({ searchParams }: { searchParams: Promise
                   ? overdue ? `Grooming overdue by ${Math.abs(daysUntil)}d` : `Next grooming in ${daysUntil}d`
                   : 'No grooming history'}
               </div>
-            </Link>
+            </div>
           )
         })}
         {cats.length === 0 && (
