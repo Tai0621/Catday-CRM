@@ -32,8 +32,8 @@ const q = async sql => (await pipe([exec(sql)]))[0].response.result
 
 // ── ids ──
 const custId = crypto.randomUUID(), catId = crypto.randomUUID()
-const svcGroom = crypto.randomUUID(), svcBoard = crypto.randomUUID()
-const roomA = crypto.randomUUID(), roomB = crypto.randomUUID()
+const svcGroom = crypto.randomUUID(), svcBoard = crypto.randomUUID(), svcSuite = crypto.randomUUID()
+const roomA = crypto.randomUUID(), roomB = crypto.randomUUID(), roomC = crypto.randomUUID()
 const clashAppt = crypto.randomUUID()
 
 async function cleanup() {
@@ -42,8 +42,8 @@ async function cleanup() {
     exec(`DELETE FROM Appointment WHERE customerId = ?`, [t(custId)]),
     exec(`DELETE FROM Cat WHERE id = ?`, [t(catId)]),
     exec(`DELETE FROM Customer WHERE id = ?`, [t(custId)]),
-    exec(`DELETE FROM Service WHERE id IN (?, ?)`, [t(svcGroom), t(svcBoard)]),
-    exec(`DELETE FROM Room WHERE id IN (?, ?)`, [t(roomA), t(roomB)]),
+    exec(`DELETE FROM Service WHERE id IN (?, ?, ?)`, [t(svcGroom), t(svcBoard), t(svcSuite)]),
+    exec(`DELETE FROM Room WHERE id IN (?, ?, ?)`, [t(roomA), t(roomB), t(roomC)]),
   ])
 }
 
@@ -73,6 +73,10 @@ try {
           VALUES (?,?,?,'Available',990,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, [t(roomA), t(`${MARK} Room A`), t('Standard')]),
     exec(`INSERT INTO Room (id,name,type,status,sortOrder,isActive,createdAt,updatedAt)
           VALUES (?,?,?,'Available',991,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, [t(roomB), t(`${MARK} Room B`), t('Suite')]),
+    exec(`INSERT INTO Room (id,name,type,status,sortOrder,isActive,createdAt,updatedAt)
+          VALUES (?,?,?,'Available',992,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, [t(roomC), t(`${MARK} Room C`), t('Suite')]),
+    exec(`INSERT INTO Service (id,name,category,durationMin,price,active,sortOrder,createdAt,updatedAt)
+          VALUES (?,?,?,?,?,1,952,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, [t(svcSuite), t(`${MARK} Suite Stay`), t('Boarding'), i(1440), f(120)]),
     // Room B is occupied for the test window → must be filtered out
     exec(`INSERT INTO Appointment (id,customerId,catId,type,serviceId,scheduledAt,endsAt,status,roomId,paid,usedCredit,createdAt,updatedAt)
           VALUES (?,?,?,?,?,?,?,'CheckedIn',?,0,0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`,
@@ -180,6 +184,18 @@ try {
     startISO: day(1).toISOString(),
   })])
   check('rejects booking without a service', noSvc.text.includes('Pick a service'))
+
+  // ── room class must match the rate ──
+  const mismatch = await callAction('createAppointment', [JSON.stringify({
+    lane: 'boarding', customerId: custId, catId, serviceId: svcSuite,
+    startISO: day(6).toISOString(), endISO: day(8).toISOString(), roomId: roomA,
+  })])
+  check('rejects Standard room on a Suite rate', mismatch.text.includes('Suite'))
+  const match = await callAction('createAppointment', [JSON.stringify({
+    lane: 'boarding', customerId: custId, catId, serviceId: svcSuite,
+    startISO: day(6).toISOString(), endISO: day(8).toISOString(), roomId: roomC,
+  })])
+  check('accepts Suite room on a Suite rate', match.status === 200 && match.text.includes('"ok":true'))
 
   console.log(`\n${pass}/${total} checks passed`)
 } finally {

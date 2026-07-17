@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { boardingNights } from '@/lib/appointment-charge'
+import { boardingNights, roomTypeForBoardingService } from '@/lib/appointment-charge'
 import { createAppointment, fetchSlots, fetchFreeRooms } from './actions'
 
 type Lane = 'grooming' | 'boarding'
@@ -60,6 +60,10 @@ export function NewAppointmentClient({
   const custCats = customerId ? cats.filter(c => c.customerId === customerId) : []
   const laneStaff = staff.filter(s => (lane === 'boarding' ? s.role === 'Boarding' : s.role === 'Groomer'))
 
+  // The chosen rate names its room class — offer only matching rooms
+  const rateRoomType = lane === 'boarding' && service ? roomTypeForBoardingService(service.name) : null
+  const offeredRooms = rateRoomType ? rooms.filter(r => r.type === rateRoomType) : rooms
+
   // ── derived price & time (mirrors the server, which recomputes on submit) ──
   const nights = lane === 'boarding' && checkIn && checkOut
     ? boardingNights(new Date(checkIn), new Date(checkOut), new Date()) : 0
@@ -99,6 +103,12 @@ export function NewAppointmentClient({
       setRoomId(prev => (r.rooms.some(x => x.id === prev) ? prev : ''))
     })
   }, [lane, checkIn, checkOut, validRange])
+
+  // Switching rate class drops a room that no longer matches it
+  useEffect(() => {
+    if (rateRoomType) setRoomId(prev => (offeredRooms.some(r => r.id === prev) ? prev : ''))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rateRoomType, rooms])
 
   const ready = !!customerId && !!catId && !!service &&
     (lane === 'grooming' ? !!time : validRange)
@@ -251,17 +261,22 @@ export function NewAppointmentClient({
                 <p className="text-xs cd-muted">Pick the dates and only free rooms will be offered.</p>
               ) : loadingRooms ? (
                 <p className="text-xs cd-muted">Checking room availability…</p>
-              ) : rooms.length === 0 ? (
+              ) : offeredRooms.length === 0 ? (
                 <p className="text-xs" style={{ color: GROOM.color }}>
-                  No rooms free for these dates — check the <Link href="/rooms/calendar" className="cd-link">room calendar</Link>.
+                  {rateRoomType && rooms.length > 0
+                    ? `No ${rateRoomType} rooms free for these dates — pick another rate or check the `
+                    : 'No rooms free for these dates — check the '}
+                  <Link href="/rooms/calendar" className="cd-link">room calendar</Link>.
                 </p>
               ) : (
                 <>
                   <select value={roomId} onChange={e => setRoomId(e.target.value)} className="cd-input">
                     <option value="">Assign later</option>
-                    {rooms.map(r => <option key={r.id} value={r.id}>{r.name} ({r.type})</option>)}
+                    {offeredRooms.map(r => <option key={r.id} value={r.id}>{r.name} ({r.type})</option>)}
                   </select>
-                  <p className="text-xs cd-muted mt-1">{rooms.length} room{rooms.length === 1 ? '' : 's'} free for these dates</p>
+                  <p className="text-xs cd-muted mt-1">
+                    {offeredRooms.length} {rateRoomType ? `${rateRoomType} room` : 'room'}{offeredRooms.length === 1 ? '' : 's'} free for these dates
+                  </p>
                 </>
               )}
             </div>

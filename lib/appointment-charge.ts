@@ -4,6 +4,17 @@
 
 const DAY = 24 * 60 * 60 * 1000
 
+// A boarding rate names its room class ("Suite (per night)", "Standard room"…).
+// Returns the Room.type it belongs to, or null if the name doesn't say —
+// used to filter the room picker and to reject mismatched saves.
+export function roomTypeForBoardingService(serviceName: string): string | null {
+  const n = serviceName.toLowerCase()
+  if (n.includes('suite')) return 'Suite'
+  if (n.includes('day')) return 'DayStay'
+  if (n.includes('standard')) return 'Standard'
+  return null
+}
+
 export function boardingNights(scheduledAt: Date, endsAt: Date | null, now: Date): number {
   const end = endsAt ?? now
   return Math.max(1, Math.ceil((end.getTime() - scheduledAt.getTime()) / DAY))

@@ -3,7 +3,7 @@
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { openSlots } from '@/lib/slots'
-import { boardingNights } from '@/lib/appointment-charge'
+import { boardingNights, roomTypeForBoardingService } from '@/lib/appointment-charge'
 
 // Service category → appointment type (the board and dashboard group by type)
 const CATEGORY_TYPE: Record<string, string> = {
@@ -77,6 +77,16 @@ export async function createAppointment(payloadJson: string): Promise<BookResult
     if (isNaN(endsAt.getTime())) return { ok: false, error: 'Pick a valid check-out date.' }
     if (endsAt <= scheduledAt) return { ok: false, error: 'Check-out must be after check-in.' }
     price = Math.round(service.price * boardingNights(scheduledAt, endsAt, new Date()) * 100) / 100
+    // The rate names its room class — a mismatched room means a wrong charge
+    if (p.roomId) {
+      const wantType = roomTypeForBoardingService(service.name)
+      if (wantType) {
+        const room = await db.room.findUnique({ where: { id: p.roomId }, select: { type: true, name: true } })
+        if (room && room.type !== wantType) {
+          return { ok: false, error: `${room.name} is a ${room.type} room, but this rate is for ${wantType}. Pick a ${wantType} room or change the rate.` }
+        }
+      }
+    }
   } else {
     endsAt = new Date(scheduledAt.getTime() + service.durationMin * 60 * 1000)
     price = service.price
