@@ -43,7 +43,6 @@ const SEGMENTS: NavSegment[] = [
         sub: 'Sales', subColor: '#ECDBB6',
         links: [
           { href: '/pos', label: 'POS Checkout', icon: '⬚' },
-          { href: '/sale', label: 'Quick Sale', icon: '⬒' },
           { href: '/products', label: 'Products', icon: '⬢' },
           { href: '/cashup', label: 'Cash-up', icon: '▣' },
         ],
@@ -93,7 +92,6 @@ const STAFF_LINKS: NavLink[] = [
   { href: '/appointments', label: 'Appointments', icon: '◷' },
   { href: '/rooms', label: 'Rooms', icon: '▦' },
   { href: '/pos', label: 'POS Checkout', icon: '⬚' },
-  { href: '/sale', label: 'Quick Sale', icon: '⬒' },
   { href: '/customers', label: 'Customers', icon: '◉' },
   { href: '/cats', label: 'Cats', icon: '◈' },
   { href: '/memberships', label: 'Memberships', icon: '◆' },

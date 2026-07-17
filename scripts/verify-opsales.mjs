@@ -87,7 +87,7 @@ try {
   // 4) manager pages
   for (const [path, marker] of [
     ['/staff', 'Verify Groomer'], ['/services', 'Full Groom'], ['/cashup', 'Expected money in'],
-    ['/sale', 'Record sale'], ['/rooms/calendar', 'Verify Room'], ['/board', 'Verify GroomCat'],
+    ['/pos', 'POS Checkout'], ['/rooms/calendar', 'Verify Room'], ['/board', 'Verify GroomCat'],
   ]) {
     const r = await get(path, managerCookie)
     console.log(`Manager ${path} -> ${r.status} ${mark(r.status === 200 && r.text.includes(marker))}`)
