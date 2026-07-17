@@ -1,5 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { getDashboardData } from '@/lib/dashboard'
+import { getChartData } from '@/lib/charts'
+import { RevenueLineChart, RevenueMixDonut, BookingsBarChart, ChartLegend } from '@/app/components/DashboardCharts'
 import { buildActionQueue } from '@/lib/actions'
 import { whatsappUrl } from '@/lib/phone'
 import { REVENUE_CATEGORIES, FOUNDER_CIRCLE_LIMIT } from '@/lib/constants'
@@ -14,7 +16,7 @@ const STREAM_COLORS: Record<string, string> = {
 
 export default async function DashboardPage() {
   await requireAuth()
-  const [d, actionQueue] = await Promise.all([getDashboardData(), buildActionQueue()])
+  const [d, actionQueue, charts] = await Promise.all([getDashboardData(), buildActionQueue(), getChartData()])
   const { now, revenue, ops, customer, alerts, panels, breakeven, prive } = d
   const topActions = actionQueue.slice(0, 5)
 
@@ -91,6 +93,38 @@ export default async function DashboardPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* ── Trends: monthly revenue + mix ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section className="cd-card p-5 lg:col-span-2">
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="font-semibold" style={{ color: '#2D1907' }}>Monthly Revenue <span className="text-xs font-normal cd-muted">last 12 months</span></h2>
+            {charts.momPct != null && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                style={charts.momPct >= 0
+                  ? { background: 'rgba(122,138,79,0.18)', color: '#5c6b3c' }
+                  : { background: 'rgba(177,73,25,0.14)', color: '#B14919' }}>
+                {charts.momPct >= 0 ? '▲' : '▼'} {Math.abs(charts.momPct)}% vs last month
+              </span>
+            )}
+          </div>
+          <RevenueLineChart data={charts.monthlyRevenue} />
+        </section>
+
+        <section className="cd-card p-5">
+          <h2 className="font-semibold mb-3" style={{ color: '#2D1907' }}>Revenue Mix <span className="text-xs font-normal cd-muted">this month</span></h2>
+          <RevenueMixDonut mix={charts.mix} />
+        </section>
+      </div>
+
+      {/* ── Bookings tempo ── */}
+      <section className="cd-card p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold" style={{ color: '#2D1907' }}>Bookings <span className="text-xs font-normal cd-muted">last 30 days</span></h2>
+          <ChartLegend items={[['Grooming', '#B14919'], ['Boarding', '#729094'], ['Other', '#a89878']]} />
+        </div>
+        <BookingsBarChart data={charts.dailyBookings} />
       </section>
 
       {/* ── Operations ── */}
