@@ -52,7 +52,7 @@ export default async function IncomeStatementPage({
             <Link href={`/finance/income-statement?year=${year}&view=forecast`}
               className="text-xs px-3 py-1.5"
               style={forecast
-                ? { background: seg.color, color: '#2D1907', fontWeight: 700 }
+                ? { background: '#E7CE7A', color: '#2D1907', fontWeight: 700 }
                 : { background: 'rgba(45,25,7,0.04)', color: 'rgba(45,25,7,0.55)' }}>
               Forecast (Excel model)
             </Link>
