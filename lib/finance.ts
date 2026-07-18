@@ -16,8 +16,25 @@ export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number]
 
 export const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-// One row of the statement: a label + 12 monthly values + year total
-export type StatementRow = { label: string; values: number[]; total: number }
+// One row of the statement: a label + 12 monthly values + year total.
+// key: leaf rows the accountant can hard-key (blue); derived rows have none.
+// overridden[m]: true where the value is a manual entry replacing the OS figure.
+// autoValues[m]: what the OS says, kept for "revert" tooltips.
+export type StatementRow = {
+  label: string
+  values: number[]
+  total: number
+  key?: string
+  overridden?: boolean[]
+  autoValues?: number[]
+}
+
+export const statementRowKeys = (): string[] => [
+  ...REVENUE_CATEGORIES.map(c => `rev:${c}`),
+  ...COGS_CATEGORIES.map(c => `cogs:${c}`),
+  ...OPEX_CATEGORIES.map(c => `opex:${c}`),
+  'tax',
+]
 
 export type IncomeStatement = {
   year: number
@@ -54,12 +71,23 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
   const from = new Date(year, 0, 1)
   const to = new Date(year + 1, 0, 1)
 
-  const [txns, expenses, firstTxn, firstExp] = await Promise.all([
+  const [txns, expenses, overrides, firstTxn, firstExp, firstCell] = await Promise.all([
     db.transaction.findMany({ where: { date: { gte: from, lt: to } }, select: { date: true, total: true, category: true } }),
     db.expense.findMany({ where: { date: { gte: from, lt: to } }, select: { date: true, amount: true, category: true } }),
+    db.statementCell.findMany({ where: { year }, select: { month: true, rowKey: true, amount: true } }),
     db.transaction.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
     db.expense.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
+    db.statementCell.findFirst({ orderBy: { year: 'asc' }, select: { year: true } }),
   ])
+
+  // Accountant's hard-keyed cells (blue) replace the OS figure for that month
+  const ovr = new Map<string, number>()
+  for (const o of overrides) ovr.set(`${o.rowKey}|${o.month}`, o.amount)
+  const applyOvr = (key: string, label: string, auto: number[]): StatementRow => {
+    const overridden = auto.map((_, m) => ovr.has(`${key}|${m}`))
+    const values = auto.map((v, m) => (overridden[m] ? ovr.get(`${key}|${m}`)! : v))
+    return { ...row(label, values), key, overridden, autoValues: auto }
+  }
 
   // ── Revenue by stream (live from the same transactions the POS writes) ──
   const revMap = new Map<string, number[]>(REVENUE_CATEGORIES.map(c => [c, blank12()]))
@@ -67,7 +95,7 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
     const key = (REVENUE_CATEGORIES as readonly string[]).includes(t.category) ? t.category : 'Other'
     revMap.get(key)![t.date.getMonth()] += t.total
   }
-  const revenue = REVENUE_CATEGORIES.map(c => row(`${c} Revenue`, revMap.get(c)!))
+  const revenue = REVENUE_CATEGORIES.map(c => applyOvr(`rev:${c}`, `${c} Revenue`, revMap.get(c)!))
   const totalRevenue = addRows('Total Revenue', revenue)
 
   // ── Expenses, split variable vs fixed per the Excel ──
@@ -76,16 +104,18 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
     const key = (EXPENSE_CATEGORIES as readonly string[]).includes(e.category) ? e.category : 'Other Expense'
     expMap.get(key)![e.date.getMonth()] += e.amount
   }
-  const cogs = COGS_CATEGORIES.map(c => row(c, expMap.get(c)!))
+  const cogs = COGS_CATEGORIES.map(c => applyOvr(`cogs:${c}`, c, expMap.get(c)!))
   const totalCogs = addRows('Total Cost of Services', cogs)
-  const opex = OPEX_CATEGORIES.map(c => row(c, expMap.get(c)!))
+  const opex = OPEX_CATEGORIES.map(c => applyOvr(`opex:${c}`, c, expMap.get(c)!))
   const totalOpex = addRows('Total Operating Expenses', opex)
 
   // ── Derived lines ──
   const grossProfit = row('Gross Profit', blank12().map((_, m) => totalRevenue.values[m] - totalCogs.values[m]))
   const ebitda = row('EBITDA (Operating Income)', blank12().map((_, m) => grossProfit.values[m] - totalOpex.values[m]))
-  // Provision: 24% of each profitable month (actual LHDN computation is annual)
-  const tax = row('Tax Provision @ 24%', ebitda.values.map(v => (v > 0 ? Math.round(v * TAX_RATE * 100) / 100 : 0)))
+  // Provision: 24% of each profitable month (actual LHDN computation is annual);
+  // the accountant can hard-key the real assessed figure per month.
+  const taxAuto = ebitda.values.map(v => (v > 0 ? Math.round(v * TAX_RATE * 100) / 100 : 0))
+  const tax = applyOvr('tax', 'Tax Provision @ 24%', taxAuto)
   const netIncome = row('Net Income', blank12().map((_, m) => ebitda.values[m] - tax.values[m]))
 
   const cumulativeNet: number[] = []
@@ -96,7 +126,11 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
 
   // Year switcher: every year between the first recorded figure and now
   const nowYear = new Date().getFullYear()
-  const earliest = Math.min(firstTxn?.date.getFullYear() ?? nowYear, firstExp?.date.getFullYear() ?? nowYear)
+  const earliest = Math.min(
+    firstTxn?.date.getFullYear() ?? nowYear,
+    firstExp?.date.getFullYear() ?? nowYear,
+    firstCell?.year ?? nowYear,
+  )
   const availableYears = Array.from({ length: nowYear - earliest + 1 }, (_, i) => earliest + i)
 
   return {
