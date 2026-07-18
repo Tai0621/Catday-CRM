@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { IncomeStatement, StatementRow } from '@/lib/finance'
-import { saveStatementCells, addStatementRow, removeStatementRow } from './actions'
+import { saveStatementCells, addStatementRow, removeStatementRow, hideStatementRow, unhideStatementRow } from './actions'
 
 // Excel-style workpaper. BLACK figures flow live from the OS (checkout,
 // expenses); BLUE figures are hard-keyed by the accountant. Editing follows
@@ -96,10 +96,29 @@ export function StatementTable({ statement: s, mode = 'actuals' }: {
   }
 
   async function deleteRow(r: StatementRow) {
-    if (!r.custom || !r.key?.startsWith('custom:')) return
-    if (!window.confirm(`Delete the row “${r.label}” and all figures keyed into it?`)) return
+    if (!r.key || r.key === 'tax') return
     setBusy(true)
-    const res = await removeStatementRow(JSON.stringify({ id: r.key.slice('custom:'.length) }))
+    let res
+    if (r.custom && r.key.startsWith('custom:')) {
+      if (!window.confirm(`Delete the row “${r.label}” and all figures keyed into it?`)) { setBusy(false); return }
+      res = await removeStatementRow(JSON.stringify({ id: r.key.slice('custom:'.length) }))
+    } else {
+      // Built-in row: hide it for this year — OS data stays and it can be restored
+      const os = r.autoValues?.reduce((a, v) => a + v, 0) ?? 0
+      const warn = os > 0
+        ? `Remove “${r.label}” from the ${s.year} statement?\n\nIts live OS figures (RM ${os.toLocaleString('en-MY')} this year) will be excluded from every total until you restore it.`
+        : `Remove “${r.label}” from the ${s.year} statement? You can restore it any time.`
+      if (!window.confirm(warn)) { setBusy(false); return }
+      res = await hideStatementRow(JSON.stringify({ year: s.year, rowKey: r.key }))
+    }
+    setBusy(false)
+    if (!res.ok) { setError(res.error); return }
+    router.refresh()
+  }
+
+  async function restoreRow(rowKey: string) {
+    setBusy(true)
+    const res = await unhideStatementRow(JSON.stringify({ year: s.year, rowKey }))
     setBusy(false)
     if (!res.ok) { setError(res.error); return }
     router.refresh()
@@ -160,8 +179,9 @@ export function StatementTable({ statement: s, mode = 'actuals' }: {
     <td className={`px-3 py-1.5 whitespace-nowrap ${opts?.indent ? 'pl-7' : ''}`}
       style={{ color: INK, fontWeight: opts?.bold ? 700 : 400, position: 'sticky', left: 0, background: '#F2EDE0' }}>
       <span className="inline-flex items-center gap-1.5">
-        {editMode && r.custom && (
-          <button onClick={() => deleteRow(r)} disabled={busy} title={`Delete “${r.label}” and its figures`}
+        {editMode && r.key && r.key !== 'tax' && (
+          <button onClick={() => deleteRow(r)} disabled={busy}
+            title={r.custom ? `Delete “${r.label}” and its figures` : `Remove “${r.label}” from this year (restorable — OS data stays)`}
             className="text-[10px] leading-none rounded px-1.5 py-0.5 font-semibold whitespace-nowrap"
             style={{ color: '#fff', background: RED }}>
             ✕ delete
@@ -251,7 +271,7 @@ export function StatementTable({ statement: s, mode = 'actuals' }: {
             <>
               <span><span className="font-semibold" style={{ color: INK }}>Black</span> — live from the OS; updates automatically.</span>
               <span><span className="font-semibold" style={{ color: BLUE }}>Blue</span> — hard-keyed by the accountant.</span>
-              {editMode && <span>Blank cell = use the OS figure · rows you added show <span className="font-semibold" style={{ color: RED }}>✕ delete</span> (built-in rows are OS-linked and stay) · totals recalculate on Save.</span>}
+              {editMode && <span>Blank cell = use the OS figure · <span className="font-semibold" style={{ color: RED }}>✕ delete</span> removes any row (OS-linked rows are restorable below; added rows go for good) · totals recalculate on Save.</span>}
             </>
           )}
           {error && <span style={{ color: RED }}>{error}</span>}
@@ -269,6 +289,21 @@ export function StatementTable({ statement: s, mode = 'actuals' }: {
           )}
         </div>
       </div>
+
+      {editMode && s.hiddenRows.length > 0 && (
+        <div className="rounded-xl px-4 py-2.5 text-xs flex flex-wrap items-center gap-2"
+          style={{ background: 'rgba(45,25,7,0.05)', border: '1px dashed rgba(45,25,7,0.2)' }}>
+          <span className="cd-muted">Removed from {s.year}:</span>
+          {s.hiddenRows.map(h => (
+            <button key={h.rowKey} onClick={() => restoreRow(h.rowKey)} disabled={busy}
+              className="px-2 py-0.5 rounded-full font-medium hover:opacity-80"
+              style={{ background: 'rgba(45,25,7,0.08)', color: INK, border: '1px solid rgba(45,25,7,0.15)' }}>
+              ↩ {h.label}
+            </button>
+          ))}
+          <span className="cd-muted">— tap to restore (OS figures return to the totals).</span>
+        </div>
+      )}
 
       <div className="cd-card overflow-x-auto">
         <table className="text-xs w-full" style={{ borderCollapse: 'collapse', minWidth: '68rem' }}>

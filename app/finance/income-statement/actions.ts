@@ -84,8 +84,51 @@ export async function addStatementRow(payloadJson: string): Promise<ActionResult
   return { ok: true, id: def.id }
 }
 
+// Remove a built-in row from a year's statement (its totals exclude it) —
+// the OS data underneath is untouched, so it can always be restored.
+export async function hideStatementRow(payloadJson: string): Promise<ActionResult> {
+  const denied = await requireAccountant()
+  if (denied) return { ok: false, error: denied }
+
+  let p: { year: number; rowKey: string }
+  try {
+    p = JSON.parse(payloadJson)
+  } catch {
+    return { ok: false, error: 'Bad request.' }
+  }
+
+  const year = Math.trunc(p.year)
+  if (!(year >= 2000 && year <= 2100)) return { ok: false, error: 'Bad year.' }
+  if (!statementRowKeys().includes(p.rowKey) || p.rowKey === 'tax') {
+    return { ok: false, error: 'This row cannot be removed.' }
+  }
+
+  await db.statementHiddenRow.upsert({
+    where: { year_rowKey: { year, rowKey: p.rowKey } },
+    create: { year, rowKey: p.rowKey },
+    update: {},
+  })
+  revalidatePath('/finance/income-statement')
+  return { ok: true }
+}
+
+export async function unhideStatementRow(payloadJson: string): Promise<ActionResult> {
+  const denied = await requireAccountant()
+  if (denied) return { ok: false, error: denied }
+
+  let p: { year: number; rowKey: string }
+  try {
+    p = JSON.parse(payloadJson)
+  } catch {
+    return { ok: false, error: 'Bad request.' }
+  }
+
+  await db.statementHiddenRow.deleteMany({ where: { year: Math.trunc(p.year), rowKey: p.rowKey } })
+  revalidatePath('/finance/income-statement')
+  return { ok: true }
+}
+
 // Delete a custom row and every figure keyed into it.
-// Built-in rows can't be deleted — they're the OS automation.
 export async function removeStatementRow(payloadJson: string): Promise<ActionResult> {
   const denied = await requireAccountant()
   if (denied) return { ok: false, error: denied }

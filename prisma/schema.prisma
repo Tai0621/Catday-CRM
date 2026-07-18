@@ -237,6 +237,17 @@ model StatementRowDef {
   createdAt DateTime @default(now())
 }
 
+// Built-in rows the accountant removed from a year's statement (restorable —
+// the underlying OS data is never touched)
+model StatementHiddenRow {
+  id        String   @id @default(cuid())
+  year      Int
+  rowKey    String   // rev:<Category> | cogs:<Category> | opex:<Category>
+  createdAt DateTime @default(now())
+
+  @@unique([year, rowKey])
+}
+
 // ─── Cat Day Wallet (储值 stored value — liability until spent) ──────────────
 
 model WalletEntry {

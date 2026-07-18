@@ -53,6 +53,7 @@ export type IncomeStatement = {
   tax: StatementRow
   netIncome: StatementRow
   cumulativeNet: number[]
+  hiddenRows: { rowKey: string; label: string }[] // removed built-ins, restorable
   yearGrossMarginPct: number | null
   yearEbitdaMarginPct: number | null
   yearNetMarginPct: number | null
@@ -78,6 +79,7 @@ export function composeStatement(opts: {
   opex: StatementRow[]
   makeTax: (ebitdaValues: number[]) => StatementRow
   availableYears: number[]
+  hiddenRows?: { rowKey: string; label: string }[]
 }): IncomeStatement {
   const { year, revenue, cogs, opex, availableYears } = opts
   const totalRevenue = addRows('Total Revenue', revenue)
@@ -109,18 +111,26 @@ export function composeStatement(opts: {
     yearEbitdaMarginPct: yearPct(ebitda.total, totalRevenue.total),
     yearNetMarginPct: yearPct(netIncome.total, totalRevenue.total),
     availableYears,
+    hiddenRows: opts.hiddenRows ?? [],
   }
+}
+
+// Display label for a built-in row key ("rev:Grooming" → "Grooming Revenue")
+export function labelForRowKey(rowKey: string): string {
+  const [section, name] = [rowKey.slice(0, rowKey.indexOf(':')), rowKey.slice(rowKey.indexOf(':') + 1)]
+  return section === 'rev' ? `${name} Revenue` : name
 }
 
 export async function buildIncomeStatement(year: number): Promise<IncomeStatement> {
   const from = new Date(year, 0, 1)
   const to = new Date(year + 1, 0, 1)
 
-  const [txns, expenses, overrides, rowDefs, firstTxn, firstExp, firstCell] = await Promise.all([
+  const [txns, expenses, overrides, rowDefs, hidden, firstTxn, firstExp, firstCell] = await Promise.all([
     db.transaction.findMany({ where: { date: { gte: from, lt: to } }, select: { date: true, total: true, category: true } }),
     db.expense.findMany({ where: { date: { gte: from, lt: to } }, select: { date: true, amount: true, category: true } }),
     db.statementCell.findMany({ where: { year }, select: { month: true, rowKey: true, amount: true } }),
     db.statementRowDef.findMany({ where: { year }, orderBy: { sortOrder: 'asc' } }),
+    db.statementHiddenRow.findMany({ where: { year }, select: { rowKey: true } }),
     db.transaction.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
     db.expense.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
     db.statementCell.findFirst({ orderBy: { year: 'asc' }, select: { year: true } }),
@@ -146,10 +156,14 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
     rowDefs.filter(d => d.section === section)
       .map(d => ({ ...applyOvr(`custom:${d.id}`, d.label, blank12()), custom: true }))
 
-  const revenue = [
+  // Built-in rows the accountant removed for this year (OS data untouched)
+  const hiddenKeys = new Set(hidden.map(h => h.rowKey))
+  const visible = (rows: StatementRow[]) => rows.filter(r => !r.key || !hiddenKeys.has(r.key))
+
+  const revenue = visible([
     ...REVENUE_CATEGORIES.map(c => applyOvr(`rev:${c}`, `${c} Revenue`, revMap.get(c)!)),
     ...customRows('rev'),
-  ]
+  ])
 
   // ── Expenses, split variable vs fixed per the Excel ──
   const expMap = new Map<string, number[]>(EXPENSE_CATEGORIES.map(c => [c, blank12()]))
@@ -157,14 +171,14 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
     const key = (EXPENSE_CATEGORIES as readonly string[]).includes(e.category) ? e.category : 'Other Expense'
     expMap.get(key)![e.date.getMonth()] += e.amount
   }
-  const cogs = [
+  const cogs = visible([
     ...COGS_CATEGORIES.map(c => applyOvr(`cogs:${c}`, c, expMap.get(c)!)),
     ...customRows('cogs'),
-  ]
-  const opex = [
+  ])
+  const opex = visible([
     ...OPEX_CATEGORIES.map(c => applyOvr(`opex:${c}`, c, expMap.get(c)!)),
     ...customRows('opex'),
-  ]
+  ])
   // Year switcher: every year between the first recorded figure and now
   const nowYear = new Date().getFullYear()
   const earliest = Math.min(
@@ -180,6 +194,7 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
     // annual); the accountant can hard-key the real assessed figure per month.
     makeTax: ebitdaValues => applyOvr('tax', 'Tax Provision @ 24%',
       ebitdaValues.map(v => (v > 0 ? Math.round(v * TAX_RATE * 100) / 100 : 0))),
+    hiddenRows: hidden.map(h => ({ rowKey: h.rowKey, label: labelForRowKey(h.rowKey) })),
   })
 }
 
