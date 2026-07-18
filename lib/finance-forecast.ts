@@ -103,3 +103,68 @@ export const YEAR1_MONTHLY: { section: string | null; rows: ForecastRow[] }[] = 
 export const YEAR1_UTILIZATION = ['5.0%', '7.7%', '10.5%', '13.2%', '15.9%', '18.6%', '21.4%', '24.1%', '26.8%', '29.5%', '32.3%', '35.0%']
 
 export const rowTotal = (r: ForecastRow) => r.values.reduce((s, v) => s + v, 0)
+
+// ── The forecast rendered as a monthly IncomeStatement (same shape as
+// actuals, so both views share one layout). 2026 uses the Excel's monthly
+// ramp; 2027–2030 spread the flat annual figures evenly (faithful to the
+// model's flat utilization); other years are zero.
+import { composeStatement, makeRow, blank12, type IncomeStatement, type StatementRow } from './finance'
+import { REVENUE_CATEGORIES } from './constants'
+import { COGS_CATEGORIES, OPEX_CATEGORIES } from './finance'
+
+const flat = (groups: { rows: ForecastRow[] }[]) => groups.flatMap(g => g.rows)
+const FY = flat(FIVE_YEAR)
+const Y1 = flat(YEAR1_MONTHLY)
+const fyVal = (label: string, yearIdx: number) => FY.find(r => r.label === label)?.values[yearIdx] ?? 0
+const y1Months = (label: string) => Y1.find(r => r.label === label)?.values ?? blank12()
+
+// Spread an annual figure over 12 months; last month absorbs rounding
+const spread = (annual: number): number[] => {
+  const monthly = Math.round((annual / 12) * 100) / 100
+  const values = Array.from({ length: 12 }, () => monthly)
+  values[11] = Math.round((annual - monthly * 11) * 100) / 100
+  return values
+}
+
+export function buildForecastStatement(year: number): IncomeStatement {
+  const yearIdx = FORECAST_YEARS.indexOf(year)
+  const isY1 = year === FORECAST_YEARS[0]
+  const inModel = yearIdx >= 0
+
+  // Map the Excel's streams onto the actuals row set
+  // (tiers sum into Membership; Events lands in Other; no Retail forecast)
+  const revenueOf = (cat: string): number[] => {
+    if (!inModel) return blank12()
+    if (isY1) {
+      if (cat === 'Membership') return y1Months('Membership Revenue')
+      if (cat === 'Other') return y1Months('Events Revenue')
+      if (cat === 'Retail') return blank12()
+      return y1Months(`${cat} Revenue`)
+    }
+    if (cat === 'Membership') {
+      return spread(
+        fyVal('Membership – Baby Cat Member', yearIdx) + fyVal('Membership – Senior Cat Owner', yearIdx) +
+        fyVal('Membership – Skin Problem Package', yearIdx) + fyVal('Membership – Premium Package', yearIdx))
+    }
+    if (cat === 'Other') return spread(fyVal('Events Revenue', yearIdx))
+    if (cat === 'Retail') return blank12()
+    return spread(fyVal(`${cat} Revenue`, yearIdx))
+  }
+
+  const expenseOf = (cat: string): number[] => {
+    if (!inModel) return blank12()
+    if (isY1) return y1Months(cat) // absent labels (Retail Stock, Other Expense) → zeros
+    return FY.some(r => r.label === cat) ? spread(fyVal(cat, yearIdx)) : blank12()
+  }
+
+  const revenue: StatementRow[] = REVENUE_CATEGORIES.map(c => makeRow(`${c} Revenue`, revenueOf(c)))
+  const cogs: StatementRow[] = COGS_CATEGORIES.map(c => makeRow(c, expenseOf(c)))
+  const opex: StatementRow[] = OPEX_CATEGORIES.map(c => makeRow(c, expenseOf(c)))
+  const taxValues = !inModel ? blank12() : isY1 ? blank12() : spread(fyVal('Tax Expense (@ 24%)', yearIdx))
+
+  return composeStatement({
+    year, revenue, cogs, opex,
+    makeTax: () => makeRow('Tax (per model)', taxValues),
+    availableYears: [...FORECAST_YEARS],
+  })
+}

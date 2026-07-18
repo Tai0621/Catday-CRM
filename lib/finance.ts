@@ -59,14 +59,58 @@ export type IncomeStatement = {
   availableYears: number[]
 }
 
-const row = (label: string, values: number[]): StatementRow => ({
+export const makeRow = (label: string, values: number[]): StatementRow => ({
   label,
   values,
   total: Math.round(values.reduce((s, v) => s + v, 0) * 100) / 100,
 })
-const blank12 = () => Array.from({ length: 12 }, () => 0)
+const row = makeRow
+export const blank12 = () => Array.from({ length: 12 }, () => 0)
 const addRows = (label: string, rows: StatementRow[]): StatementRow =>
   row(label, blank12().map((_, m) => rows.reduce((s, r) => s + r.values[m], 0)))
+
+// Assembles a full statement from its leaf rows — shared by the live actuals
+// builder and the Excel-model forecast so both render identically.
+export function composeStatement(opts: {
+  year: number
+  revenue: StatementRow[]
+  cogs: StatementRow[]
+  opex: StatementRow[]
+  makeTax: (ebitdaValues: number[]) => StatementRow
+  availableYears: number[]
+}): IncomeStatement {
+  const { year, revenue, cogs, opex, availableYears } = opts
+  const totalRevenue = addRows('Total Revenue', revenue)
+  const totalCogs = addRows('Total Cost of Services', cogs)
+  const totalOpex = addRows('Total Operating Expenses', opex)
+  const grossProfit = row('Gross Profit', blank12().map((_, m) => totalRevenue.values[m] - totalCogs.values[m]))
+  const ebitda = row('EBITDA (Operating Income)', blank12().map((_, m) => grossProfit.values[m] - totalOpex.values[m]))
+  const tax = opts.makeTax(ebitda.values)
+  const netIncome = row('Net Income', blank12().map((_, m) => ebitda.values[m] - tax.values[m]))
+
+  const cumulativeNet: number[] = []
+  netIncome.values.reduce((acc, v, i) => { cumulativeNet[i] = Math.round((acc + v) * 100) / 100; return cumulativeNet[i] }, 0)
+
+  const pct = (num: number[], den: number[]) => num.map((v, i) => (den[i] > 0 ? Math.round((v / den[i]) * 1000) / 10 : -1))
+  const yearPct = (num: number, den: number) => (den > 0 ? Math.round((num / den) * 1000) / 10 : null)
+
+  return {
+    year,
+    months: MONTH_LABELS,
+    revenue, totalRevenue,
+    cogs, totalCogs,
+    grossProfit,
+    grossMarginPct: pct(grossProfit.values, totalRevenue.values),
+    opex, totalOpex,
+    ebitda,
+    ebitdaMarginPct: pct(ebitda.values, totalRevenue.values),
+    tax, netIncome, cumulativeNet,
+    yearGrossMarginPct: yearPct(grossProfit.total, totalRevenue.total),
+    yearEbitdaMarginPct: yearPct(ebitda.total, totalRevenue.total),
+    yearNetMarginPct: yearPct(netIncome.total, totalRevenue.total),
+    availableYears,
+  }
+}
 
 export async function buildIncomeStatement(year: number): Promise<IncomeStatement> {
   const from = new Date(year, 0, 1)
@@ -106,7 +150,6 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
     ...REVENUE_CATEGORIES.map(c => applyOvr(`rev:${c}`, `${c} Revenue`, revMap.get(c)!)),
     ...customRows('rev'),
   ]
-  const totalRevenue = addRows('Total Revenue', revenue)
 
   // ── Expenses, split variable vs fixed per the Excel ──
   const expMap = new Map<string, number[]>(EXPENSE_CATEGORIES.map(c => [c, blank12()]))
@@ -118,28 +161,10 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
     ...COGS_CATEGORIES.map(c => applyOvr(`cogs:${c}`, c, expMap.get(c)!)),
     ...customRows('cogs'),
   ]
-  const totalCogs = addRows('Total Cost of Services', cogs)
   const opex = [
     ...OPEX_CATEGORIES.map(c => applyOvr(`opex:${c}`, c, expMap.get(c)!)),
     ...customRows('opex'),
   ]
-  const totalOpex = addRows('Total Operating Expenses', opex)
-
-  // ── Derived lines ──
-  const grossProfit = row('Gross Profit', blank12().map((_, m) => totalRevenue.values[m] - totalCogs.values[m]))
-  const ebitda = row('EBITDA (Operating Income)', blank12().map((_, m) => grossProfit.values[m] - totalOpex.values[m]))
-  // Provision: 24% of each profitable month (actual LHDN computation is annual);
-  // the accountant can hard-key the real assessed figure per month.
-  const taxAuto = ebitda.values.map(v => (v > 0 ? Math.round(v * TAX_RATE * 100) / 100 : 0))
-  const tax = applyOvr('tax', 'Tax Provision @ 24%', taxAuto)
-  const netIncome = row('Net Income', blank12().map((_, m) => ebitda.values[m] - tax.values[m]))
-
-  const cumulativeNet: number[] = []
-  netIncome.values.reduce((acc, v, i) => { cumulativeNet[i] = Math.round((acc + v) * 100) / 100; return cumulativeNet[i] }, 0)
-
-  const pct = (num: number[], den: number[]) => num.map((v, i) => (den[i] > 0 ? Math.round((v / den[i]) * 1000) / 10 : -1))
-  const yearPct = (num: number, den: number) => (den > 0 ? Math.round((num / den) * 1000) / 10 : null)
-
   // Year switcher: every year between the first recorded figure and now
   const nowYear = new Date().getFullYear()
   const earliest = Math.min(
@@ -149,22 +174,13 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
   )
   const availableYears = Array.from({ length: nowYear - earliest + 1 }, (_, i) => earliest + i)
 
-  return {
-    year,
-    months: MONTH_LABELS,
-    revenue, totalRevenue,
-    cogs, totalCogs,
-    grossProfit,
-    grossMarginPct: pct(grossProfit.values, totalRevenue.values),
-    opex, totalOpex,
-    ebitda,
-    ebitdaMarginPct: pct(ebitda.values, totalRevenue.values),
-    tax, netIncome, cumulativeNet,
-    yearGrossMarginPct: yearPct(grossProfit.total, totalRevenue.total),
-    yearEbitdaMarginPct: yearPct(ebitda.total, totalRevenue.total),
-    yearNetMarginPct: yearPct(netIncome.total, totalRevenue.total),
-    availableYears,
-  }
+  return composeStatement({
+    year, revenue, cogs, opex, availableYears,
+    // Provision: 24% of each profitable month (actual LHDN computation is
+    // annual); the accountant can hard-key the real assessed figure per month.
+    makeTax: ebitdaValues => applyOvr('tax', 'Tax Provision @ 24%',
+      ebitdaValues.map(v => (v > 0 ? Math.round(v * TAX_RATE * 100) / 100 : 0))),
+  })
 }
 
 // CSV export — opens straight in Excel, mirroring the statement layout.

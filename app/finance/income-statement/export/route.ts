@@ -11,15 +11,19 @@ export async function GET(req: NextRequest) {
 
   const yearParam = req.nextUrl.searchParams.get('year') ?? ''
   const year = /^\d{4}$/.test(yearParam) ? Number(yearParam) : new Date().getFullYear()
+  const forecast = req.nextUrl.searchParams.get('view') === 'forecast'
 
-  const statement = await buildIncomeStatement(year)
+  const statement = forecast
+    ? (await import('@/lib/finance-forecast')).buildForecastStatement(year)
+    : await buildIncomeStatement(year)
   // BOM so Excel opens it as UTF-8 without an import wizard
   const csv = '﻿' + statementToCsv(statement)
 
+  const name = `CATDAY-Income-Statement-${forecast ? 'Forecast-' : ''}${year}.csv`
   return new NextResponse(csv, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="CATDAY-Income-Statement-${year}.csv"`,
+      'Content-Disposition': `attachment; filename="${name}"`,
     },
   })
 }

@@ -20,7 +20,11 @@ const fmt = (v: number) =>
 
 const cellKey = (rowKey: string, m: number) => `${rowKey}|${m}`
 
-export function StatementTable({ statement: s }: { statement: IncomeStatement }) {
+export function StatementTable({ statement: s, mode = 'actuals' }: {
+  statement: IncomeStatement
+  mode?: 'actuals' | 'forecast'
+}) {
+  const forecast = mode === 'forecast'
   const router = useRouter()
   const [editMode, setEditMode] = useState(false)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
@@ -123,10 +127,12 @@ export function StatementTable({ statement: s }: { statement: IncomeStatement })
   }
 
   const viewCell = (r: StatementRow, m: number) => {
-    const manual = r.overridden?.[m] ?? false
+    const manual = !forecast && (r.overridden?.[m] ?? false)
     return (
       <td key={m} className="px-2 py-1.5 text-right tabular-nums whitespace-nowrap"
-        title={manual ? `Hard-keyed — OS figure is RM ${(r.autoValues?.[m] ?? 0).toLocaleString('en-MY')}.` : 'Live from the OS.'}
+        title={forecast ? undefined : manual
+          ? `Hard-keyed — OS figure is RM ${(r.autoValues?.[m] ?? 0).toLocaleString('en-MY')}.`
+          : 'Live from the OS.'}
         style={{ color: manual ? BLUE : 'rgba(45,25,7,0.75)', fontWeight: manual ? 600 : 400 }}>
         {fmt(r.values[m])}
       </td>
@@ -155,10 +161,10 @@ export function StatementTable({ statement: s }: { statement: IncomeStatement })
       style={{ color: INK, fontWeight: opts?.bold ? 700 : 400, position: 'sticky', left: 0, background: '#F2EDE0' }}>
       <span className="inline-flex items-center gap-1.5">
         {editMode && r.custom && (
-          <button onClick={() => deleteRow(r)} disabled={busy} title="Delete this row"
-            className="text-xs leading-none rounded px-1"
-            style={{ color: RED, border: `1px solid ${RED}55` }}>
-            ✕
+          <button onClick={() => deleteRow(r)} disabled={busy} title={`Delete “${r.label}” and its figures`}
+            className="text-[10px] leading-none rounded px-1.5 py-0.5 font-semibold whitespace-nowrap"
+            style={{ color: '#fff', background: RED }}>
+            ✕ delete
           </button>
         )}
         {r.label}
@@ -239,13 +245,21 @@ export function StatementTable({ statement: s }: { statement: IncomeStatement })
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs cd-muted">
-          <span><span className="font-semibold" style={{ color: INK }}>Black</span> — live from the OS; updates automatically.</span>
-          <span><span className="font-semibold" style={{ color: BLUE }}>Blue</span> — hard-keyed by the accountant.</span>
-          {editMode && <span>Type into any cell (blank = use the OS figure) · totals recalculate on Save.</span>}
+          {forecast ? (
+            <span>Estimates from your Excel model, spread monthly — switch to <strong>Actuals</strong> for live figures.</span>
+          ) : (
+            <>
+              <span><span className="font-semibold" style={{ color: INK }}>Black</span> — live from the OS; updates automatically.</span>
+              <span><span className="font-semibold" style={{ color: BLUE }}>Blue</span> — hard-keyed by the accountant.</span>
+              {editMode && <span>Blank cell = use the OS figure · rows you added show <span className="font-semibold" style={{ color: RED }}>✕ delete</span> (built-in rows are OS-linked and stay) · totals recalculate on Save.</span>}
+            </>
+          )}
           {error && <span style={{ color: RED }}>{error}</span>}
         </div>
         <div className="flex items-center gap-2">
-          {editMode ? (
+          {forecast ? (
+            <span className="cd-pill" style={{ background: 'rgba(231,206,122,0.4)', color: '#7a5c00' }}>estimates</span>
+          ) : editMode ? (
             <>
               <button onClick={save} disabled={busy} className="cd-btn text-sm">{busy ? 'Saving…' : 'Save'}</button>
               <button onClick={cancelEdit} disabled={busy} className="cd-btn-sec text-sm">Cancel</button>
