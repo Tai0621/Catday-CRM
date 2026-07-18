@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { IncomeStatement, StatementRow } from '@/lib/finance'
-import { saveStatementCell } from './actions'
+import { saveStatementCells, addStatementRow, removeStatementRow } from './actions'
 
-// Accounting colour convention: BLACK figures flow live from the OS
-// (checkout, expenses); BLUE figures are hard-keyed by the accountant.
+// Excel-style workpaper. BLACK figures flow live from the OS (checkout,
+// expenses); BLUE figures are hard-keyed by the accountant. Editing follows
+// the Edit → change → Save cycle; custom rows can be added and deleted.
 const INK = '#2D1907'
 const BLUE = '#1D4ED8'
 const RED = '#B14919'
@@ -17,63 +18,115 @@ const fmt = (v: number) =>
     : v === 0 ? '–'
     : v.toLocaleString('en-MY', { maximumFractionDigits: 0 })
 
+const cellKey = (rowKey: string, m: number) => `${rowKey}|${m}`
+
 export function StatementTable({ statement: s }: { statement: IncomeStatement }) {
   const router = useRouter()
-  const [editing, setEditing] = useState<{ rowKey: string; month: number } | null>(null)
-  const [draft, setDraft] = useState('')
+  const [editMode, setEditMode] = useState(false)
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [addingTo, setAddingTo] = useState<string | null>(null) // section being added to
+  const [newLabel, setNewLabel] = useState('')
 
-  function beginEdit(r: StatementRow, m: number) {
-    if (!r.key || busy) return
-    setEditing({ rowKey: r.key, month: m })
-    setDraft(r.overridden?.[m] ? String(r.values[m]) : '')
+  // What each editable cell "starts as": the keyed figure, or '' when it's the live OS value
+  const initial = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const r of [...s.revenue, ...s.cogs, ...s.opex, s.tax]) {
+      if (!r.key) continue
+      r.values.forEach((v, m) => { map[cellKey(r.key!, m)] = r.overridden?.[m] ? String(v) : '' })
+    }
+    return map
+  }, [s])
+
+  function beginEdit() {
+    setDrafts({})
     setError(null)
+    setEditMode(true)
   }
 
-  async function commit(clear = false) {
-    if (!editing) return
-    const trimmed = draft.trim()
-    const amount = clear || trimmed === '' ? null : parseFloat(trimmed)
-    if (amount !== null && !(Number.isFinite(amount) && amount >= 0)) { setError('Enter a valid amount.'); return }
+  function cancelEdit() {
+    setDrafts({})
+    setAddingTo(null)
+    setError(null)
+    setEditMode(false)
+  }
+
+  async function save() {
+    const cells: { month: number; rowKey: string; amount: number | null }[] = []
+    for (const [k, draft] of Object.entries(drafts)) {
+      if (draft === initial[k]) continue // untouched
+      const [rowKey, mStr] = [k.slice(0, k.lastIndexOf('|')), k.slice(k.lastIndexOf('|') + 1)]
+      const trimmed = draft.trim()
+      if (trimmed === '') {
+        cells.push({ month: Number(mStr), rowKey, amount: null }) // cleared → back to OS
+        continue
+      }
+      const amount = parseFloat(trimmed)
+      if (!(Number.isFinite(amount) && amount >= 0)) {
+        setError(`"${trimmed}" is not a valid amount.`)
+        return
+      }
+      cells.push({ month: Number(mStr), rowKey, amount })
+    }
+    if (cells.length === 0) { cancelEdit(); return }
     setBusy(true)
-    const res = await saveStatementCell(JSON.stringify({ year: s.year, month: editing.month, rowKey: editing.rowKey, amount }))
+    const res = await saveStatementCells(JSON.stringify({ year: s.year, cells }))
     setBusy(false)
     if (!res.ok) { setError(res.error); return }
-    setEditing(null)
+    setDrafts({})
+    setEditMode(false)
     router.refresh()
   }
 
-  const leafCell = (r: StatementRow, m: number) => {
-    const isEditing = editing && editing.rowKey === r.key && editing.month === m
-    if (isEditing) {
-      return (
-        <td key={m} className="px-1 py-1 text-right" style={{ minWidth: '4.6rem' }}>
-          <input
-            autoFocus
-            type="number" min="0" step="0.01"
-            value={draft}
-            placeholder={String(r.autoValues?.[m] ?? 0)}
-            onChange={e => setDraft(e.target.value)}
-            onBlur={() => commit()}
-            onKeyDown={e => {
-              if (e.key === 'Enter') commit()
-              if (e.key === 'Escape') setEditing(null)
-            }}
-            className="w-full text-right text-xs rounded px-1 py-0.5"
-            style={{ border: `1.5px solid ${BLUE}`, color: BLUE, background: '#fff', outline: 'none' }}
-          />
-        </td>
-      )
-    }
+  async function addRow(section: string) {
+    const label = newLabel.trim()
+    if (!label) return
+    setBusy(true)
+    const res = await addStatementRow(JSON.stringify({ year: s.year, section, label }))
+    setBusy(false)
+    if (!res.ok) { setError(res.error); return }
+    setNewLabel('')
+    setAddingTo(null)
+    router.refresh()
+  }
+
+  async function deleteRow(r: StatementRow) {
+    if (!r.custom || !r.key?.startsWith('custom:')) return
+    if (!window.confirm(`Delete the row “${r.label}” and all figures keyed into it?`)) return
+    setBusy(true)
+    const res = await removeStatementRow(JSON.stringify({ id: r.key.slice('custom:'.length) }))
+    setBusy(false)
+    if (!res.ok) { setError(res.error); return }
+    router.refresh()
+  }
+
+  // ── cells ──
+  const editCell = (r: StatementRow, m: number) => {
+    const k = cellKey(r.key!, m)
+    const value = drafts[k] ?? initial[k]
+    return (
+      <td key={m} className="px-1 py-1 text-right" style={{ minWidth: '4.6rem' }}>
+        <input
+          type="number" min="0" step="0.01"
+          value={value}
+          placeholder={fmt(r.autoValues?.[m] ?? 0)}
+          onChange={e => setDrafts(prev => ({ ...prev, [k]: e.target.value }))}
+          className="w-full text-right text-xs rounded px-1 py-0.5"
+          style={{
+            border: `1px solid ${value !== '' ? BLUE : 'rgba(45,25,7,0.2)'}`,
+            color: BLUE, background: '#fff', outline: 'none',
+          }}
+        />
+      </td>
+    )
+  }
+
+  const viewCell = (r: StatementRow, m: number) => {
     const manual = r.overridden?.[m] ?? false
     return (
-      <td key={m}
-        onClick={() => beginEdit(r, m)}
-        className="px-2 py-1.5 text-right tabular-nums whitespace-nowrap cursor-pointer hover:opacity-70"
-        title={manual
-          ? `Manual entry — OS figure is RM ${(r.autoValues?.[m] ?? 0).toLocaleString('en-MY')}. Click to edit; clear to revert.`
-          : 'Live from the OS. Click to hard-key a figure.'}
+      <td key={m} className="px-2 py-1.5 text-right tabular-nums whitespace-nowrap"
+        title={manual ? `Hard-keyed — OS figure is RM ${(r.autoValues?.[m] ?? 0).toLocaleString('en-MY')}.` : 'Live from the OS.'}
         style={{ color: manual ? BLUE : 'rgba(45,25,7,0.75)', fontWeight: manual ? 600 : 400 }}>
         {fmt(r.values[m])}
       </td>
@@ -100,14 +153,24 @@ export function StatementTable({ statement: s }: { statement: IncomeStatement })
   const labelTd = (r: StatementRow, opts?: { bold?: boolean; indent?: boolean }) => (
     <td className={`px-3 py-1.5 whitespace-nowrap ${opts?.indent ? 'pl-7' : ''}`}
       style={{ color: INK, fontWeight: opts?.bold ? 700 : 400, position: 'sticky', left: 0, background: '#F2EDE0' }}>
-      {r.label}
+      <span className="inline-flex items-center gap-1.5">
+        {editMode && r.custom && (
+          <button onClick={() => deleteRow(r)} disabled={busy} title="Delete this row"
+            className="text-xs leading-none rounded px-1"
+            style={{ color: RED, border: `1px solid ${RED}55` }}>
+            ✕
+          </button>
+        )}
+        {r.label}
+        {r.custom && !editMode && <span className="text-[10px]" style={{ color: BLUE, opacity: 0.7 }}>manual</span>}
+      </span>
     </td>
   )
 
   const leafRow = (r: StatementRow) => (
-    <tr key={r.label}>
+    <tr key={r.key ?? r.label}>
       {labelTd(r, { indent: true })}
-      {r.values.map((_, m) => leafCell(r, m))}
+      {r.values.map((_, m) => (editMode ? editCell(r, m) : viewCell(r, m)))}
       {totalTd(r)}
     </tr>
   )
@@ -129,6 +192,32 @@ export function StatementTable({ statement: s }: { statement: IncomeStatement })
     </tr>
   )
 
+  // "+ Add row" line at the foot of a section (edit mode only)
+  const addRowLine = (section: string, prompt: string) => {
+    if (!editMode) return null
+    return (
+      <tr key={`add-${section}`}>
+        <td colSpan={14} className="px-3 py-1.5" style={{ position: 'sticky', left: 0 }}>
+          {addingTo === section ? (
+            <span className="inline-flex items-center gap-2">
+              <input autoFocus value={newLabel} onChange={e => setNewLabel(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') addRow(section); if (e.key === 'Escape') { setAddingTo(null); setNewLabel('') } }}
+                placeholder={prompt} className="text-xs rounded px-2 py-1"
+                style={{ border: `1px solid ${BLUE}`, color: BLUE, background: '#fff', outline: 'none', width: '16rem' }} />
+              <button onClick={() => addRow(section)} disabled={busy || !newLabel.trim()} className="cd-btn-sec text-xs">Add</button>
+              <button onClick={() => { setAddingTo(null); setNewLabel('') }} className="text-xs cd-muted hover:underline">cancel</button>
+            </span>
+          ) : (
+            <button onClick={() => { setAddingTo(section); setNewLabel('') }} disabled={busy}
+              className="text-xs hover:underline" style={{ color: BLUE }}>
+              + Add row
+            </button>
+          )}
+        </td>
+      </tr>
+    )
+  }
+
   const pctRow = (label: string, values: number[], yearVal: number | null) => (
     <tr key={label}>
       <td className="px-3 py-1 text-xs italic whitespace-nowrap"
@@ -148,11 +237,23 @@ export function StatementTable({ statement: s }: { statement: IncomeStatement })
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs cd-muted">
-        <span><span className="font-semibold" style={{ color: INK }}>Black</span> — live from the OS (checkout, expenses); updates automatically.</span>
-        <span><span className="font-semibold" style={{ color: BLUE }}>Blue</span> — hard-keyed by the accountant; click any monthly cell to enter, clear it to revert.</span>
-        {error && <span style={{ color: RED }}>{error}</span>}
-        {busy && <span>Saving…</span>}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs cd-muted">
+          <span><span className="font-semibold" style={{ color: INK }}>Black</span> — live from the OS; updates automatically.</span>
+          <span><span className="font-semibold" style={{ color: BLUE }}>Blue</span> — hard-keyed by the accountant.</span>
+          {editMode && <span>Type into any cell (blank = use the OS figure) · totals recalculate on Save.</span>}
+          {error && <span style={{ color: RED }}>{error}</span>}
+        </div>
+        <div className="flex items-center gap-2">
+          {editMode ? (
+            <>
+              <button onClick={save} disabled={busy} className="cd-btn text-sm">{busy ? 'Saving…' : 'Save'}</button>
+              <button onClick={cancelEdit} disabled={busy} className="cd-btn-sec text-sm">Cancel</button>
+            </>
+          ) : (
+            <button onClick={beginEdit} className="cd-btn-sec text-sm">✎ Edit</button>
+          )}
+        </div>
       </div>
 
       <div className="cd-card overflow-x-auto">
@@ -167,16 +268,19 @@ export function StatementTable({ statement: s }: { statement: IncomeStatement })
           <tbody className="cd-tbody">
             {sectionHead('Revenue')}
             {s.revenue.map(leafRow)}
+            {addRowLine('rev', 'e.g. Events Revenue')}
             {derivedRow(s.totalRevenue, { bold: true, topRule: true })}
 
             {sectionHead('Cost of Services (variable)')}
             {s.cogs.map(leafRow)}
+            {addRowLine('cogs', 'e.g. Packaging')}
             {derivedRow(s.totalCogs, { bold: true, topRule: true })}
             {derivedRow(s.grossProfit, { bold: true })}
             {pctRow('Gross Margin %', s.grossMarginPct, s.yearGrossMarginPct)}
 
             {sectionHead('Operating Expenses (fixed)')}
             {s.opex.map(leafRow)}
+            {addRowLine('opex', 'e.g. Depreciation')}
             {derivedRow(s.totalOpex, { bold: true, topRule: true })}
 
             {derivedRow(s.ebitda, { bold: true, topRule: true })}

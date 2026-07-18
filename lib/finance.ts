@@ -27,6 +27,7 @@ export type StatementRow = {
   key?: string
   overridden?: boolean[]
   autoValues?: number[]
+  custom?: boolean // accountant-added row: fully manual, deletable
 }
 
 export const statementRowKeys = (): string[] => [
@@ -71,10 +72,11 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
   const from = new Date(year, 0, 1)
   const to = new Date(year + 1, 0, 1)
 
-  const [txns, expenses, overrides, firstTxn, firstExp, firstCell] = await Promise.all([
+  const [txns, expenses, overrides, rowDefs, firstTxn, firstExp, firstCell] = await Promise.all([
     db.transaction.findMany({ where: { date: { gte: from, lt: to } }, select: { date: true, total: true, category: true } }),
     db.expense.findMany({ where: { date: { gte: from, lt: to } }, select: { date: true, amount: true, category: true } }),
     db.statementCell.findMany({ where: { year }, select: { month: true, rowKey: true, amount: true } }),
+    db.statementRowDef.findMany({ where: { year }, orderBy: { sortOrder: 'asc' } }),
     db.transaction.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
     db.expense.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
     db.statementCell.findFirst({ orderBy: { year: 'asc' }, select: { year: true } }),
@@ -95,7 +97,15 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
     const key = (REVENUE_CATEGORIES as readonly string[]).includes(t.category) ? t.category : 'Other'
     revMap.get(key)![t.date.getMonth()] += t.total
   }
-  const revenue = REVENUE_CATEGORIES.map(c => applyOvr(`rev:${c}`, `${c} Revenue`, revMap.get(c)!))
+  // Accountant-added rows: no OS source, every figure is keyed (all blue)
+  const customRows = (section: string): StatementRow[] =>
+    rowDefs.filter(d => d.section === section)
+      .map(d => ({ ...applyOvr(`custom:${d.id}`, d.label, blank12()), custom: true }))
+
+  const revenue = [
+    ...REVENUE_CATEGORIES.map(c => applyOvr(`rev:${c}`, `${c} Revenue`, revMap.get(c)!)),
+    ...customRows('rev'),
+  ]
   const totalRevenue = addRows('Total Revenue', revenue)
 
   // ── Expenses, split variable vs fixed per the Excel ──
@@ -104,9 +114,15 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
     const key = (EXPENSE_CATEGORIES as readonly string[]).includes(e.category) ? e.category : 'Other Expense'
     expMap.get(key)![e.date.getMonth()] += e.amount
   }
-  const cogs = COGS_CATEGORIES.map(c => applyOvr(`cogs:${c}`, c, expMap.get(c)!))
+  const cogs = [
+    ...COGS_CATEGORIES.map(c => applyOvr(`cogs:${c}`, c, expMap.get(c)!)),
+    ...customRows('cogs'),
+  ]
   const totalCogs = addRows('Total Cost of Services', cogs)
-  const opex = OPEX_CATEGORIES.map(c => applyOvr(`opex:${c}`, c, expMap.get(c)!))
+  const opex = [
+    ...OPEX_CATEGORIES.map(c => applyOvr(`opex:${c}`, c, expMap.get(c)!)),
+    ...customRows('opex'),
+  ]
   const totalOpex = addRows('Total Operating Expenses', opex)
 
   // ── Derived lines ──

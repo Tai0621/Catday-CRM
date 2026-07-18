@@ -218,13 +218,23 @@ model StatementCell {
   id        String   @id @default(cuid())
   year      Int
   month     Int      // 0-11
-  rowKey    String   // rev:<Category> | cogs:<Category> | opex:<Category> | tax
+  rowKey    String   // rev:<Category> | cogs:<Category> | opex:<Category> | tax | custom:<rowDefId>
   amount    Float
   note      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([year, month, rowKey])
+}
+
+// Accountant-added statement rows (fully manual, deletable) — e.g. Depreciation
+model StatementRowDef {
+  id        String   @id @default(cuid())
+  year      Int
+  section   String   // rev | cogs | opex
+  label     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
 }
 
 // ─── Cat Day Wallet (储值 stored value — liability until spent) ──────────────

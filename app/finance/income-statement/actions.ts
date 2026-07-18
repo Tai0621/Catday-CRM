@@ -5,37 +5,105 @@ import { getSession, isManager } from '@/lib/auth'
 import { statementRowKeys } from '@/lib/finance'
 import { revalidatePath } from 'next/cache'
 
-export type SaveCellResult = { ok: true } | { ok: false; error: string }
+export type ActionResult = { ok: true } | { ok: false; error: string }
 
-// Accountant keys a figure into a statement cell (blue), or clears it back to
-// the live OS figure (black). amount === null clears.
-export async function saveStatementCell(payloadJson: string): Promise<SaveCellResult> {
+async function requireAccountant(): Promise<string | null> {
   const session = await getSession()
-  if (!session || !isManager(session)) return { ok: false, error: 'Manager sign-in required.' }
+  return session && isManager(session) ? null : 'Manager sign-in required.'
+}
 
-  let p: { year: number; month: number; rowKey: string; amount: number | null }
+async function allowedKeys(year: number): Promise<Set<string>> {
+  const defs = await db.statementRowDef.findMany({ where: { year }, select: { id: true } })
+  return new Set([...statementRowKeys(), ...defs.map(d => `custom:${d.id}`)])
+}
+
+// Excel-style Save: commit every changed cell in one batch.
+// amount === null clears the override back to the live OS figure.
+export async function saveStatementCells(payloadJson: string): Promise<ActionResult> {
+  const denied = await requireAccountant()
+  if (denied) return { ok: false, error: denied }
+
+  let p: { year: number; cells: { month: number; rowKey: string; amount: number | null }[] }
   try {
     p = JSON.parse(payloadJson)
   } catch {
     return { ok: false, error: 'Bad request.' }
   }
 
-  const year = Math.trunc(p.year), month = Math.trunc(p.month)
+  const year = Math.trunc(p.year)
   if (!(year >= 2000 && year <= 2100)) return { ok: false, error: 'Bad year.' }
-  if (!(month >= 0 && month <= 11)) return { ok: false, error: 'Bad month.' }
-  if (!statementRowKeys().includes(p.rowKey)) return { ok: false, error: 'Unknown statement row.' }
+  if (!Array.isArray(p.cells) || p.cells.length === 0) return { ok: false, error: 'Nothing to save.' }
+  if (p.cells.length > 400) return { ok: false, error: 'Too many changes in one save.' }
 
-  if (p.amount === null) {
-    await db.statementCell.deleteMany({ where: { year, month, rowKey: p.rowKey } })
-  } else {
-    const amount = Math.round(Number(p.amount) * 100) / 100
-    if (!Number.isFinite(amount) || amount < 0) return { ok: false, error: 'Amount must be zero or above.' }
-    await db.statementCell.upsert({
-      where: { year_month_rowKey: { year, month, rowKey: p.rowKey } },
-      create: { year, month, rowKey: p.rowKey, amount },
-      update: { amount },
-    })
+  const keys = await allowedKeys(year)
+  for (const c of p.cells) {
+    const month = Math.trunc(c.month)
+    if (!(month >= 0 && month <= 11)) return { ok: false, error: 'Bad month.' }
+    if (!keys.has(c.rowKey)) return { ok: false, error: `Unknown statement row: ${c.rowKey}` }
+    if (c.amount !== null) {
+      const amount = Number(c.amount)
+      if (!Number.isFinite(amount) || amount < 0) return { ok: false, error: 'Amounts must be zero or above.' }
+    }
   }
+
+  const ops = p.cells.map(c =>
+    c.amount === null
+      ? db.statementCell.deleteMany({ where: { year, month: Math.trunc(c.month), rowKey: c.rowKey } })
+      : db.statementCell.upsert({
+          where: { year_month_rowKey: { year, month: Math.trunc(c.month), rowKey: c.rowKey } },
+          create: { year, month: Math.trunc(c.month), rowKey: c.rowKey, amount: Math.round(Number(c.amount) * 100) / 100 },
+          update: { amount: Math.round(Number(c.amount) * 100) / 100 },
+        }),
+  )
+  await db.$transaction(ops)
+  revalidatePath('/finance/income-statement')
+  return { ok: true }
+}
+
+// Add a custom row to a section (fully manual line, e.g. Depreciation)
+export async function addStatementRow(payloadJson: string): Promise<ActionResult & { id?: string }> {
+  const denied = await requireAccountant()
+  if (denied) return { ok: false, error: denied }
+
+  let p: { year: number; section: string; label: string }
+  try {
+    p = JSON.parse(payloadJson)
+  } catch {
+    return { ok: false, error: 'Bad request.' }
+  }
+
+  const year = Math.trunc(p.year)
+  if (!(year >= 2000 && year <= 2100)) return { ok: false, error: 'Bad year.' }
+  if (!['rev', 'cogs', 'opex'].includes(p.section)) return { ok: false, error: 'Bad section.' }
+  const label = (p.label ?? '').trim()
+  if (!label || label.length > 60) return { ok: false, error: 'Row name must be 1–60 characters.' }
+
+  const count = await db.statementRowDef.count({ where: { year, section: p.section } })
+  const def = await db.statementRowDef.create({ data: { year, section: p.section, label, sortOrder: count } })
+  revalidatePath('/finance/income-statement')
+  return { ok: true, id: def.id }
+}
+
+// Delete a custom row and every figure keyed into it.
+// Built-in rows can't be deleted — they're the OS automation.
+export async function removeStatementRow(payloadJson: string): Promise<ActionResult> {
+  const denied = await requireAccountant()
+  if (denied) return { ok: false, error: denied }
+
+  let p: { id: string }
+  try {
+    p = JSON.parse(payloadJson)
+  } catch {
+    return { ok: false, error: 'Bad request.' }
+  }
+
+  const def = await db.statementRowDef.findUnique({ where: { id: p.id } })
+  if (!def) return { ok: false, error: 'Row not found.' }
+
+  await db.$transaction([
+    db.statementCell.deleteMany({ where: { year: def.year, rowKey: `custom:${def.id}` } }),
+    db.statementRowDef.delete({ where: { id: def.id } }),
+  ])
   revalidatePath('/finance/income-statement')
   return { ok: true }
 }
