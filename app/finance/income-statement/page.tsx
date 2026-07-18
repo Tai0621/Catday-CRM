@@ -2,17 +2,20 @@ import { requireManager } from '@/lib/auth'
 import { buildIncomeStatement, type StatementRow } from '@/lib/finance'
 import { SEGMENTS } from '@/lib/segments'
 import Link from 'next/link'
+import { ForecastView } from './ForecastView'
 
 // The Excel's income statement, live: revenue rows come from the same
 // transactions the POS writes; cost rows from the Expenses page.
+// ?view=forecast shows the Excel model's estimates instead of actuals.
 export default async function IncomeStatementPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string }>
+  searchParams: Promise<{ year?: string; view?: string }>
 }) {
   await requireManager()
-  const { year: yearParam } = await searchParams
+  const { year: yearParam, view } = await searchParams
   const year = /^\d{4}$/.test(yearParam ?? '') ? Number(yearParam) : new Date().getFullYear()
+  const forecast = view === 'forecast'
   const s = await buildIncomeStatement(year)
   const seg = SEGMENTS.business
 
@@ -86,8 +89,25 @@ export default async function IncomeStatementPage({
             <Link href="/finance/expenses" className="cd-link">Expenses</Link> page. All figures in RM.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {s.availableYears.map(y => (
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Actuals ⇄ Forecast toggle */}
+          <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid rgba(45,25,7,0.15)' }}>
+            <Link href={`/finance/income-statement?year=${year}`}
+              className="text-xs px-3 py-1.5"
+              style={!forecast
+                ? { background: '#2D1907', color: '#ECDBB6', fontWeight: 600 }
+                : { background: 'rgba(45,25,7,0.04)', color: 'rgba(45,25,7,0.55)' }}>
+              Actuals
+            </Link>
+            <Link href={`/finance/income-statement?year=${year}&view=forecast`}
+              className="text-xs px-3 py-1.5"
+              style={forecast
+                ? { background: seg.color, color: '#2D1907', fontWeight: 700 }
+                : { background: 'rgba(45,25,7,0.04)', color: 'rgba(45,25,7,0.55)' }}>
+              Forecast (Excel model)
+            </Link>
+          </div>
+          {!forecast && s.availableYears.map(y => (
             <Link key={y} href={`/finance/income-statement?year=${y}`}
               className="text-xs px-3 py-1.5 rounded-lg"
               style={y === year
@@ -96,10 +116,15 @@ export default async function IncomeStatementPage({
               {y}
             </Link>
           ))}
-          <a href={`/finance/income-statement/export?year=${year}`} className="cd-btn text-sm">⤓ Export to Excel</a>
+          {!forecast && (
+            <a href={`/finance/income-statement/export?year=${year}`} className="cd-btn text-sm">⤓ Export to Excel</a>
+          )}
         </div>
       </div>
 
+      {forecast && <ForecastView />}
+
+      {!forecast && <>
       {/* Year headline */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Headline label={`Revenue ${year}`} value={s.totalRevenue.total} />
@@ -168,6 +193,7 @@ export default async function IncomeStatementPage({
         Tax row is a 24% provision on profitable months (the model&apos;s corporate rate) — LHDN computes the real
         figure annually. Balance sheet &amp; cash flow join once asset and liability data exist (three-statement goal).
       </p>
+      </>}
     </div>
   )
 }
