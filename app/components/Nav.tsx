@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { Icon } from './NavIcons'
 
 type NavLink = { href: string; label: string; icon: string }
 // A segment's links can be split into named sub-groups (e.g. Grooming / Boarding / Sales)
@@ -13,9 +14,9 @@ const segmentLinks = (s: NavSegment) => s.groups.flatMap(g => g.links)
 
 // Pinned above the segments — the owner's daily spine, not tied to one segment
 const PINNED: NavLink[] = [
-  { href: '/', label: 'Dashboard', icon: '⊞' },
-  { href: '/actions', label: 'Action Inbox', icon: '◎' },
-  { href: '/ask', label: 'Ask AI', icon: '✦' },
+  { href: '/', label: 'Dashboard', icon: 'dashboard' },
+  { href: '/actions', label: 'Action Inbox', icon: 'inbox' },
+  { href: '/ask', label: 'Ask AI', icon: 'ai' },
 ]
 
 // The six business segments — the OS map. Colours match lib/segments.ts.
@@ -26,25 +27,25 @@ const SEGMENTS: NavSegment[] = [
       {
         sub: 'Grooming', subColor: '#C86A3C',
         links: [
-          { href: '/board', label: 'Service Board', icon: '◫' },
-          { href: '/services', label: 'Service Menu', icon: '✂' },
+          { href: '/board', label: 'Service Board', icon: 'board' },
+          { href: '/services', label: 'Service Menu', icon: 'scissors' },
         ],
       },
       {
         sub: 'Boarding', subColor: '#729094',
         links: [
-          { href: '/runsheet', label: 'Run Sheet', icon: '☰' },
-          { href: '/rooms/calendar', label: 'Room Calendar', icon: '▤' },
-          { href: '/rooms', label: 'Rooms', icon: '▦' },
+          { href: '/runsheet', label: 'Run Sheet', icon: 'runsheet' },
+          { href: '/rooms/calendar', label: 'Room Calendar', icon: 'calendar' },
+          { href: '/rooms', label: 'Rooms', icon: 'rooms' },
         ],
       },
       {
         sub: 'Sales', subColor: '#ECDBB6',
         links: [
-          { href: '/appointments', label: 'Appointments', icon: '◷' },
-          { href: '/pos', label: 'POS Checkout', icon: '⬚' },
-          { href: '/products', label: 'Products', icon: '⬢' },
-          { href: '/cashup', label: 'Cash-up', icon: '▣' },
+          { href: '/appointments', label: 'Appointments', icon: 'clock' },
+          { href: '/pos', label: 'POS Checkout', icon: 'pos' },
+          { href: '/products', label: 'Products', icon: 'box' },
+          { href: '/cashup', label: 'Cash-up', icon: 'wallet' },
         ],
       },
     ],
@@ -52,7 +53,7 @@ const SEGMENTS: NavSegment[] = [
   {
     key: 'hr', header: 'Human Resource', color: '#729094',
     groups: [{ links: [
-      { href: '/staff', label: 'Staff & PINs', icon: '♟' },
+      { href: '/staff', label: 'Staff & PINs', icon: 'staff' },
     ] }],
   },
   {
@@ -61,17 +62,17 @@ const SEGMENTS: NavSegment[] = [
       {
         sub: '3-Statement', subColor: '#B8902B',
         links: [
-          { href: '/finance/income-statement', label: 'Income Statement', icon: '≣' },
-          { href: '/finance/balance-sheet', label: 'Balance Sheet', icon: '⚖' },
-          { href: '/finance/cash-flow', label: 'Cash Flow', icon: '♒' },
+          { href: '/finance/income-statement', label: 'Income Statement', icon: 'report' },
+          { href: '/finance/balance-sheet', label: 'Balance Sheet', icon: 'scale' },
+          { href: '/finance/cash-flow', label: 'Cash Flow', icon: 'trend' },
         ],
       },
       {
         sub: 'Records & Planning', subColor: '#729094',
         links: [
-          { href: '/finance/expenses', label: 'Expenses', icon: '◒' },
-          { href: '/revenue', label: 'Revenue', icon: '◐' },
-          { href: '/plan', label: 'Financial Plan', icon: '◔' },
+          { href: '/finance/expenses', label: 'Expenses', icon: 'receipt' },
+          { href: '/revenue', label: 'Revenue', icon: 'bars' },
+          { href: '/plan', label: 'Financial Plan', icon: 'compass' },
         ],
       },
     ],
@@ -79,17 +80,17 @@ const SEGMENTS: NavSegment[] = [
   {
     key: 'crm', header: 'Customers · CRM', color: '#98A86B',
     groups: [{ links: [
-      { href: '/customers', label: 'Customers', icon: '◉' },
-      { href: '/cats', label: 'Cats', icon: '◈' },
-      { href: '/memberships', label: 'Memberships', icon: '◆' },
-      { href: '/whatsapp', label: 'WhatsApp', icon: '✆' },
-      { href: '/incidents', label: 'Incidents', icon: '⚠' },
+      { href: '/customers', label: 'Customers', icon: 'customers' },
+      { href: '/cats', label: 'Cats', icon: 'cat' },
+      { href: '/memberships', label: 'Memberships', icon: 'star' },
+      { href: '/whatsapp', label: 'WhatsApp', icon: 'chat' },
+      { href: '/incidents', label: 'Incidents', icon: 'alert' },
     ] }],
   },
   {
     key: 'marketing', header: 'Marketing', color: '#E7CE7A',
     groups: [{ links: [
-      { href: '/academy', label: 'Academy', icon: '◑' },
+      { href: '/academy', label: 'Academy', icon: 'cap' },
     ] }],
   },
   {
@@ -100,16 +101,16 @@ const SEGMENTS: NavSegment[] = [
 
 // Staff see a flat, focused lane — no segment tree
 const STAFF_LINKS: NavLink[] = [
-  { href: '/actions', label: 'Action Inbox', icon: '◎' },
-  { href: '/board', label: 'Service Board', icon: '◫' },
-  { href: '/runsheet', label: 'Run Sheet', icon: '☰' },
-  { href: '/appointments', label: 'Appointments', icon: '◷' },
-  { href: '/rooms', label: 'Rooms', icon: '▦' },
-  { href: '/pos', label: 'POS Checkout', icon: '⬚' },
-  { href: '/customers', label: 'Customers', icon: '◉' },
-  { href: '/cats', label: 'Cats', icon: '◈' },
-  { href: '/memberships', label: 'Memberships', icon: '◆' },
-  { href: '/incidents', label: 'Incidents', icon: '⚠' },
+  { href: '/actions', label: 'Action Inbox', icon: 'inbox' },
+  { href: '/board', label: 'Service Board', icon: 'board' },
+  { href: '/runsheet', label: 'Run Sheet', icon: 'runsheet' },
+  { href: '/appointments', label: 'Appointments', icon: 'clock' },
+  { href: '/rooms', label: 'Rooms', icon: 'rooms' },
+  { href: '/pos', label: 'POS Checkout', icon: 'pos' },
+  { href: '/customers', label: 'Customers', icon: 'customers' },
+  { href: '/cats', label: 'Cats', icon: 'cat' },
+  { href: '/memberships', label: 'Memberships', icon: 'star' },
+  { href: '/incidents', label: 'Incidents', icon: 'alert' },
 ]
 
 const STORE_KEY = 'cd-nav-open'
@@ -161,7 +162,7 @@ export function Nav({ isManager, userName }: { isManager: boolean; userName?: st
         onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = '#ECDBB6' }}
         onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'rgba(236,219,182,0.65)' }}
       >
-        <span className="text-sm w-4 text-center">{l.icon}</span>
+        <span className="w-4 flex items-center justify-center shrink-0"><Icon name={l.icon} /></span>
         {!collapsed && <span className="flex-1 truncate">{l.label}</span>}
       </Link>
     )
@@ -172,14 +173,14 @@ export function Nav({ isManager, userName }: { isManager: boolean; userName?: st
       style={{ background: '#2D1907' }}>
       <div className="flex items-center justify-between px-3 py-4" style={{ borderBottom: '1px solid rgba(236,219,182,0.15)' }}>
         {!collapsed && (
-          <span className="font-bold text-base tracking-widest uppercase" style={{ fontFamily: 'var(--font-brand)', color: '#ECDBB6', letterSpacing: '0.12em' }}>
-            cat day
-          </span>
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src="/catday-logo-cream.png" alt="Cat Day" className="h-7 w-auto select-none" style={{ pointerEvents: 'none' }} />
         )}
         <button
           onClick={() => setCollapsed(c => !c)}
-          className="p-1 rounded ml-auto text-xs transition-colors"
+          className="p-1 rounded ml-auto transition-colors flex items-center justify-center"
           style={{ color: '#ECDBB6', opacity: 0.6 }}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? '›' : '‹'}
         </button>
@@ -263,7 +264,7 @@ export function Nav({ isManager, userName }: { isManager: boolean; userName?: st
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(236,219,182,0.8)' }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(236,219,182,0.45)' }}
           >
-            <span>↩</span>
+            <Icon name="logout" size={15} />
             {!collapsed && <span>Log out</span>}
           </button>
         </form>
