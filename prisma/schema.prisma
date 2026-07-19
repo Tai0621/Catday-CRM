@@ -246,6 +246,19 @@ model PlanDriver {
   updatedAt DateTime @updatedAt
 }
 
+// Balance sheet — accountant-keyed lines (blue), per as-of month-end.
+// OS-derived lines (receivables, wallet, retained earnings) are computed live,
+// never stored. Finance-only: nothing here writes back to operations.
+model BalanceSheetCell {
+  id        String   @id @default(cuid())
+  asOf      String   // "YYYY-MM" (month-end the balance sheet is struck at)
+  lineKey   String   // a.cash | a.inventory | l.loans | e.capital | …
+  amount    Float
+  updatedAt DateTime @updatedAt
+
+  @@unique([asOf, lineKey])
+}
+
 // Accountant's custom row order per section (drag-to-reorder). orderJson is a
 // JSON array of rowKeys; rows not listed fall to the end in default order.
 model StatementRowOrder {

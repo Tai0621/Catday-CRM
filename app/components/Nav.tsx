@@ -59,6 +59,8 @@ const SEGMENTS: NavSegment[] = [
     key: 'finance', header: 'Finance', color: '#ECDBB6',
     groups: [{ links: [
       { href: '/finance/income-statement', label: 'Income Statement', icon: '≣' },
+      { href: '/finance/balance-sheet', label: 'Balance Sheet', icon: '⚖' },
+      { href: '/finance/cash-flow', label: 'Cash Flow', icon: '♒' },
       { href: '/finance/expenses', label: 'Expenses', icon: '◒' },
       { href: '/revenue', label: 'Revenue', icon: '◐' },
       { href: '/plan', label: 'Financial Plan', icon: '◔' },
