@@ -14,14 +14,17 @@ export function DeleteTxnButton({ id, amount, label, grouped }: {
   const [err, setErr] = useState<string | null>(null)
 
   function onClick() {
-    const msg = grouped
-      ? `Delete this transaction and its linked payment rows (${label}, RM ${amount.toFixed(2)})?\n\nThis removes it from revenue, the income statement and the cash-up. It does not restock products or refund points.`
-      : `Delete this transaction (${label}, RM ${amount.toFixed(2)})?\n\nThis removes it from revenue, the income statement and the cash-up.`
+    const msg = `Delete this transaction${grouped ? ' and its linked payment rows' : ''} (${label}, RM ${amount.toFixed(2)})?\n\nThis removes it from revenue, the income statement and the cash-up — and reverses any loyalty points, wallet payment and product stock from this sale.`
     if (!window.confirm(msg)) return
     setErr(null)
     start(async () => {
       const res = await deleteTransaction(id)
       if (!res.ok) { setErr(res.error); return }
+      const undone: string[] = []
+      if (res.pointsReversed) undone.push(`−${res.pointsReversed} pts`)
+      if (res.walletRefunded) undone.push(`+RM ${res.walletRefunded.toFixed(2)} wallet`)
+      if (res.restocked) undone.push(`+${res.restocked} stock`)
+      if (undone.length) window.alert(`Deleted. Reversed: ${undone.join(' · ')}.`)
       router.refresh()
     })
   }
