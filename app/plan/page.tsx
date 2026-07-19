@@ -2,9 +2,11 @@ import { requireManager } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
-import { monthKey, monthLabel } from '@/lib/plan'
+import { monthKey, monthLabel, monthsBetween } from '@/lib/plan'
 import { buildPlanProjection, defaultDrivers, DRIVER_GROUPS, ALL_DRIVER_KEYS, type PlanDrivers } from '@/lib/plan-model'
+import { buildIncomeStatement } from '@/lib/finance'
 import { SEGMENTS } from '@/lib/segments'
+import { ScenarioAnalysis } from './ScenarioAnalysis'
 
 export default async function PlanPage() {
   await requireManager()
@@ -24,6 +26,34 @@ export default async function PlanPage() {
 
   const proj = buildPlanProjection(drivers, startMonth, breakevenMonth)
   const seg = SEGMENTS.business
+
+  // ── Real revenue & cost over the elapsed part of the plan (drives the smart
+  // recommendation). Uses the income statement actuals, which merge recorded
+  // expenses with any accountant-keyed figures. ──
+  const nowKey = monthKey(now)
+  const elapsedEnd = nowKey < startMonth ? null : (nowKey < breakevenMonth ? nowKey : breakevenMonth)
+  const elapsedMonths = elapsedEnd ? monthsBetween(startMonth, elapsedEnd) : []
+  let actual: { months: number; revenue: number; cost: number } | null = null
+  if (elapsedMonths.length > 0) {
+    const yearsNeeded = [...new Set(elapsedMonths.map(m => Number(m.slice(0, 4))))]
+    const statements = Object.fromEntries(
+      await Promise.all(yearsNeeded.map(async y => [y, await buildIncomeStatement(y)] as const)),
+    )
+    let rev = 0, cost = 0
+    for (const mk of elapsedMonths) {
+      const y = Number(mk.slice(0, 4)); const mi = Number(mk.slice(5, 7)) - 1
+      const st = statements[y]
+      rev += st.totalRevenue.values[mi]
+      cost += st.totalCogs.values[mi] + st.totalOpex.values[mi]
+    }
+    actual = { months: elapsedMonths.length, revenue: Math.round(rev), cost: Math.round(cost) }
+  }
+  // What the plan itself expected over those same elapsed months
+  const K = elapsedMonths.length
+  const plannedElapsed = {
+    revenue: Math.round(proj.totalRevenue.slice(0, K).reduce((s, v) => s + v, 0)),
+    cost: Math.round(proj.totalCogs.slice(0, K).reduce((s, v) => s + v, 0) + proj.totalOpex.slice(0, K).reduce((s, v) => s + v, 0)),
+  }
 
   // ── Save horizon + drivers, then regenerate monthly targets for the dashboard ──
   async function savePlan(data: FormData) {
@@ -142,6 +172,15 @@ export default async function PlanPage() {
           value={proj.breakevenMonth ? monthLabel(proj.breakevenMonth) : 'Not within plan'}
           accent={proj.breakevenMonth ? '#2D1907' : '#B14919'} />
       </div>
+
+      {/* Smart recommendation + scenario analysis */}
+      <ScenarioAnalysis
+        drivers={drivers}
+        startMonth={startMonth}
+        endMonth={breakevenMonth}
+        actual={actual}
+        plannedElapsed={plannedElapsed}
+      />
 
       {/* Projected P&L — annual columns */}
       <div className="cd-card overflow-x-auto">

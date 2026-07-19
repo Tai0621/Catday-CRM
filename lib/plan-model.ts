@@ -1,6 +1,9 @@
 import { REVENUE_CATEGORIES } from './constants'
-import { COGS_CATEGORIES, OPEX_CATEGORIES } from './finance'
+import { COGS_CATEGORIES, OPEX_CATEGORIES } from './finance-categories'
 import { monthsBetween } from './plan'
+
+// NOTE: keep this module free of server-only imports (no ./db, no ./finance) —
+// the scenario analysis runs it in the browser to recompute live as sliders move.
 
 // Driver-based financial projection: capacity × price × a utilization ramp
 // drives boarding & grooming revenue; other streams + variable costs scale
@@ -127,7 +130,9 @@ export interface PlanProjection {
 
 const r2 = (v: number) => Math.round(v * 100) / 100
 
-export function buildPlanProjection(drivers: PlanDrivers, startMonth: string, endMonth: string): PlanProjection {
+// costScale multiplies all costs — used by the smart recommendation to model
+// "what if real costs run 12% above plan" and re-solve the levers.
+export function buildPlanProjection(drivers: PlanDrivers, startMonth: string, endMonth: string, costScale = 1): PlanProjection {
   const d = (k: string) => drivers[k] ?? 0
   const months = monthsBetween(startMonth, endMonth)
   const N = months.length || 1
@@ -146,8 +151,8 @@ export function buildPlanProjection(drivers: PlanDrivers, startMonth: string, en
     return { label: stream === 'Boarding' || stream === 'Grooming' ? `${stream} Revenue` : `${stream} Revenue`, values: utilFrac.map(u => r2(full * u)) }
   }
   const revenue = REVENUE_CATEGORIES.map(revLine)
-  const cogs = COGS_CATEGORIES.map(c => ({ label: c, values: utilFrac.map(u => r2(d(`cogs.${c}`) * u)) }))
-  const opex = OPEX_CATEGORIES.map(c => ({ label: c, values: months.map(() => r2(d(`opex.${c}`))) }))
+  const cogs = COGS_CATEGORIES.map(c => ({ label: c, values: utilFrac.map(u => r2(d(`cogs.${c}`) * u * costScale)) }))
+  const opex = OPEX_CATEGORIES.map(c => ({ label: c, values: months.map(() => r2(d(`opex.${c}`) * costScale)) }))
 
   const sumAt = (lines: PlanLine[], m: number) => r2(lines.reduce((s, l) => s + l.values[m], 0))
   const totalRevenue = months.map((_, m) => sumAt(revenue, m))
@@ -202,4 +207,26 @@ export function buildPlanProjection(drivers: PlanDrivers, startMonth: string, en
     monthlyRevCost, years, breakevenMonth,
     totals: { revenue: totalRev, cost: totalCost, net: r2(totalRev - totalCost) },
   }
+}
+
+// Solve one driver (utilization end %, boarding/grooming price…) for the value
+// that makes the plan's total net ≥ target, holding everything else fixed.
+// Returns null if it can't be reached within a sensible cap.
+export function solveDriverForNet(
+  base: PlanDrivers, start: string, end: string, key: string,
+  costScale = 1, targetNet = 0,
+): number | null {
+  const cur = base[key] ?? 0
+  const netAt = (v: number) => buildPlanProjection({ ...base, [key]: v }, start, end, costScale).totals.net
+  if (netAt(cur) >= targetNet) return r2(cur)
+
+  const cap = key === 'util.endPct' ? 100 : key.endsWith('Pct') ? 100 : Math.max(cur * 20, cur + 10000)
+  if (netAt(cap) < targetNet) return null // unreachable even at the cap
+
+  let lo = cur, hi = cap
+  for (let i = 0; i < 48; i++) {
+    const mid = (lo + hi) / 2
+    if (netAt(mid) >= targetNet) hi = mid; else lo = mid
+  }
+  return r2(hi)
 }

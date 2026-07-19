@@ -33,21 +33,23 @@ const check = (label, ok, extra = '') => { total++; if (ok) pass++; console.log(
 const before = await q(`SELECT startMonth, breakevenMonth FROM BusinessPlan WHERE id='default'`)
 const hadPlan = before.rows.length > 0
 const prev = hadPlan ? { start: before.rows[0][0].value, end: before.rows[0][1].value } : null
-const roomsBefore = await q(`SELECT value FROM PlanDriver WHERE key='cap.boardingRooms'`)
-const hadRooms = roomsBefore.rows.length > 0
-const prevRooms = hadRooms ? roomsBefore.rows[0][0].value : null
+// snapshot ALL drivers so non-overridden ones fall back to defaults during the
+// test (the DB may hold a real saved plan with non-default utilization etc.)
+const driversBefore = await q(`SELECT key, value FROM PlanDriver`)
+const prevDrivers = driversBefore.rows.map(r => ({ key: r[0].value, value: r[1].value }))
 // snapshot MonthlyTarget for the 12 test months so the write-through test can restore them
 const tgtBefore = await q(`SELECT month, revenueTarget, costBudget FROM MonthlyTarget WHERE month LIKE '2026-%'`)
 const prevTargets = tgtBefore.rows.map(r => ({ month: r[0].value, rev: r[1].value, cost: r[2].value }))
 
 try {
-  // ── seed Excel-matching inputs, 12-month 2026 horizon ──
+  // ── clean driver slate + Excel-matching inputs, 12-month 2026 horizon ──
+  // (delete all so every non-seeded driver uses defaultDrivers → matches Excel)
   await pipe([
+    exec(`DELETE FROM PlanDriver`),
     exec(`INSERT INTO BusinessPlan (id, startMonth, breakevenMonth, avgSaleValue, currency, createdAt, updatedAt)
           VALUES ('default','2026-01','2026-12',0,'RM',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
           ON CONFLICT(id) DO UPDATE SET startMonth='2026-01', breakevenMonth='2026-12'`),
-    exec(`INSERT INTO PlanDriver (id, key, value, updatedAt) VALUES (?, 'cap.boardingRooms', 50, CURRENT_TIMESTAMP)
-          ON CONFLICT(key) DO UPDATE SET value=50`, [t(crypto.randomUUID())]),
+    exec(`INSERT INTO PlanDriver (id, key, value, updatedAt) VALUES (?, 'cap.boardingRooms', 50, CURRENT_TIMESTAMP)`, [t(crypto.randomUUID())]),
   ])
 
   const login = await fetch(`${BASE}/api/login`, {
@@ -90,10 +92,11 @@ try {
   } else {
     await pipe([exec(`DELETE FROM BusinessPlan WHERE id='default'`)])
   }
-  if (hadRooms) {
-    await pipe([exec(`UPDATE PlanDriver SET value=? WHERE key='cap.boardingRooms'`, [f(prevRooms)])])
-  } else {
-    await pipe([exec(`DELETE FROM PlanDriver WHERE key='cap.boardingRooms'`)])
+  await pipe([exec(`DELETE FROM PlanDriver`)])
+  if (prevDrivers.length) {
+    await pipe(prevDrivers.map(dr => exec(
+      `INSERT INTO PlanDriver (id, key, value, updatedAt) VALUES (?, ?, ?, CURRENT_TIMESTAMP)`,
+      [t(crypto.randomUUID()), t(dr.key), f(dr.value)])))
   }
   // restore MonthlyTarget test months (delete ones we might have touched, re-insert originals)
   await pipe([exec(`DELETE FROM MonthlyTarget WHERE month LIKE '2026-%'`)])

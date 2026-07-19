@@ -5,16 +5,12 @@ import { REVENUE_CATEGORIES } from './constants'
 // Revenue → Cost of Services (variable) → Gross Profit → Operating Expenses
 // (fixed) → EBITDA → Tax → Net Income, with monthly columns.
 
-export const TAX_RATE = 0.24 // Malaysian corporate rate, per the model's assumptions
-
-// Expense categories from the Excel's OPEX BASE, split the way its
-// Income Statement sheet splits them.
-export const COGS_CATEGORIES = ['Grooming Supplies', 'Food & Litter', 'Vet Visit', 'Retail Stock'] as const
-export const OPEX_CATEGORIES = ['Rent', 'Salaries', 'Cleaning Supplies', 'Utilities', 'Marketing', 'Maintenance', 'Other Expense'] as const
-export const EXPENSE_CATEGORIES = [...COGS_CATEGORIES, ...OPEX_CATEGORIES] as const
-export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number]
-
-export const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+// Category constants live in a db-free module so client components (the plan
+// scenario analysis) can share them; imported for local use here and
+// re-exported for existing importers of lib/finance.
+import { TAX_RATE, COGS_CATEGORIES, OPEX_CATEGORIES, EXPENSE_CATEGORIES, MONTH_LABELS } from './finance-categories'
+export { TAX_RATE, COGS_CATEGORIES, OPEX_CATEGORIES, EXPENSE_CATEGORIES, MONTH_LABELS }
+export type { ExpenseCategory } from './finance-categories'
 
 // One row of the statement: a label + 12 monthly values + year total.
 // key: leaf rows the accountant can hard-key (blue); derived rows have none.
