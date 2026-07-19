@@ -121,12 +121,13 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
   const from = new Date(year, 0, 1)
   const to = new Date(year + 1, 0, 1)
 
-  const [txns, expenses, overrides, rowDefs, hidden, firstTxn, firstExp, firstCell] = await Promise.all([
+  const [txns, expenses, overrides, rowDefs, hidden, rowOrders, firstTxn, firstExp, firstCell] = await Promise.all([
     db.transaction.findMany({ where: { date: { gte: from, lt: to } }, select: { date: true, total: true, category: true } }),
     db.expense.findMany({ where: { date: { gte: from, lt: to } }, select: { date: true, amount: true, category: true } }),
     db.statementCell.findMany({ where: { year }, select: { month: true, rowKey: true, amount: true } }),
     db.statementRowDef.findMany({ where: { year }, orderBy: { sortOrder: 'asc' } }),
     db.statementHiddenRow.findMany({ where: { year }, select: { rowKey: true } }),
+    db.statementRowOrder.findMany({ where: { year }, select: { section: true, orderJson: true } }),
     db.transaction.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
     db.expense.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
     db.statementCell.findFirst({ orderBy: { year: 'asc' }, select: { year: true } }),
@@ -156,10 +157,23 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
   const hiddenKeys = new Set(hidden.map(h => h.rowKey))
   const visible = (rows: StatementRow[]) => rows.filter(r => !r.key || !hiddenKeys.has(r.key))
 
-  const revenue = visible([
+  // Accountant's saved row order per section; unlisted rows keep default order at the end
+  const orderMap = new Map<string, string[]>()
+  for (const o of rowOrders) {
+    try { orderMap.set(o.section, JSON.parse(o.orderJson) as string[]) } catch { /* ignore bad json */ }
+  }
+  const ordered = (section: string, rows: StatementRow[]): StatementRow[] => {
+    const keys = orderMap.get(section)
+    if (!keys || keys.length === 0) return rows
+    const idx = new Map(keys.map((k, i) => [k, i]))
+    return [...rows].sort((a, b) =>
+      (a.key && idx.has(a.key) ? idx.get(a.key)! : Infinity) - (b.key && idx.has(b.key) ? idx.get(b.key)! : Infinity))
+  }
+
+  const revenue = ordered('rev', visible([
     ...REVENUE_CATEGORIES.map(c => applyOvr(`rev:${c}`, `${c} Revenue`, revMap.get(c)!)),
     ...customRows('rev'),
-  ])
+  ]))
 
   // ── Expenses, split variable vs fixed per the Excel ──
   const expMap = new Map<string, number[]>(EXPENSE_CATEGORIES.map(c => [c, blank12()]))
@@ -167,14 +181,14 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
     const key = (EXPENSE_CATEGORIES as readonly string[]).includes(e.category) ? e.category : 'Other Expense'
     expMap.get(key)![e.date.getMonth()] += e.amount
   }
-  const cogs = visible([
+  const cogs = ordered('cogs', visible([
     ...COGS_CATEGORIES.map(c => applyOvr(`cogs:${c}`, c, expMap.get(c)!)),
     ...customRows('cogs'),
-  ])
-  const opex = visible([
+  ]))
+  const opex = ordered('opex', visible([
     ...OPEX_CATEGORIES.map(c => applyOvr(`opex:${c}`, c, expMap.get(c)!)),
     ...customRows('opex'),
-  ])
+  ]))
   // Year switcher: every year between the first recorded figure and now
   const nowYear = new Date().getFullYear()
   const earliest = Math.min(

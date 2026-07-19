@@ -246,6 +246,18 @@ model PlanDriver {
   updatedAt DateTime @updatedAt
 }
 
+// Accountant's custom row order per section (drag-to-reorder). orderJson is a
+// JSON array of rowKeys; rows not listed fall to the end in default order.
+model StatementRowOrder {
+  id        String   @id @default(cuid())
+  year      Int
+  section   String   // rev | cogs | opex
+  orderJson String
+  updatedAt DateTime @updatedAt
+
+  @@unique([year, section])
+}
+
 // Built-in rows the accountant removed from a year's statement (restorable —
 // the underlying OS data is never touched)
 model StatementHiddenRow {

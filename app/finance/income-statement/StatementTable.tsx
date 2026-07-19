@@ -1,9 +1,11 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { IncomeStatement, StatementRow } from '@/lib/finance'
-import { saveStatementCells, addStatementRow, removeStatementRow, hideStatementRow, unhideStatementRow } from './actions'
+import { saveStatementCells, addStatementRow, removeStatementRow, hideStatementRow, unhideStatementRow, reorderStatementRows } from './actions'
+
+type Section = 'rev' | 'cogs' | 'opex'
 
 // Excel-style workpaper. BLACK figures flow live from the OS (checkout,
 // expenses); BLUE figures are hard-keyed by the accountant. Editing follows
@@ -17,6 +19,15 @@ const fmt = (v: number) =>
   v < 0 ? `(${Math.abs(v).toLocaleString('en-MY', { maximumFractionDigits: 0 })})`
     : v === 0 ? '–'
     : v.toLocaleString('en-MY', { maximumFractionDigits: 0 })
+
+// Six-dot drag handle
+function GripIcon() {
+  return (
+    <svg width="9" height="14" viewBox="0 0 9 14" fill="currentColor" aria-hidden style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+      {[2, 7].flatMap(cx => [2, 7, 12].map(cy => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={1.3} />))}
+    </svg>
+  )
+}
 
 const cellKey = (rowKey: string, m: number) => `${rowKey}|${m}`
 
@@ -32,6 +43,37 @@ export function StatementTable({ statement: s, mode = 'actuals' }: {
   const [error, setError] = useState<string | null>(null)
   const [addingTo, setAddingTo] = useState<string | null>(null) // section being added to
   const [newLabel, setNewLabel] = useState('')
+
+  // Local row order per section (optimistic; drag reorders here then persists)
+  const [rows, setRows] = useState<Record<Section, StatementRow[]>>({ rev: s.revenue, cogs: s.cogs, opex: s.opex })
+  useEffect(() => { setRows({ rev: s.revenue, cogs: s.cogs, opex: s.opex }) }, [s])
+  const dragRef = useRef<{ section: Section; key: string } | null>(null)
+  const [dragKey, setDragKey] = useState<string | null>(null)
+
+  async function persistOrder(section: Section, keys: string[]) {
+    setBusy(true)
+    const res = await reorderStatementRows(JSON.stringify({ year: s.year, section, keys }))
+    setBusy(false)
+    if (!res.ok) { setError(res.error); return }
+    router.refresh()
+  }
+
+  function onDropRow(section: Section, targetKey: string) {
+    const d = dragRef.current
+    dragRef.current = null
+    setDragKey(null)
+    if (!d || d.section !== section || d.key === targetKey) return
+    setRows(prev => {
+      const arr = [...prev[section]]
+      const from = arr.findIndex(r => r.key === d.key)
+      const to = arr.findIndex(r => r.key === targetKey)
+      if (from < 0 || to < 0) return prev
+      const [moved] = arr.splice(from, 1)
+      arr.splice(to, 0, moved)
+      persistOrder(section, arr.map(r => r.key!).filter(Boolean))
+      return { ...prev, [section]: arr }
+    })
+  }
 
   // What each editable cell "starts as": the keyed figure, or '' when it's the live OS value
   const initial = useMemo(() => {
@@ -175,16 +217,28 @@ export function StatementTable({ statement: s, mode = 'actuals' }: {
     </td>
   )
 
-  const labelTd = (r: StatementRow, opts?: { bold?: boolean; indent?: boolean }) => (
-    <td className={`px-3 py-1.5 whitespace-nowrap ${opts?.indent ? 'pl-7' : ''}`}
+  const labelTd = (r: StatementRow, opts?: { bold?: boolean; indent?: boolean; section?: Section }) => (
+    <td className={`px-3 py-1.5 whitespace-nowrap ${opts?.indent && !(editMode && opts?.section) ? 'pl-7' : ''}`}
       style={{ color: INK, fontWeight: opts?.bold ? 700 : 400, position: 'sticky', left: 0, background: '#F2EDE0' }}>
       <span className="inline-flex items-center gap-1.5">
+        {editMode && opts?.section && (
+          <span
+            draggable
+            onDragStart={() => { dragRef.current = { section: opts.section!, key: r.key! }; setDragKey(r.key!) }}
+            onDragEnd={() => { dragRef.current = null; setDragKey(null) }}
+            title="Drag to reorder"
+            className="cursor-grab active:cursor-grabbing select-none"
+            style={{ color: 'rgba(45,25,7,0.35)', lineHeight: 1 }}>
+            <GripIcon />
+          </span>
+        )}
         {editMode && r.key && r.key !== 'tax' && (
           <button onClick={() => deleteRow(r)} disabled={busy}
             title={r.custom ? `Delete “${r.label}” and its figures` : `Remove “${r.label}” from this year (restorable — OS data stays)`}
-            className="text-[10px] leading-none rounded px-1.5 py-0.5 font-semibold whitespace-nowrap"
-            style={{ color: '#fff', background: RED }}>
-            ✕ delete
+            aria-label={`Remove ${r.label}`}
+            className="leading-none rounded-full flex items-center justify-center hover:opacity-90"
+            style={{ color: '#fff', background: RED, width: 16, height: 16, fontSize: 11 }}>
+            ✕
           </button>
         )}
         {r.label}
@@ -193,9 +247,12 @@ export function StatementTable({ statement: s, mode = 'actuals' }: {
     </td>
   )
 
-  const leafRow = (r: StatementRow) => (
-    <tr key={r.key ?? r.label}>
-      {labelTd(r, { indent: true })}
+  const leafRow = (r: StatementRow, section?: Section) => (
+    <tr key={r.key ?? r.label}
+      onDragOver={section ? (e => { if (dragRef.current?.section === section) e.preventDefault() }) : undefined}
+      onDrop={section ? (() => onDropRow(section, r.key!)) : undefined}
+      style={dragKey && dragKey === r.key ? { opacity: 0.4 } : undefined}>
+      {labelTd(r, { indent: true, section })}
       {r.values.map((_, m) => (editMode ? editCell(r, m) : viewCell(r, m)))}
       {totalTd(r)}
     </tr>
@@ -271,7 +328,7 @@ export function StatementTable({ statement: s, mode = 'actuals' }: {
             <>
               <span><span className="font-semibold" style={{ color: INK }}>Black</span> — live from the OS; updates automatically.</span>
               <span><span className="font-semibold" style={{ color: BLUE }}>Blue</span> — hard-keyed by the accountant.</span>
-              {editMode && <span>Blank cell = use the OS figure · <span className="font-semibold" style={{ color: RED }}>✕ delete</span> removes any row (OS-linked rows are restorable below; added rows go for good) · totals recalculate on Save.</span>}
+              {editMode && <span>Blank cell = use the OS figure · <span className="font-semibold" style={{ color: RED }}>✕</span> removes a row (OS-linked rows restore below) · drag the <GripIcon /> handle to reorder · totals recalculate on Save.</span>}
             </>
           )}
           {error && <span style={{ color: RED }}>{error}</span>}
@@ -316,19 +373,19 @@ export function StatementTable({ statement: s, mode = 'actuals' }: {
           </thead>
           <tbody className="cd-tbody">
             {sectionHead('Revenue')}
-            {s.revenue.map(leafRow)}
+            {rows.rev.map(r => leafRow(r, 'rev'))}
             {addRowLine('rev', 'e.g. Events Revenue')}
             {derivedRow(s.totalRevenue, { bold: true, topRule: true })}
 
             {sectionHead('Cost of Services (variable)')}
-            {s.cogs.map(leafRow)}
+            {rows.cogs.map(r => leafRow(r, 'cogs'))}
             {addRowLine('cogs', 'e.g. Packaging')}
             {derivedRow(s.totalCogs, { bold: true, topRule: true })}
             {derivedRow(s.grossProfit, { bold: true })}
             {pctRow('Gross Margin %', s.grossMarginPct, s.yearGrossMarginPct)}
 
             {sectionHead('Operating Expenses (fixed)')}
-            {s.opex.map(leafRow)}
+            {rows.opex.map(r => leafRow(r, 'opex'))}
             {addRowLine('opex', 'e.g. Depreciation')}
             {derivedRow(s.totalOpex, { bold: true, topRule: true })}
 
