@@ -237,6 +237,15 @@ model StatementRowDef {
   createdAt DateTime @default(now())
 }
 
+// Driver-based financial plan inputs (key → value), e.g. cap.boardingPrice,
+// util.endPct, opex.Rent. Flexible so the model can grow without migrations.
+model PlanDriver {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Float
+  updatedAt DateTime @updatedAt
+}
+
 // Built-in rows the accountant removed from a year's statement (restorable —
 // the underlying OS data is never touched)
 model StatementHiddenRow {
