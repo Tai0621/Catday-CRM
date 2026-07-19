@@ -2,6 +2,7 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { REVENUE_CATEGORIES } from '@/lib/constants'
 import { RevenueChart } from './RevenueChart'
+import { DeleteTxnButton } from './DeleteTxnButton'
 
 export default async function RevenuePage({ searchParams }: { searchParams: Promise<{ months?: string }> }) {
   await requireAuth()
@@ -76,29 +77,45 @@ export default async function RevenuePage({ searchParams }: { searchParams: Prom
           <h2 className="font-semibold" style={{ color: '#2D1907' }}>Recent Transactions</h2>
           <a href="/revenue/new" className="cd-btn text-xs" style={{ padding: '0.35rem 0.75rem' }}>+ Add</a>
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead><tr className="cd-thead">
             <th>Date</th>
             <th>Category</th>
             <th>Reference</th>
+            <th>Method</th>
             <th style={{ textAlign: 'right' }}>Amount</th>
+            <th></th>
           </tr></thead>
           <tbody className="cd-tbody">
-            {transactions.slice(-20).reverse().map(tx => (
+            {transactions.slice(-30).reverse().map(tx => (
               <tr key={tx.id}>
-                <td className="px-4 py-2 cd-muted">{tx.date.toLocaleDateString('en-MY')}</td>
+                <td className="px-4 py-2 cd-muted whitespace-nowrap">{tx.date.toLocaleDateString('en-MY')}</td>
                 <td className="px-4 py-2">
                   <span className="cd-pill" style={categoryStyle(tx.category)}>{tx.category}</span>
                 </td>
-                <td className="px-4 py-2 cd-muted">{tx.reference ?? '—'}</td>
-                <td className="px-4 py-2 text-right font-medium" style={{ color: '#2D1907' }}>RM {tx.total.toFixed(2)}</td>
+                <td className="px-4 py-2 cd-muted">
+                  {tx.reference ?? '—'}
+                  {tx.notes && <span className="block text-xs" style={{ color: 'rgba(45,25,7,0.4)' }}>{tx.notes}</span>}
+                </td>
+                <td className="px-4 py-2 cd-muted">{tx.method ?? '—'}</td>
+                <td className="px-4 py-2 text-right font-medium whitespace-nowrap" style={{ color: '#2D1907' }}>RM {tx.total.toFixed(2)}</td>
+                <td className="px-3 py-2 text-right">
+                  <DeleteTxnButton id={tx.id} amount={tx.total}
+                    label={`${tx.category} · ${tx.date.toLocaleDateString('en-MY')}`}
+                    grouped={!!tx.reference} />
+                </td>
               </tr>
             ))}
             {transactions.length === 0 && (
-              <tr><td colSpan={4} className="px-4 py-8 text-center cd-muted">No transactions yet</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center cd-muted">No transactions yet</td></tr>
             )}
           </tbody>
         </table>
+        </div>
+        <p className="px-4 py-2 text-xs cd-muted" style={{ borderTop: '1px solid rgba(45,25,7,0.06)' }}>
+          Deleting removes the record from revenue, the income statement and the cash-up. Split payments (same reference) are removed together.
+        </p>
       </div>
     </div>
   )
