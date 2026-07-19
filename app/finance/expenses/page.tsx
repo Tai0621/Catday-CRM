@@ -20,16 +20,32 @@ export default async function ExpensesPage() {
     const dateStr = (data.get('date') as string) || ''
     const category = (data.get('category') as string) || ''
     if (!(amount > 0) || !dateStr || !category) return
+    const paid = data.get('paid') !== 'unpaid'
+    const dueStr = (data.get('dueDate') as string) || ''
     await db.expense.create({
       data: {
         date: new Date(`${dateStr}T12:00:00`),
         category,
         amount: Math.round(amount * 100) / 100,
+        vendor: ((data.get('vendor') as string) || '').trim() || null,
         notes: ((data.get('notes') as string) || '').trim() || null,
+        paid,
+        dueDate: !paid && dueStr ? new Date(`${dueStr}T12:00:00`) : null,
       },
     })
     revalidatePath('/finance/expenses')
+    revalidatePath('/finance/aging')
     redirect('/finance/expenses')
+  }
+
+  async function togglePaid(data: FormData) {
+    'use server'
+    const id = data.get('id') as string
+    const cur = await db.expense.findUnique({ where: { id }, select: { paid: true } })
+    if (cur) await db.expense.update({ where: { id }, data: { paid: !cur.paid } })
+    revalidatePath('/finance/expenses')
+    revalidatePath('/finance/aging')
+    revalidatePath('/finance/balance-sheet')
   }
 
   async function removeExpense(data: FormData) {
@@ -82,9 +98,28 @@ export default async function ExpensesPage() {
             </optgroup>
           </select>
         </div>
-        <div>
-          <label className="cd-label">Notes</label>
-          <input name="notes" placeholder="e.g. July rent · Maybank transfer" className="cd-input" />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="cd-label">Vendor / supplier</label>
+            <input name="vendor" placeholder="e.g. OKANA, landlord…" className="cd-input" />
+          </div>
+          <div>
+            <label className="cd-label">Notes</label>
+            <input name="notes" placeholder="e.g. July rent · Maybank transfer" className="cd-input" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4 items-end">
+          <div>
+            <label className="cd-label">Status</label>
+            <select name="paid" className="cd-input">
+              <option value="paid">Paid (already settled)</option>
+              <option value="unpaid">Unpaid — owe it (accounts payable)</option>
+            </select>
+          </div>
+          <div>
+            <label className="cd-label">Due date (if unpaid)</label>
+            <input name="dueDate" type="date" className="cd-input" />
+          </div>
         </div>
         <button type="submit" className="cd-btn">Record expense</button>
       </form>
@@ -108,23 +143,28 @@ export default async function ExpensesPage() {
                       <tr key={e.id}>
                         <td className="px-4 py-2 cd-muted whitespace-nowrap">{e.date.toLocaleDateString('en-MY', { day: '2-digit', month: 'short' })}</td>
                         <td className="px-4 py-2" style={{ color: '#2D1907' }}>
-                          {e.category}
+                          {e.vendor ? <span className="font-medium">{e.vendor}</span> : e.category}
+                          {e.vendor && <span className="cd-muted"> · {e.category}</span>}
                           {e.notes && <span className="cd-muted"> · {e.notes}</span>}
                         </td>
                         <td className="px-4 py-2">
-                          <span className="cd-pill" style={
-                            (COGS_CATEGORIES as readonly string[]).includes(e.category)
-                              ? { background: 'rgba(177,73,25,0.12)', color: '#B14919' }
-                              : { background: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.55)' }
-                          }>
-                            {(COGS_CATEGORIES as readonly string[]).includes(e.category) ? 'variable' : 'fixed'}
-                          </span>
+                          {e.paid ? (
+                            <span className="cd-pill" style={{ background: 'rgba(122,138,79,0.18)', color: '#5c6b3c' }}>paid</span>
+                          ) : (
+                            <span className="cd-pill" style={{ background: 'rgba(177,73,25,0.15)', color: '#B14919' }}>
+                              unpaid{e.dueDate ? ` · due ${e.dueDate.toLocaleDateString('en-MY', { day: '2-digit', month: 'short' })}` : ''}
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-2 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: '#2D1907' }}>
                           RM {e.amount.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
                         </td>
-                        <td className="px-2 py-2 text-right">
-                          <form action={removeExpense}>
+                        <td className="px-2 py-2 text-right whitespace-nowrap">
+                          <form action={togglePaid} className="inline">
+                            <input type="hidden" name="id" value={e.id} />
+                            <button type="submit" className="text-xs cd-link mr-2">{e.paid ? 'mark unpaid' : 'mark paid'}</button>
+                          </form>
+                          <form action={removeExpense} className="inline">
                             <input type="hidden" name="id" value={e.id} />
                             <button type="submit" className="text-xs cd-muted hover:underline">remove</button>
                           </form>

@@ -1,5 +1,6 @@
 import { db } from './db'
 import { buildIncomeStatement } from './finance'
+import { payablesTotal } from './aging'
 
 // The Balance Sheet — a finance-only overlay. It READS operational data
 // (unpaid appointments, the wallet ledger, the income statement) but never
@@ -69,7 +70,7 @@ export async function buildBalanceSheet(asOf: string): Promise<BalanceSheet> {
   const end = monthEnd(asOf) // exclusive
   const [y, m] = asOf.split('-').map(Number)
 
-  const [cells, unpaidAppts, walletAgg, futureDeposits, firstTxn, firstExp] = await Promise.all([
+  const [cells, unpaidAppts, walletAgg, futureDeposits, payables, firstTxn, firstExp] = await Promise.all([
     db.balanceSheetCell.findMany({ where: { asOf }, select: { lineKey: true, amount: true } }),
     // Accounts receivable: completed but unpaid, up to the as-of date
     db.appointment.findMany({
@@ -83,6 +84,7 @@ export async function buildBalanceSheet(asOf: string): Promise<BalanceSheet> {
       where: { depositRM: { not: null }, paid: false, status: { notIn: ['Cancelled', 'NoShow', 'Completed'] }, OR: [{ endsAt: { gte: end } }, { endsAt: null, scheduledAt: { gte: end } }] },
       select: { depositRM: true },
     }),
+    payablesTotal(end), // unpaid expenses as of the date
     db.transaction.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
     db.expense.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
   ])
@@ -131,7 +133,7 @@ export async function buildBalanceSheet(asOf: string): Promise<BalanceSheet> {
 
   const liabilities: BSSection[] = [
     section('Current Liabilities', [
-      keyedLine('l.payables', 'Accounts payable'),
+      autoLine('l.payables', 'Accounts payable', payables),
       autoLine('l.wallet', 'Customer wallet balances', walletLiability),
       keyedLine('l.deposits', 'Unearned booking deposits', depositHint > 0 ? `unfulfilled deposits ≈ ${rm(depositHint)}` : undefined),
       keyedLine('l.otherCurrent', 'Other current liabilities'),
@@ -174,7 +176,7 @@ export async function buildBalanceSheet(asOf: string): Promise<BalanceSheet> {
 // Keys the accountant may hard-key (guard for the save action)
 export const KEYED_BS_KEYS = [
   'a.cash', 'a.inventory', 'a.prepaid', 'a.otherCurrent', 'a.fixedAssets', 'a.otherNonCurrent',
-  'l.payables', 'l.deposits', 'l.otherCurrent', 'l.loans',
+  'l.deposits', 'l.otherCurrent', 'l.loans',
   'e.capital', 'e.openingRetained',
 ]
 

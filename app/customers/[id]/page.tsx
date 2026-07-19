@@ -12,6 +12,7 @@ import {
   PRIVATE_CLUB_TIER, PRIVATE_CLUB_SPEND, PRIVATE_CLUB_VISITS,
 } from '@/lib/constants'
 import { buildCustomerIntel, segmentStyle } from '@/lib/intelligence'
+import { customerReceivable } from '@/lib/aging'
 import { SEGMENTS } from '@/lib/segments'
 import { AwardPointsForm } from './AwardPointsForm'
 
@@ -49,6 +50,8 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     transactions: allTx,
     memberships: customer.memberships.map(m => ({ status: m.status, tier: { name: m.tier.name } })),
   })
+
+  const receivable = await customerReceivable(id)
 
   const activeMembership = customer.memberships.find(m => m.status === 'Active')
   const tierName = activeMembership?.tier.name ?? 'Essential'
@@ -153,6 +156,30 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           </div>
           <AwardPointsForm action={award} />
         </div>
+
+        {/* Outstanding balance (accounts receivable) */}
+        {receivable.total > 0 && (
+          <div className="cd-card p-5 space-y-2 md:col-span-2" style={{ borderLeft: '3px solid #B14919' }}>
+            <div className="flex items-baseline justify-between">
+              <span className="text-xs uppercase tracking-wider" style={{ color: '#B14919' }}>Outstanding balance</span>
+              <span className="text-2xl font-bold" style={{ color: '#B14919' }}>RM {receivable.total.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <ul className="text-sm space-y-0.5">
+              {receivable.items.map(i => (
+                <li key={i.apptId} className="flex items-center justify-between">
+                  <span style={{ color: '#2D1907' }}>{i.type} · {i.catName} <span className="cd-muted">· {i.date.toLocaleDateString('en-MY')} · {i.days}d</span></span>
+                  <span className="font-medium tabular-nums" style={{ color: '#2D1907' }}>RM {i.amount.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Link href={`/pos?customerId=${id}`} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ background: '#2D1907', color: '#ECDBB6' }}>Collect at POS →</Link>
+              <a href={whatsappUrl(customer.phone, `Hi! A friendly reminder from Cat Day 🐾 — there's an outstanding balance of RM ${receivable.total.toLocaleString('en-MY')} on your account. Let us know if you'd like to settle it. Thank you!`)}
+                target="_blank" rel="noopener noreferrer"
+                className="text-xs px-3 py-1.5 rounded-lg" style={{ background: '#729094', color: '#F2EDE0' }}>WhatsApp reminder</a>
+            </div>
+          </div>
+        )}
 
         {/* Cat Day Wallet (stored value) */}
         <div className="cd-card p-5 space-y-3 md:col-span-2" style={{ borderLeft: `3px solid ${SEGMENTS.membership.color}` }}>

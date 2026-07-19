@@ -203,13 +203,16 @@ model CashUp {
 // ─── Expenses (cost side of the income statement) ────────────────────────────
 
 model Expense {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   date      DateTime
-  category  String   // see EXPENSE_CATEGORIES in lib/finance.ts (Rent, Salaries, …)
+  category  String    // see EXPENSE_CATEGORIES in lib/finance.ts (Rent, Salaries, …)
   amount    Float
   notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  vendor    String?   // supplier — for accounts-payable tracking
+  paid      Boolean   @default(true)  // unpaid = an account payable
+  dueDate   DateTime? // when it's due (for A/P aging)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 // ─── Statement overrides (accountant's hard-keyed cells — render blue) ───────

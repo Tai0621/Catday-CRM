@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import Link from 'next/link'
 import { displayPhone } from '@/lib/phone'
 import { buildCustomerIntel, segmentStyle, SEGMENTS } from '@/lib/intelligence'
+import { receivableByCustomer } from '@/lib/aging'
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string; segment?: string }> }) {
   await requireAuth()
@@ -30,6 +31,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
     ...(segment ? {} : { skip: (page - 1) * perPage, take: perPage }),
   })
   const total = await db.customer.count({ where })
+  const owing = await receivableByCustomer()
 
   const withIntel = all.map(c => ({ c, intel: buildCustomerIntel(c) }))
   const rows = segment
@@ -94,6 +96,11 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
               <tr key={c.id}>
                 <td className="px-4 py-3 font-medium" style={{ color: '#2D1907' }}>
                   {c.name ?? <span className="cd-muted italic">No name</span>}
+                  {owing.get(c.id) && (
+                    <span className="ml-2 cd-pill" style={{ background: 'rgba(177,73,25,0.15)', color: '#B14919', fontWeight: 600 }}>
+                      owes RM {owing.get(c.id)!.toLocaleString('en-MY', { maximumFractionDigits: 0 })}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <span className="cd-pill" style={segmentStyle(intel.segment)}>{intel.segment}</span>
