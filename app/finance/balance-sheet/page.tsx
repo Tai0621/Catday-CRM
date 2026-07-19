@@ -4,6 +4,7 @@ import { monthKey } from '@/lib/plan'
 import { SEGMENTS } from '@/lib/segments'
 import Link from 'next/link'
 import { BalanceSheetTable } from './BalanceSheetTable'
+import { StatementTabs } from '../StatementTabs'
 
 // Balance Sheet — finance-only. Reads operations read-only (receivables, wallet
 // ledger, income statement); the accountant keys the rest. Nothing written back
@@ -21,6 +22,7 @@ export default async function BalanceSheetPage({
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
+      <StatementTabs />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: '#2D1907' }}>

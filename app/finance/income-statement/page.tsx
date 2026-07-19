@@ -4,6 +4,7 @@ import { buildForecastStatement, FORECAST_YEARS } from '@/lib/finance-forecast'
 import { SEGMENTS } from '@/lib/segments'
 import Link from 'next/link'
 import { StatementTable } from './StatementTable'
+import { StatementTabs } from '../StatementTabs'
 
 // One layout for both views — Actuals (live + accountant-keyed) and the Excel
 // model's Forecast — so the toggle never jumps. A Plan-vs-Actual strip tracks
@@ -28,6 +29,7 @@ export default async function IncomeStatementPage({
 
   return (
     <div className="max-w-6xl mx-auto space-y-5">
+      <StatementTabs />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: '#2D1907' }}>

@@ -57,14 +57,24 @@ const SEGMENTS: NavSegment[] = [
   },
   {
     key: 'finance', header: 'Finance', color: '#ECDBB6',
-    groups: [{ links: [
-      { href: '/finance/income-statement', label: 'Income Statement', icon: '≣' },
-      { href: '/finance/balance-sheet', label: 'Balance Sheet', icon: '⚖' },
-      { href: '/finance/cash-flow', label: 'Cash Flow', icon: '♒' },
-      { href: '/finance/expenses', label: 'Expenses', icon: '◒' },
-      { href: '/revenue', label: 'Revenue', icon: '◐' },
-      { href: '/plan', label: 'Financial Plan', icon: '◔' },
-    ] }],
+    groups: [
+      {
+        sub: '3-Statement', subColor: '#B8902B',
+        links: [
+          { href: '/finance/income-statement', label: 'Income Statement', icon: '≣' },
+          { href: '/finance/balance-sheet', label: 'Balance Sheet', icon: '⚖' },
+          { href: '/finance/cash-flow', label: 'Cash Flow', icon: '♒' },
+        ],
+      },
+      {
+        sub: 'Records & Planning', subColor: '#729094',
+        links: [
+          { href: '/finance/expenses', label: 'Expenses', icon: '◒' },
+          { href: '/revenue', label: 'Revenue', icon: '◐' },
+          { href: '/plan', label: 'Financial Plan', icon: '◔' },
+        ],
+      },
+    ],
   },
   {
     key: 'crm', header: 'Customers · CRM', color: '#98A86B',

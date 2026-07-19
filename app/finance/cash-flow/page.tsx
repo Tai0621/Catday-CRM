@@ -3,6 +3,7 @@ import { buildCashFlow, type CFSection } from '@/lib/cash-flow'
 import { monthKey } from '@/lib/plan'
 import { SEGMENTS } from '@/lib/segments'
 import Link from 'next/link'
+import { StatementTabs } from '../StatementTabs'
 
 // Cash Flow Statement — year-to-date, indirect method. Read-only: every figure
 // derives from the income statement and the movement between two balance
@@ -32,6 +33,7 @@ export default async function CashFlowPage({
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
+      <StatementTabs />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: '#2D1907' }}>
