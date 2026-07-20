@@ -24,6 +24,7 @@ export function DeleteTxnButton({ id, amount, label, grouped }: {
       if (res.pointsReversed) undone.push(`−${res.pointsReversed} pts`)
       if (res.walletRefunded) undone.push(`+RM ${res.walletRefunded.toFixed(2)} wallet`)
       if (res.restocked) undone.push(`+${res.restocked} stock`)
+      if (res.apptsReopened) undone.push(`${res.apptsReopened} visit${res.apptsReopened > 1 ? 's' : ''} re-opened`)
       if (undone.length) window.alert(`Deleted. Reversed: ${undone.join(' · ')}.`)
       router.refresh()
     })

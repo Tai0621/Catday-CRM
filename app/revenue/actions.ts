@@ -5,7 +5,7 @@ import { getSession, isManager } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export type DeleteResult =
-  | { ok: true; removed: number; total: number; pointsReversed: number; walletRefunded: number; restocked: number }
+  | { ok: true; removed: number; total: number; pointsReversed: number; walletRefunded: number; restocked: number; apptsReopened: number }
   | { ok: false; error: string }
 
 // Remove a wrongly-recorded transaction AND unwind the side effects the POS
@@ -68,6 +68,18 @@ export async function deleteTransaction(id: string): Promise<DeleteResult> {
     ops.push(db.product.update({ where: { id: l.productId! }, data: { stockQty: { increment: l.quantity } } }))
   }
 
+  // ── re-open any appointments this sale settled (mark unpaid again) ──
+  const apptLines = await db.transactionLine.findMany({
+    where: { transactionId: { in: ids }, appointmentId: { not: null } },
+    select: { appointmentId: true },
+  })
+  const apptIds = [...new Set(apptLines.map(l => l.appointmentId!))]
+  let apptsReopened = 0
+  if (apptIds.length > 0) {
+    apptsReopened = apptIds.length
+    ops.push(db.appointment.updateMany({ where: { id: { in: apptIds } }, data: { paid: false } }))
+  }
+
   // ── finally, remove the lines and the transaction rows ──
   ops.push(db.transactionLine.deleteMany({ where: { transactionId: { in: ids } } }))
   ops.push(db.transaction.deleteMany({ where: { id: { in: ids } } }))
@@ -76,6 +88,7 @@ export async function deleteTransaction(id: string): Promise<DeleteResult> {
 
   revalidatePath('/revenue')
   revalidatePath('/finance/income-statement')
+  revalidatePath('/finance/aging')
   revalidatePath('/cashup')
   revalidatePath('/')
   return {
@@ -85,5 +98,6 @@ export async function deleteTransaction(id: string): Promise<DeleteResult> {
     pointsReversed,
     walletRefunded: Math.round(walletRefunded * 100) / 100,
     restocked,
+    apptsReopened,
   }
 }

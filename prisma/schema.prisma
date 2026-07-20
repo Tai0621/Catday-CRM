@@ -121,6 +121,9 @@ model Membership {
   notes        String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+
+  @@index([customerId])
+  @@index([status])
 }
 
 // ─── Loyalty (Royalty Engine) ────────────────────────────────────────────────
@@ -213,6 +216,9 @@ model Expense {
   dueDate   DateTime? // when it's due (for A/P aging)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  @@index([date])
+  @@index([paid])
 }
 
 // ─── Statement overrides (accountant's hard-keyed cells — render blue) ───────
@@ -342,7 +348,13 @@ model Appointment {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  careTasks   CareTask[]
+  careTasks        CareTask[]
+  transactionLines TransactionLine[]
+
+  @@index([customerId])
+  @@index([catId])
+  @@index([status])
+  @@index([scheduledAt])
 }
 
 // ─── Transaction ─────────────────────────────────────────────────────────────
@@ -360,6 +372,10 @@ model Transaction {
   createdAt  DateTime @default(now())
 
   lines      TransactionLine[]
+
+  @@index([customerId])
+  @@index([date])
+  @@index([reference])
 }
 
 model TransactionLine {
@@ -370,10 +386,15 @@ model TransactionLine {
   cat           Cat?        @relation(fields: [catId], references: [id])
   productId     String?
   product       Product?    @relation(fields: [productId], references: [id])
+  appointmentId String?     // the visit this line settled (lets a delete re-open it)
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
   description   String
   quantity      Int         @default(1)
   unitPrice     Float
   subtotal      Float
+
+  @@index([transactionId])
+  @@index([appointmentId])
 }
 
 // ─── Retail products (POS catalog — also the seed of the Inventory round) ────
@@ -381,7 +402,8 @@ model TransactionLine {
 model Product {
   id        String   @id @default(cuid())
   name      String   @unique
-  price     Float
+  price     Float    // sell price
+  costPrice Float    @default(0) // unit cost — for COGS + inventory-at-cost on the balance sheet
   stockQty  Int      @default(0)
   sku       String?
   active    Boolean  @default(true)

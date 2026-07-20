@@ -102,6 +102,7 @@ export async function checkout(payloadJson: string): Promise<CheckoutResult> {
       lines: {
         create: items.map(i => ({
           catId: i.catId || null,
+          appointmentId: i.kind === 'appointment' ? i.refId ?? null : null,
           productId: i.kind === 'product' ? i.refId ?? null : null,
           description: i.label,
           quantity: i.qty,
@@ -129,6 +130,7 @@ export async function checkout(payloadJson: string): Promise<CheckoutResult> {
         lines: {
           create: items.map(i => ({
             catId: i.catId || null,
+            appointmentId: i.kind === 'appointment' ? i.refId ?? null : null,
             productId: i.kind === 'product' ? i.refId ?? null : null,
             description: i.label,
             quantity: i.qty,

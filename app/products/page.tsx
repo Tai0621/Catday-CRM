@@ -17,6 +17,7 @@ export default async function ProductsPage() {
       data: {
         name,
         price: parseFloat((data.get('price') as string) || '0'),
+        costPrice: parseFloat((data.get('costPrice') as string) || '0'),
         stockQty: parseInt((data.get('stockQty') as string) || '0', 10),
         sku: ((data.get('sku') as string) ?? '').trim() || null,
         sortOrder: products.length + 1,
@@ -33,6 +34,7 @@ export default async function ProductsPage() {
       where: { id },
       data: {
         price: parseFloat((data.get('price') as string) || '0'),
+        costPrice: parseFloat((data.get('costPrice') as string) || '0'),
         ...(restock ? { stockQty: { increment: restock } } : {}),
       },
     })
@@ -67,6 +69,10 @@ export default async function ProductsPage() {
         <div>
           <label className="cd-label">Price (RM)</label>
           <input name="price" type="number" min="0" step="0.5" defaultValue="50" className="cd-input" style={{ width: '6.5rem' }} />
+        </div>
+        <div>
+          <label className="cd-label">Cost (RM)</label>
+          <input name="costPrice" type="number" min="0" step="0.5" defaultValue="0" className="cd-input" style={{ width: '6rem' }} />
         </div>
         <div>
           <label className="cd-label">Stock</label>
@@ -107,7 +113,9 @@ export default async function ProductsPage() {
                     <form action={updateProduct} className="flex items-center gap-1.5">
                       <input type="hidden" name="id" value={p.id} />
                       <span className="cd-muted text-xs">RM</span>
-                      <input name="price" type="number" min="0" step="0.5" defaultValue={p.price} className="cd-input" style={{ width: '5.5rem' }} />
+                      <input name="price" type="number" min="0" step="0.5" defaultValue={p.price} className="cd-input" style={{ width: '5rem' }} title="Sell price" />
+                      <span className="cd-muted text-xs">cost</span>
+                      <input name="costPrice" type="number" min="0" step="0.5" defaultValue={p.costPrice} className="cd-input" style={{ width: '5rem' }} title="Unit cost" />
                       <span className="cd-muted text-xs">+stock</span>
                       <input name="restock" type="number" min="0" defaultValue={0} className="cd-input" style={{ width: '4.5rem' }} />
                       <button type="submit" className="cd-btn-sec text-xs">Save</button>
