@@ -1,0 +1,33 @@
+---
+description: Cat Day CRM/OS — mandatory project conventions and gotchas
+alwaysApply: true
+---
+
+Before writing any code in this repo, read **`AGENTS.md`** at the repo root in full — it is the
+canonical build guide (stack, design system, data-integrity rules, verification philosophy) and is
+kept up to date. Do not skip it or rely on general Next.js/Prisma knowledge instead; several of its
+rules override what would otherwise be reasonable defaults.
+
+The five rules most likely to cause a silent regression if missed (full detail in `AGENTS.md`):
+
+1. **`prisma migrate dev` / `prisma db push` do not work here** (Prisma 7 + Turso libsql). Schema
+   changes go: edit `prisma/schema.prisma` → write an idempotent `scripts/migrate-<feature>.mjs` using
+   Turso's HTTP `/v2/pipeline` API (copy an existing one) → `node scripts/migrate-<feature>.mjs` →
+   `npx prisma generate` → **restart the dev server** (it caches the old Prisma client and will throw
+   confusing errors, including unrelated 404s, until restarted).
+2. **Finance is read-only over operations.** `lib/finance.ts`, `lib/balance-sheet.ts`,
+   `lib/cash-flow.ts` compute from `Transaction`/`Expense`/`Appointment`/`WalletEntry` but never write
+   back to them. Never make a finance feature mutate operational/POS data.
+3. **Money/points/wallet/stock changes must be reversible.** POS checkout (`app/pos/actions.ts`)
+   creates several linked side effects atomically; `deleteTransaction`
+   (`app/revenue/actions.ts`) reverses all of them (points, wallet, stock, re-opening the settled
+   appointment). Any new checkout side effect needs a matching reversal.
+4. **Design system is fixed, not a starting point.** Reuse `lib/segments.ts` `SEGMENTS` colors, the
+   `.cd-*` classes in `app/globals.css`, and the `NavIcons.tsx` monochrome SVG style — no new hex
+   colors, no emoji, no ad-hoc Tailwind soup duplicating an existing `.cd-*` class.
+5. **Every non-trivial change ships with `scripts/verify-<feature>.mjs`** — seeds real data into Turso,
+   drives the actual page/server-action over HTTP, asserts, cleans up in `finally`. Copy an existing
+   one; don't invent a different testing shape. `npm run build` must also stay clean.
+
+Manager-only pages need **both** an entry in `proxy.ts` `MANAGER_PATHS` **and** a `requireManager()`
+call in the page — one alone has been an actual bug source.
