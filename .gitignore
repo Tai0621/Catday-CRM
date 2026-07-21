@@ -45,3 +45,8 @@ next-env.d.ts
 
 .vercel
 .claude/
+
+# local demo database (fabricated data, machine-local only — see scripts/setup-local-demo.mjs)
+/prisma/demo.db
+/prisma/demo.db-wal
+/prisma/demo.db-shm
