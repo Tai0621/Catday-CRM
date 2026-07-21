@@ -246,6 +246,16 @@ model StatementRowDef {
   createdAt DateTime @default(now())
 }
 
+// Business configuration (key → value string, parsed by lib/config.ts) — the
+// productization seam: everything client-specific (name, currency, hours, tax)
+// lives here as data, not code. Single-tenant today; a future multi-tenant
+// build makes this @@id([orgId, key]) — a purely additive change.
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 // Driver-based financial plan inputs (key → value), e.g. cap.boardingPrice,
 // util.endPct, opex.Rent. Flexible so the model can grow without migrations.
 model PlanDriver {

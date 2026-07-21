@@ -3,11 +3,13 @@ import { db } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { displayPhone, whatsappUrl } from '@/lib/phone'
+import { getConfig } from '@/lib/config'
 import { PrintButton } from './PrintButton'
 
 export default async function ReceiptPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAuth()
   const { id } = await params
+  const config = await getConfig()
 
   const txn = await db.transaction.findUnique({
     where: { id },
@@ -27,7 +29,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
     : null
 
   const waText = [
-    `Thank you for visiting Cat Day! 🐾`,
+    `Thank you for visiting ${config.business.name}! 🐾`,
     `Receipt ${txn.reference ?? txn.id}`,
     ...txn.lines.map(l => `· ${l.description}${l.quantity > 1 ? ` ×${l.quantity}` : ''} — RM ${l.subtotal.toFixed(2)}`),
     `Total: RM ${grandTotal.toFixed(2)}`,
@@ -55,9 +57,12 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
       <div className="cd-card p-6 space-y-4" style={{ background: '#FDFBF5' }}>
         <div className="text-center space-y-1">
           <div className="font-bold tracking-widest uppercase" style={{ fontFamily: 'var(--font-brand)', color: '#2D1907', letterSpacing: '0.18em' }}>
-            cat day
+            {config.business.name}
           </div>
-          <div className="text-xs cd-muted">A GOOD DAY FOR EVERY CAT</div>
+          <div className="text-xs cd-muted uppercase">{config.business.tagline}</div>
+          {(config.business.address || config.business.phone) && (
+            <div className="text-xs cd-muted">{[config.business.address, config.business.phone].filter(Boolean).join(' · ')}</div>
+          )}
           <div className="text-xs cd-muted pt-1">
             {txn.reference ?? txn.id} · {txn.date.toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'short' })}
           </div>

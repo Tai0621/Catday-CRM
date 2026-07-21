@@ -1,9 +1,11 @@
 import { redirect } from 'next/navigation'
 import { isAuthenticated } from '@/lib/auth'
+import { getConfig } from '@/lib/config'
 import { PasswordField } from './PasswordField'
 
 export default async function LoginPage() {
   if (await isAuthenticated()) redirect('/')
+  const config = await getConfig()
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4"
@@ -12,11 +14,11 @@ export default async function LoginPage() {
         {/* Company logo */}
         <div className="flex flex-col items-center mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/catday-logo.png" alt="Cat Day"
+          <img src="/catday-logo.png" alt={config.business.name}
             width={252} height={106}
             className="w-[228px] h-auto select-none" style={{ pointerEvents: 'none' }} />
           <p className="text-[11px] font-semibold tracking-[0.28em] uppercase mt-4" style={{ color: '#B14919' }}>
-            A Good Day for Every Cat
+            {config.business.tagline}
           </p>
         </div>
 
@@ -38,7 +40,7 @@ export default async function LoginPage() {
         </form>
 
         <p className="text-center text-xs mt-6 tracking-wide" style={{ color: 'rgba(45,25,7,0.4)' }}>
-          Cat Day OS · Staff Portal
+          {config.business.name} OS · {config.portalLabel}
         </p>
       </div>
     </div>

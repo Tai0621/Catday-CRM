@@ -7,7 +7,7 @@ const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-form
 // Staff hitting these are sent to their service board.
 const MANAGER_PATHS = [
   '/revenue', '/plan', '/academy', '/ask', '/api/ask', '/whatsapp',
-  '/staff', '/services', '/cashup', '/memberships/tiers', '/finance',
+  '/staff', '/services', '/cashup', '/memberships/tiers', '/finance', '/admin',
 ]
 
 async function sha256Hex(str: string): Promise<string> {

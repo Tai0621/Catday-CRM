@@ -1,5 +1,5 @@
 import { db } from './db'
-import { OPEN_HOUR, CLOSE_HOUR, SLOT_STEP_MIN } from './constants'
+import { getConfig } from './config'
 
 // Grooming-side capacity: open hours × groomers on duty × service duration.
 // A slot is open if at least one groomer is free for the whole duration.
@@ -22,7 +22,7 @@ export async function openSlots(dateStr: string, durationMin: number): Promise<{
   if (isNaN(dayStart.getTime())) return { slots: [], capacity: 1 }
   const dayEnd = new Date(dayStart.getTime() + DAY)
 
-  const [capacity, appts] = await Promise.all([
+  const [capacity, appts, config] = await Promise.all([
     groomerCapacity(),
     db.appointment.findMany({
       where: {
@@ -33,7 +33,9 @@ export async function openSlots(dateStr: string, durationMin: number): Promise<{
       },
       select: { scheduledAt: true, endsAt: true },
     }),
+    getConfig(),
   ])
+  const { openHour, closeHour, slotStepMin } = config.ops
 
   const busy = appts.map(a => ({
     start: a.scheduledAt.getTime(),
@@ -42,7 +44,7 @@ export async function openSlots(dateStr: string, durationMin: number): Promise<{
 
   const slots: OpenSlot[] = []
   const duration = Math.max(15, durationMin) * 60 * 1000
-  for (let h = OPEN_HOUR * 60; h + Math.max(15, durationMin) <= CLOSE_HOUR * 60; h += SLOT_STEP_MIN) {
+  for (let h = openHour * 60; h + Math.max(15, durationMin) <= closeHour * 60; h += slotStepMin) {
     const start = dayStart.getTime() + h * 60 * 1000
     const end = start + duration
     const overlapping = busy.filter(b => b.start < end && b.end > start).length
