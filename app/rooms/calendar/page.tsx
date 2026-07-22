@@ -5,8 +5,12 @@ import { SEGMENTS } from '@/lib/segments'
 
 const DAY = 24 * 60 * 60 * 1000
 const DAYS_SHOWN = 14
+const GROOM_TYPES = ['Grooming', 'Bath', 'Diagnosis']
+const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 // Room availability across dates — "is Suite 2 free from the 18th to the 23rd?"
+// Weeks are visually divided; boarding stays that also have a grooming session
+// in the window are flagged (✂) so front desk sees the cross-over at a glance.
 export default async function RoomCalendarPage({
   searchParams,
 }: {
@@ -19,8 +23,9 @@ export default async function RoomCalendarPage({
   const now = new Date()
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const end = new Date(start.getTime() + DAYS_SHOWN * DAY)
+  const todayKey = dayKey(now)
 
-  const [rooms, bookings] = await Promise.all([
+  const [rooms, bookings, grooming] = await Promise.all([
     db.room.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }),
     db.appointment.findMany({
       where: {
@@ -31,11 +36,36 @@ export default async function RoomCalendarPage({
       },
       include: { cat: true, room: true },
     }),
+    // Grooming/bath/diagnosis in the same window — linked onto boarding stays
+    db.appointment.findMany({
+      where: {
+        type: { in: GROOM_TYPES },
+        status: { notIn: ['Cancelled', 'NoShow'] },
+        scheduledAt: { gte: start, lt: end },
+      },
+      select: { catId: true, scheduledAt: true },
+    }),
   ])
+
+  // catId → sorted list of grooming day-keys within the window
+  const groomByCat = new Map<string, string[]>()
+  for (const g of grooming) {
+    const k = dayKey(g.scheduledAt)
+    const arr = groomByCat.get(g.catId) ?? []
+    if (!arr.includes(k)) arr.push(k)
+    groomByCat.set(g.catId, arr)
+  }
 
   const days = Array.from({ length: DAYS_SHOWN }, (_, i) => new Date(start.getTime() + i * DAY))
   const seg = SEGMENTS.boarding
+  const groomColor = SEGMENTS.grooming.color
   const unassigned = bookings.filter(b => !b.roomId)
+
+  const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6
+  const isToday = (d: Date) => dayKey(d) === todayKey
+  const weekDivider = (d: Date, i: number) => i > 0 && d.getDay() === 1 // Monday starts a new week
+  const dayBg = (d: Date) => (isToday(d) ? 'rgba(177,73,25,0.10)' : isWeekend(d) ? 'rgba(45,25,7,0.05)' : 'transparent')
+  const dividerLeft = (d: Date, i: number) => (weekDivider(d, i) ? '2px solid rgba(45,25,7,0.28)' : undefined)
 
   function stayFor(roomId: string, day: Date) {
     const dayEnd = new Date(day.getTime() + DAY)
@@ -52,9 +82,9 @@ export default async function RoomCalendarPage({
   const shownRooms = freeOnly ? rooms.filter(r => !bookedRoomIds.has(r.id)) : rooms
 
   // One row = a run of cells; each stay collapses into a single bar spanning its days
-  type Cell = { kind: 'empty'; key: number } | {
+  type Cell = { kind: 'empty'; key: number; day: Date } | {
     kind: 'stay'; key: number; span: number
-    stay: (typeof bookings)[number]; startsBefore: boolean; endsAfter: boolean
+    stay: (typeof bookings)[number]; startsBefore: boolean; endsAfter: boolean; groomDays: string[]
   }
   function rowCells(roomId: string): Cell[] {
     const cells: Cell[] = []
@@ -62,16 +92,20 @@ export default async function RoomCalendarPage({
     while (i < DAYS_SHOWN) {
       const stay = stayFor(roomId, days[i])
       if (!stay) {
-        cells.push({ kind: 'empty', key: i })
+        cells.push({ kind: 'empty', key: i, day: days[i] })
         i++
         continue
       }
       let span = 1
       while (i + span < DAYS_SHOWN && stayFor(roomId, days[i + span])?.id === stay.id) span++
+      // Grooming day-keys that fall within this bar's visible span
+      const spanKeys = new Set(Array.from({ length: span }, (_, k) => dayKey(days[i + k])))
+      const groomDays = (groomByCat.get(stay.catId) ?? []).filter(k => spanKeys.has(k))
       cells.push({
         kind: 'stay', key: i, span, stay,
         startsBefore: stay.scheduledAt < days[i],
         endsAfter: stay.endsAt != null && stay.endsAt > new Date(days[i].getTime() + span * DAY),
+        groomDays,
       })
       i += span
     }
@@ -105,8 +139,8 @@ export default async function RoomCalendarPage({
         </div>
       )}
 
-      {/* Free-rooms toggle */}
-      <div className="flex items-center gap-2">
+      {/* Free-rooms toggle + legend */}
+      <div className="flex items-center gap-2 flex-wrap">
         <Link href="/rooms/calendar" className="text-xs px-3 py-1.5 rounded-lg transition-colors"
           style={!freeOnly
             ? { background: '#2D1907', color: '#ECDBB6', fontWeight: 600 }
@@ -119,17 +153,25 @@ export default async function RoomCalendarPage({
             : { background: 'rgba(45,25,7,0.06)', color: 'rgba(45,25,7,0.55)', border: '1px solid rgba(45,25,7,0.12)' }}>
           Free next {DAYS_SHOWN} days ({freeRoomCount})
         </Link>
+        <span className="ml-auto flex items-center gap-3 text-xs cd-muted">
+          <span className="flex items-center gap-1"><span className="rounded" style={{ width: 14, height: 10, background: seg.bg, border: `1px solid ${seg.color}` }} /> boarding</span>
+          <span className="flex items-center gap-1" style={{ color: groomColor }}>✂ grooming</span>
+          <span className="flex items-center gap-1"><span className="rounded" style={{ width: 12, height: 10, background: 'rgba(177,73,25,0.10)' }} /> today</span>
+        </span>
       </div>
 
       <div className="cd-card overflow-x-auto">
         <table className="text-xs" style={{ borderCollapse: 'collapse', minWidth: '100%' }}>
           <thead>
             <tr className="cd-thead">
-              <th style={{ position: 'sticky', left: 0, background: '#ECDBB6' }}>Room</th>
-              {days.map(d => (
-                <th key={d.getTime()} className="text-center" style={{ minWidth: '4.2rem', padding: '0.5rem 0.25rem' }}>
-                  <div>{d.toLocaleDateString('en-MY', { weekday: 'short' })}</div>
-                  <div style={{ fontWeight: 700 }}>{d.getDate()}/{d.getMonth() + 1}</div>
+              <th style={{ position: 'sticky', left: 0, background: '#ECDBB6', zIndex: 1 }}>Room</th>
+              {days.map((d, i) => (
+                <th key={d.getTime()} className="text-center"
+                  style={{ minWidth: '4.2rem', padding: '0.5rem 0.25rem', background: dayBg(d), borderLeft: dividerLeft(d, i) }}>
+                  <div style={{ color: isToday(d) ? '#B14919' : isWeekend(d) ? 'rgba(45,25,7,0.45)' : undefined, fontWeight: isToday(d) ? 700 : 400 }}>
+                    {isToday(d) ? 'Today' : d.toLocaleDateString('en-MY', { weekday: 'short' })}
+                  </div>
+                  <div style={{ fontWeight: 700, color: isToday(d) ? '#B14919' : undefined }}>{d.getDate()}/{d.getMonth() + 1}</div>
                 </th>
               ))}
             </tr>
@@ -145,27 +187,34 @@ export default async function RoomCalendarPage({
             {shownRooms.map(room => (
               <tr key={room.id}>
                 <td className="px-3 py-2 font-medium whitespace-nowrap"
-                  style={{ color: '#2D1907', position: 'sticky', left: 0, background: '#ECDBB6' }}>
+                  style={{ color: '#2D1907', position: 'sticky', left: 0, background: '#ECDBB6', zIndex: 1 }}>
                   {room.name}
                   <span className="cd-muted font-normal"> · {room.type}</span>
                 </td>
                 {rowCells(room.id).map(cell =>
                   cell.kind === 'empty' ? (
-                    <td key={cell.key} className="text-center" style={{ padding: '0.2rem' }}>
+                    <td key={cell.key} className="text-center"
+                      style={{ padding: '0.2rem', background: dayBg(cell.day), borderLeft: dividerLeft(cell.day, cell.key) }}>
                       <div className="rounded" style={{ height: '1.9rem', background: 'rgba(45,25,7,0.03)' }} />
                     </td>
                   ) : (
-                    <td key={cell.key} colSpan={cell.span} style={{ padding: '0.2rem' }}>
+                    <td key={cell.key} colSpan={cell.span}
+                      style={{ padding: '0.2rem', borderLeft: dividerLeft(days[cell.key], cell.key) }}>
                       <Link href={`/appointments/${cell.stay.id}`}
-                        className="flex items-center px-2 truncate font-medium hover:opacity-80"
+                        className="flex items-center gap-1 px-2 truncate font-medium hover:opacity-80"
                         style={{
                           background: seg.bg, color: seg.text, height: '1.9rem',
                           borderRadius: `${cell.startsBefore ? 0 : 6}px ${cell.endsAfter ? 0 : 6}px ${cell.endsAfter ? 0 : 6}px ${cell.startsBefore ? 0 : 6}px`,
                           borderLeft: cell.startsBefore ? `3px solid ${seg.color}` : undefined,
                           borderRight: cell.endsAfter ? `3px solid ${seg.color}` : undefined,
+                          boxShadow: cell.groomDays.length > 0 ? `inset 0 -3px 0 ${groomColor}` : undefined,
                         }}
-                        title={`${cell.stay.cat.name} · ${cell.stay.scheduledAt.toLocaleDateString('en-MY')} → ${cell.stay.endsAt?.toLocaleDateString('en-MY') ?? '?'}`}>
-                        {cell.startsBefore && '← '}{cell.stay.cat.name}{cell.endsAfter && ' →'}
+                        title={`${cell.stay.cat.name} · ${cell.stay.scheduledAt.toLocaleDateString('en-MY')} → ${cell.stay.endsAt?.toLocaleDateString('en-MY') ?? '?'}`
+                          + (cell.groomDays.length > 0 ? `\n✂ Grooming: ${cell.groomDays.map(k => { const [, m, d] = k.split('-'); return `${Number(d)}/${Number(m)}` }).join(', ')}` : '')}>
+                        {cell.startsBefore && '← '}
+                        {cell.groomDays.length > 0 && <span style={{ color: groomColor, fontWeight: 700 }}>✂</span>}
+                        <span className="truncate">{cell.stay.cat.name}</span>
+                        {cell.endsAfter && ' →'}
                       </Link>
                     </td>
                   ),

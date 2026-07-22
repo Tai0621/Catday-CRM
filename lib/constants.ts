@@ -23,6 +23,18 @@ export const BOARD_ADVANCE_LABELS: Record<string, string> = {
   Scheduled: 'Check in', CheckedIn: 'Start', InService: 'Quality check',
   QualityCheck: 'Mark ready', Ready: 'Picked up',
 }
+// Each service-board stage gets its own colour so staff read progress at a
+// glance without reading labels: waiting=taupe, checked-in=teal, in-service=
+// rust (active), quality-check=gold (review), ready=green (go). `color` is the
+// solid accent (column header, card top border, advance button); `bg` is the
+// soft tint (count pill, card wash).
+export const BOARD_STAGE_COLORS: Record<string, { color: string; bg: string }> = {
+  Scheduled:    { color: '#8A7A5E', bg: 'rgba(138,122,94,0.14)' },
+  CheckedIn:    { color: '#729094', bg: 'rgba(114,144,148,0.16)' },
+  InService:    { color: '#B14919', bg: 'rgba(177,73,25,0.13)' },
+  QualityCheck: { color: '#B8902B', bg: 'rgba(184,144,43,0.16)' },
+  Ready:        { color: '#5F7A3F', bg: 'rgba(95,122,63,0.16)' },
+}
 
 export const ROOM_TYPES = ['Standard', 'Suite', 'DayStay'] as const
 export type RoomType = typeof ROOM_TYPES[number]

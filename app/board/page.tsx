@@ -2,7 +2,7 @@ import { requireAuth, getSession } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
-import { BOARD_FLOW, BOARD_COLUMN_LABELS, BOARD_ADVANCE_LABELS } from '@/lib/constants'
+import { BOARD_FLOW, BOARD_COLUMN_LABELS, BOARD_ADVANCE_LABELS, BOARD_STAGE_COLORS } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
 import { displayPhone, whatsappUrl } from '@/lib/phone'
 
@@ -93,13 +93,15 @@ export default async function BoardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3">
           {columns.map(col => {
             const items = appts.filter(a => a.status === col)
+            const sc = BOARD_STAGE_COLORS[col]
             return (
               <div key={col} className="space-y-2">
-                <div className="flex items-center gap-2 px-1">
-                  <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: seg.text }}>
+                <div className="flex items-center gap-2 px-1 pb-1" style={{ borderBottom: `2px solid ${sc.color}` }}>
+                  <span className="rounded-full" style={{ width: 9, height: 9, background: sc.color }} />
+                  <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: sc.color }}>
                     {BOARD_COLUMN_LABELS[col]}
                   </h2>
-                  <span className="cd-pill" style={{ background: seg.bg, color: seg.text }}>{items.length}</span>
+                  <span className="cd-pill ml-auto" style={{ background: sc.bg, color: sc.color, fontWeight: 700 }}>{items.length}</span>
                 </div>
                 {items.length === 0 && (
                   <div className="rounded-lg border border-dashed px-3 py-4 text-center text-xs cd-muted"
@@ -107,7 +109,7 @@ export default async function BoardPage() {
                 )}
                 {items.map(a => (
                   <div key={a.id} className="cd-card p-3 space-y-2"
-                    style={{ borderTop: `3px solid ${seg.color}` }}>
+                    style={{ borderTop: `4px solid ${sc.color}`, background: sc.bg }}>
                     <div>
                       <div className="flex items-center justify-between">
                         <Link href={`/cats/${a.catId}`} className="font-semibold text-sm hover:underline" style={{ color: '#2D1907' }}>
@@ -142,7 +144,7 @@ export default async function BoardPage() {
                         <input type="hidden" name="id" value={a.id} />
                         <input type="hidden" name="current" value={a.status} />
                         <button type="submit" className="text-xs px-2.5 py-1 rounded-lg font-medium"
-                          style={{ background: seg.color, color: '#F2EDE0' }}>
+                          style={{ background: sc.color, color: '#F2EDE0' }}>
                           {BOARD_ADVANCE_LABELS[a.status]} →
                         </button>
                       </form>
