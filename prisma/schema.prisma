@@ -256,6 +256,28 @@ model Setting {
   updatedAt DateTime @updatedAt
 }
 
+// Administrative — Fixed Asset Register. Each asset depreciates straight-line
+// over usefulLifeMonths down to salvageValue. Finance reads these (never writes
+// back): net book value auto-fills the balance-sheet fixed-assets line, the
+// monthly charge posts as a Depreciation line on the income statement (so
+// retained earnings absorbs it and the sheet stays balanced), and purchases
+// flow to cash-flow investing. Until the first asset exists, statements are
+// unchanged — the fixed-assets line stays accountant-keyed. See lib/assets.ts.
+model FixedAsset {
+  id               String   @id @default(cuid())
+  name             String
+  category         String // ASSET_CATEGORIES in lib/assets.ts
+  cost             Float // acquisition cost (RM)
+  salvageValue     Float    @default(0) // residual value at end of life (RM)
+  purchaseDate     DateTime // depreciation starts this month
+  usefulLifeMonths Int // straight-line life
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([purchaseDate])
+}
+
 // Driver-based financial plan inputs (key → value), e.g. cap.boardingPrice,
 // util.endPct, opex.Rent. Flexible so the model can grow without migrations.
 model PlanDriver {

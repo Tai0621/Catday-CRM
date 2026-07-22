@@ -1,5 +1,6 @@
 import { db } from './db'
 import { REVENUE_CATEGORIES } from './constants'
+import { fetchAssetCores, depreciationForYear } from './assets'
 
 // Mirrors the owner's "CATDAY Income Statement.xlsx":
 // Revenue → Cost of Services (variable) → Gross Profit → Operating Expenses
@@ -121,7 +122,7 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
   const from = new Date(year, 0, 1)
   const to = new Date(year + 1, 0, 1)
 
-  const [txns, expenses, overrides, rowDefs, hidden, rowOrders, firstTxn, firstExp, firstCell] = await Promise.all([
+  const [txns, expenses, overrides, rowDefs, hidden, rowOrders, firstTxn, firstExp, firstCell, assets] = await Promise.all([
     db.transaction.findMany({ where: { date: { gte: from, lt: to } }, select: { date: true, total: true, category: true } }),
     db.expense.findMany({ where: { date: { gte: from, lt: to } }, select: { date: true, amount: true, category: true } }),
     db.statementCell.findMany({ where: { year }, select: { month: true, rowKey: true, amount: true } }),
@@ -131,6 +132,7 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
     db.transaction.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
     db.expense.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
     db.statementCell.findFirst({ orderBy: { year: 'asc' }, select: { year: true } }),
+    fetchAssetCores(),
   ])
 
   // Accountant's hard-keyed cells (blue) replace the OS figure for that month
@@ -185,10 +187,17 @@ export async function buildIncomeStatement(year: number): Promise<IncomeStatemen
     ...COGS_CATEGORIES.map(c => applyOvr(`cogs:${c}`, c, expMap.get(c)!)),
     ...customRows('cogs'),
   ]))
-  const opex = ordered('opex', visible([
+  // Depreciation is derived from the Asset Register, not an entered Expense, so
+  // it's an auto (black) row appended to opex — and only when assets exist, so
+  // statements stay identical to before the register was adopted. It flows into
+  // EBITDA → net income → retained earnings, keeping the balance sheet in sync.
+  const depValues = depreciationForYear(assets, year)
+  const opexRows = [
     ...OPEX_CATEGORIES.map(c => applyOvr(`opex:${c}`, c, expMap.get(c)!)),
     ...customRows('opex'),
-  ]))
+  ]
+  if (depValues.some(v => v !== 0)) opexRows.push(row('Depreciation & Amortization', depValues))
+  const opex = ordered('opex', visible(opexRows))
   // Year switcher: every year between the first recorded figure and now
   const nowYear = new Date().getFullYear()
   const earliest = Math.min(

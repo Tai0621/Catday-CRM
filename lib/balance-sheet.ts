@@ -1,6 +1,7 @@
 import { db } from './db'
 import { buildIncomeStatement } from './finance'
 import { payablesTotal } from './aging'
+import { fetchAssetCores, fixedAssetsNBV } from './assets'
 
 // The Balance Sheet — a finance-only overlay. It READS operational data
 // (unpaid appointments, the wallet ledger, the income statement) but never
@@ -70,7 +71,7 @@ export async function buildBalanceSheet(asOf: string): Promise<BalanceSheet> {
   const end = monthEnd(asOf) // exclusive
   const [y, m] = asOf.split('-').map(Number)
 
-  const [cells, unpaidAppts, walletAgg, futureDeposits, payables, products, firstTxn, firstExp] = await Promise.all([
+  const [cells, unpaidAppts, walletAgg, futureDeposits, payables, products, firstTxn, firstExp, assetCores] = await Promise.all([
     db.balanceSheetCell.findMany({ where: { asOf }, select: { lineKey: true, amount: true } }),
     // Accounts receivable: completed but unpaid, up to the as-of date
     db.appointment.findMany({
@@ -88,7 +89,9 @@ export async function buildBalanceSheet(asOf: string): Promise<BalanceSheet> {
     db.product.findMany({ where: { active: true }, select: { stockQty: true, costPrice: true } }),
     db.transaction.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
     db.expense.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
+    fetchAssetCores(),
   ])
+  const fixedAssets = assetCores
 
   const keyed = new Map(cells.map(c => [c.lineKey, c.amount]))
   const receivables = r2(unpaidAppts.reduce((s, a) => s + (a.price ?? 0), 0))
@@ -130,7 +133,15 @@ export async function buildBalanceSheet(asOf: string): Promise<BalanceSheet> {
       keyedLine('a.prepaid', 'Prepayments & deposits paid'),
       keyedLine('a.otherCurrent', 'Other current assets'),
     ]),
-    section('Non-current Assets', KEYED.assets['Non-current Assets'].map(l => keyedLine(l.key, l.label))),
+    // Fixed assets come from the Asset Register once it's in use (net book value,
+    // black/auto). While the register is empty, the line stays accountant-keyed
+    // so nothing changes for a business that hasn't adopted it yet.
+    section('Non-current Assets', [
+      fixedAssets.length > 0
+        ? autoLine('a.fixedAssets', 'Fixed assets (net of depreciation)', fixedAssetsNBV(fixedAssets, asOf))
+        : keyedLine('a.fixedAssets', 'Fixed assets (net of depreciation)'),
+      keyedLine('a.otherNonCurrent', 'Other non-current assets'),
+    ]),
   ]
 
   const liabilities: BSSection[] = [

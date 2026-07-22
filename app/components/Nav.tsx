@@ -96,13 +96,21 @@ const SEGMENTS: NavSegment[] = [
   },
   {
     key: 'admin', header: 'Administrative', color: '#B8902B',
-    groups: [{
-      sub: 'Configuration', subColor: '#B8902B',
-      links: [
-        { href: '/admin/settings', label: 'Business Settings', icon: 'settings' },
-      ],
-    }],
-    // assets, licenses, vendors, activity log, documents — next rounds
+    groups: [
+      {
+        sub: 'Records', subColor: '#B8902B',
+        links: [
+          { href: '/admin/assets', label: 'Asset Register', icon: 'asset' },
+        ],
+      },
+      {
+        sub: 'Configuration', subColor: '#B8902B',
+        links: [
+          { href: '/admin/settings', label: 'Business Settings', icon: 'settings' },
+        ],
+      },
+    ],
+    // licenses, vendors, activity log, documents — next rounds
   },
 ]
 

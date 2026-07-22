@@ -508,3 +508,10 @@ CREATE INDEX "ActionLog_actionKey_idx" ON "ActionLog"("actionKey");
 -- CreateIndex
 CREATE UNIQUE INDEX "MonthlyTarget_month_key" ON "MonthlyTarget"("month");
 
+
+-- CreateTable
+CREATE TABLE "Setting" (
+    "key" TEXT NOT NULL PRIMARY KEY,
+    "value" TEXT NOT NULL,
+    "updatedAt" DATETIME NOT NULL
+);

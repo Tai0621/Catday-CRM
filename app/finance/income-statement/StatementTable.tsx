@@ -221,7 +221,7 @@ export function StatementTable({ statement: s, mode = 'actuals' }: {
     <td className={`px-3 py-1.5 whitespace-nowrap ${opts?.indent && !(editMode && opts?.section) ? 'pl-7' : ''}`}
       style={{ color: INK, fontWeight: opts?.bold ? 700 : 400, position: 'sticky', left: 0, background: '#F2EDE0' }}>
       <span className="inline-flex items-center gap-1.5">
-        {editMode && opts?.section && (
+        {editMode && opts?.section && r.key && (
           <span
             draggable
             onDragStart={() => { dragRef.current = { section: opts.section!, key: r.key! }; setDragKey(r.key!) }}
@@ -253,7 +253,7 @@ export function StatementTable({ statement: s, mode = 'actuals' }: {
       onDrop={section ? (() => onDropRow(section, r.key!)) : undefined}
       style={dragKey && dragKey === r.key ? { opacity: 0.4 } : undefined}>
       {labelTd(r, { indent: true, section })}
-      {r.values.map((_, m) => (editMode ? editCell(r, m) : viewCell(r, m)))}
+      {r.values.map((_, m) => (editMode && r.key ? editCell(r, m) : viewCell(r, m)))}
       {totalTd(r)}
     </tr>
   )

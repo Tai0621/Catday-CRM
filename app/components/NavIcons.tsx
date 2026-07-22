@@ -30,6 +30,7 @@ const ICONS: Record<string, ReactNode> = {
   cap: (<><path d="M2.5 8.5 12 4l9.5 4.5L12 13z" /><path d="M6.5 11v4.5c0 1.2 2.9 2.5 5.5 2.5s5.5-1.3 5.5-2.5V11" /><path d="M21.5 8.5v5" /></>),
   logout: (<><path d="M9.5 21H5.5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 16.5l4.5-4.5L16 7.5M20.5 12h-11" /></>),
   settings: (<><circle cx="12" cy="12" r="3" /><path d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12h2.5M19 12h2.5M4.2 19.8l1.8-1.8M18 6l1.8-1.8" /></>),
+  asset: (<><path d="M3.5 8.5 12 4l8.5 4.5-8.5 4.5z" /><path d="M3.5 8.5v7L12 20l8.5-4.5v-7" /><path d="M12 13v7" /><circle cx="16.2" cy="6.6" r="1" /></>),
 }
 
 export function Icon({ name, size = 17 }: { name: string; size?: number }) {

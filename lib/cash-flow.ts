@@ -1,5 +1,6 @@
 import { buildBalanceSheet, type BalanceSheet } from './balance-sheet'
 import { buildIncomeStatement } from './finance'
+import { fetchAssetCores, depreciationBetween } from './assets'
 
 // Cash Flow Statement — indirect method, derived from the movement between two
 // balance sheets plus net income for the period. Because it's built from the
@@ -33,7 +34,7 @@ const lineMap = (bs: BalanceSheet) =>
 const label = (m: string) => { const [y, mm] = m.split('-').map(Number); return new Date(y, mm - 1, 1).toLocaleDateString('en-MY', { month: 'long', year: 'numeric' }) }
 
 export async function buildCashFlow(fromMonth: string, toMonth: string): Promise<CashFlow> {
-  const [bsOpen, bsClose] = await Promise.all([buildBalanceSheet(fromMonth), buildBalanceSheet(toMonth)])
+  const [bsOpen, bsClose, assets] = await Promise.all([buildBalanceSheet(fromMonth), buildBalanceSheet(toMonth), fetchAssetCores()])
   const o = lineMap(bsOpen), c = lineMap(bsClose)
   const d = (k: string) => r2((c.get(k) ?? 0) - (o.get(k) ?? 0)) // change over the period
 
@@ -54,9 +55,15 @@ export async function buildCashFlow(fromMonth: string, toMonth: string): Promise
   const sec = (title: string, lines: CFLine[]): CFSection =>
     ({ title, lines, subtotal: r2(lines.reduce((s, l) => s + l.value, 0)) })
 
-  // Operating: net income, then working-capital movements
+  // Depreciation is a non-cash expense inside net income; add it back in
+  // operating and remove it from the fixed-asset delta below, so the investing
+  // line shows actual cash spent on assets rather than the book-value change.
+  const depreciation = depreciationBetween(assets, fromMonth, toMonth)
+
+  // Operating: net income, add back non-cash depreciation, then working-capital
   const operating = sec('Operating activities', [
     { label: 'Net income for the period', value: netIncome },
+    { label: 'Depreciation (non-cash)', value: depreciation },
     { label: '(Increase)/decrease in receivables', value: r2(-d('a.receivables')) },
     { label: '(Increase)/decrease in inventory', value: r2(-d('a.inventory')) },
     { label: '(Increase)/decrease in prepayments', value: r2(-d('a.prepaid')) },
@@ -67,9 +74,12 @@ export async function buildCashFlow(fromMonth: string, toMonth: string): Promise
     { label: 'Increase/(decrease) in other current liabilities', value: d('l.otherCurrent') },
   ])
 
-  // Investing: change in long-term assets (net of depreciation — see note)
+  // Investing: cash spent on long-term assets. The fixed-asset book-value change
+  // is (purchases − depreciation); backing out the depreciation added to
+  // operating leaves just the cash purchases. Total fixed-asset contribution
+  // stays −Δ(a.fixedAssets), so ending cash still ties to the balance sheet.
   const investing = sec('Investing activities', [
-    { label: 'Purchase/(disposal) of fixed assets', value: r2(-d('a.fixedAssets')) },
+    { label: 'Purchase/(disposal) of fixed assets', value: r2(-d('a.fixedAssets') - depreciation) },
     { label: 'Other non-current assets', value: r2(-d('a.otherNonCurrent')) },
   ])
 
