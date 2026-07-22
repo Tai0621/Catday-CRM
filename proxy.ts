@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { roleHome, staffCanAccess } from './lib/roles'
 
 const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-forms']
 
@@ -55,9 +56,14 @@ export async function proxy(req: NextRequest) {
   }
 
   if (info.role !== 'Manager') {
-    const managerOnly = pathname === '/' || MANAGER_PATHS.some(p => pathname.startsWith(p))
-    if (managerOnly) {
-      return NextResponse.redirect(new URL('/board', req.url))
+    // Two gates for staff: the manager-only denylist (blocks everyone who isn't
+    // a manager), then the per-role allow-list (default-deny). Anything the role
+    // may not open — including '/' — bounces to that role's home screen.
+    const home = roleHome(info.role)
+    const managerOnly = MANAGER_PATHS.some(p => pathname.startsWith(p))
+    const blocked = pathname === '/' || managerOnly || !staffCanAccess(info.role, pathname)
+    if (blocked && pathname !== home) {
+      return NextResponse.redirect(new URL(home, req.url))
     }
   }
 

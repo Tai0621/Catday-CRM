@@ -116,7 +116,8 @@ const SEGMENTS: NavSegment[] = [
 ]
 
 // Staff see a flat, focused lane — no segment tree
-const STAFF_LINKS: NavLink[] = [
+// Reception (Front Desk) sees the full operational lane.
+const FRONTDESK_LINKS: NavLink[] = [
   { href: '/actions', label: 'Action Inbox', icon: 'inbox' },
   { href: '/board', label: 'Service Board', icon: 'board' },
   { href: '/runsheet', label: 'Run Sheet', icon: 'runsheet' },
@@ -129,6 +130,21 @@ const STAFF_LINKS: NavLink[] = [
   { href: '/incidents', label: 'Incidents', icon: 'alert' },
 ]
 
+// Groomers and boarding carers get a stripped, job-only lane — fewer choices,
+// less to read, less to get wrong. Must mirror lib/roles.ts STAFF_ROLE_PATHS.
+const ROLE_LINKS: Record<string, NavLink[]> = {
+  FrontDesk: FRONTDESK_LINKS,
+  Groomer: [
+    { href: '/board', label: 'My Board', icon: 'board' },
+    { href: '/cats', label: 'Cats & Assess', icon: 'cat' },
+  ],
+  Boarding: [
+    { href: '/runsheet', label: 'Run Sheet', icon: 'runsheet' },
+    { href: '/rooms', label: 'Rooms', icon: 'rooms' },
+    { href: '/cats', label: 'Cats', icon: 'cat' },
+  ],
+}
+
 const STORE_KEY = 'cd-nav-open'
 
 function isActive(href: string, pathname: string) {
@@ -137,7 +153,8 @@ function isActive(href: string, pathname: string) {
   return pathname.startsWith(href)
 }
 
-export function Nav({ isManager, userName }: { isManager: boolean; userName?: string }) {
+export function Nav({ role, userName }: { role: string; userName?: string }) {
+  const isManager = role === 'Manager'
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
 
@@ -165,20 +182,20 @@ export function Nav({ isManager, userName }: { isManager: boolean; userName?: st
     })
   }
 
-  const linkRow = (l: NavLink, indent = false) => {
+  const linkRow = (l: NavLink, indent = false, big = false) => {
     const active = isActive(l.href, pathname)
     return (
       <Link
         key={l.href}
         href={l.href}
-        className={`flex items-center gap-2.5 py-1.5 text-sm rounded mx-1 transition-all ${indent && !collapsed ? 'pl-7 pr-3' : 'px-3'}`}
+        className={`flex items-center rounded mx-1 transition-all ${big ? 'gap-3 py-3 text-[15px] font-medium' : 'gap-2.5 py-1.5 text-sm'} ${indent && !collapsed ? 'pl-7 pr-3' : 'px-3'}`}
         style={active
           ? { background: '#B14919', color: '#ECDBB6', fontWeight: 600 }
           : { color: 'rgba(236,219,182,0.65)' }}
         onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.color = '#ECDBB6' }}
         onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.color = 'rgba(236,219,182,0.65)' }}
       >
-        <span className="w-4 flex items-center justify-center shrink-0"><Icon name={l.icon} /></span>
+        <span className={`flex items-center justify-center shrink-0 ${big ? 'w-6' : 'w-4'}`}><Icon name={l.icon} size={big ? 21 : undefined} /></span>
         {!collapsed && <span className="flex-1 truncate">{l.label}</span>}
       </Link>
     )
@@ -204,8 +221,8 @@ export function Nav({ isManager, userName }: { isManager: boolean; userName?: st
 
       <nav className="flex-1 py-2 overflow-y-auto">
         {!isManager ? (
-          // ── Staff: flat lane ──
-          <div className="space-y-0.5">{STAFF_LINKS.map(l => linkRow(l))}</div>
+          // ── Staff: a stripped, big-tap-target lane for just their job ──
+          <div className="space-y-1">{(ROLE_LINKS[role] ?? FRONTDESK_LINKS).map(l => linkRow(l, false, true))}</div>
         ) : collapsed ? (
           // ── Manager, collapsed rail: pinned + everything as icons ──
           <div className="space-y-0.5">
@@ -269,7 +286,7 @@ export function Nav({ isManager, userName }: { isManager: boolean; userName?: st
       <div className="px-3 py-3 space-y-1.5" style={{ borderTop: '1px solid rgba(236,219,182,0.15)' }}>
         {!collapsed && userName && (
           <div className="text-xs truncate" style={{ color: 'rgba(236,219,182,0.55)' }}>
-            {userName}{!isManager && ' · staff'}
+            {userName}{!isManager && ` · ${role}`}
           </div>
         )}
         <form action="/api/logout" method="POST">

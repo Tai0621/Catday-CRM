@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { hashPassword, makeSessionToken } from '@/lib/auth'
+import { roleHome } from '@/lib/roles'
 import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
 
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
     })
     if (staff) {
       token = makeSessionToken({ kind: 'staff', staffId: staff.id, name: staff.name, role: staff.role })
-      landing = staff.role === 'Manager' ? '/' : '/board'
+      landing = roleHome(staff.role)
     }
   }
 
