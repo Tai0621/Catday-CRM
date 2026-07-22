@@ -6,6 +6,7 @@ import { predictNextGrooming } from '@/lib/grooming-reminder'
 import { displayPhone, whatsappUrl } from '@/lib/phone'
 import { FOUNDER_CIRCLE_LIMIT } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
+import { MediaSection } from '@/app/components/MediaSection'
 
 export default async function CatDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAuth()
@@ -128,6 +129,11 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
         <InfoCard label="Gender" value={cat.gender ?? '—'} />
         <InfoCard label="Life Stage" value={cat.lifeStage ?? '—'} />
         <InfoCard label="DOB" value={cat.dateOfBirth?.toLocaleDateString('en-MY') ?? '—'} />
+      </div>
+
+      {/* Photos & videos */}
+      <div className="cd-card p-4">
+        <MediaSection ownerType="cat" ownerId={cat.id} accept="both" label="photo" title="Photos & videos" />
       </div>
 
       {/* Grooming status */}

@@ -256,6 +256,29 @@ model Setting {
   updatedAt DateTime @updatedAt
 }
 
+// Generic photo/video attachment stored in Vercel Blob. One shared model so
+// every feature (cat profile photos, grooming before/after, boarding belongings
+// & condition shots) reuses the same upload/list/delete plumbing. `ownerType` +
+// `ownerId` link it to whatever it belongs to; `tag` sub-classifies within an
+// owner (e.g. 'before' | 'after' | 'belongings' | 'room' | 'condition').
+// See lib/media.ts and app/components/MediaSection.tsx.
+model MediaAsset {
+  id          String   @id @default(cuid())
+  url         String // public Blob URL
+  pathname    String // Blob pathname — needed to delete the blob
+  kind        String // image | video
+  contentType String
+  size        Int // bytes
+  ownerType   String // cat | assessment | appointment | ...
+  ownerId     String
+  tag         String?
+  caption     String?
+  uploadedBy  String? // staff id, when known
+  createdAt   DateTime @default(now())
+
+  @@index([ownerType, ownerId])
+}
+
 // Administrative — Fixed Asset Register. Each asset depreciates straight-line
 // over usefulLifeMonths down to salvageValue. Finance reads these (never writes
 // back): net book value auto-fills the balance-sheet fixed-assets line, the
