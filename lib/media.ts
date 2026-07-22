@@ -1,3 +1,4 @@
+import { del } from '@vercel/blob'
 import { db } from './db'
 
 // Media (photo/video) plumbing shared by every feature that captures images or
@@ -42,6 +43,19 @@ export async function listMediaFor(ownerType: string, ownerId: string, tag?: str
     select: { id: true, url: true, kind: true, contentType: true, tag: true, caption: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
   })
+}
+
+// Delete a media asset: remove the Blob (best-effort) then the row. Shared by
+// the DELETE route and the deleteMediaAsset server action.
+export async function removeMedia(id: string): Promise<void> {
+  const asset = await db.mediaAsset.findUnique({ where: { id }, select: { url: true } })
+  if (!asset) return
+  try {
+    if (isMediaConfigured()) await del(asset.url)
+  } catch {
+    // Blob already gone / unreachable — still drop the row so the UI clears.
+  }
+  await db.mediaAsset.delete({ where: { id } })
 }
 
 // A stable, collision-free Blob pathname for an owner's file.
