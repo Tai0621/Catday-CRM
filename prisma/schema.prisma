@@ -278,6 +278,29 @@ model FixedAsset {
   @@index([purchaseDate])
 }
 
+// Administrative — Licenses & Renewals. Compliance items with an expiry
+// (business/health/fire permits, insurance, certifications). Each surfaces in
+// the Action Inbox `reminderDays` ahead of `renewalDate`; renewing = pushing
+// renewalDate forward. Archived items are hidden but kept for history. See
+// lib/actions.ts (LicenseRenewal rule) and LICENSE_CATEGORIES in lib/constants.
+model License {
+  id           String   @id @default(cuid())
+  name         String
+  category     String // LICENSE_CATEGORIES in lib/constants.ts
+  authority    String? // issuing body, e.g. DBKL, Bomba
+  licenseNo    String?
+  issueDate    DateTime?
+  renewalDate  DateTime // next expiry / renewal-due date — drives the alert
+  reminderDays Int      @default(30) // lead time to surface the renewal action
+  cost         Float? // renewal fee (RM), informational
+  notes        String?
+  archived     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([archived, renewalDate])
+}
+
 // Driver-based financial plan inputs (key → value), e.g. cap.boardingPrice,
 // util.endPct, opex.Rent. Flexible so the model can grow without migrations.
 model PlanDriver {

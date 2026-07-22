@@ -101,6 +101,7 @@ const SEGMENTS: NavSegment[] = [
         sub: 'Records', subColor: '#B8902B',
         links: [
           { href: '/admin/assets', label: 'Asset Register', icon: 'asset' },
+          { href: '/admin/licenses', label: 'Licenses & Renewals', icon: 'license' },
         ],
       },
       {

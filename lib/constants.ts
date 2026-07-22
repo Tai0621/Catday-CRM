@@ -87,9 +87,20 @@ export const VACCINATION_ALERT_DAYS = 30
 export const ACTION_TYPES = [
   'OutstandingPayment', 'VipArrival', 'RebookCheckout', 'WinBack',
   'MembershipExpiry', 'VaccinationExpiry', 'GroomingDue', 'Birthday', 'GoldEligible',
-  'PrivateClubEligible', 'VipCheckIn',
+  'PrivateClubEligible', 'VipCheckIn', 'LicenseRenewal',
 ] as const
 export type ActionType = typeof ACTION_TYPES[number]
+
+// ── Licenses & Renewals (Administrative) ──
+// Compliance items with an expiry: business/health/fire permits, insurance,
+// certifications. Each carries its own lead time (a premise licence may need
+// 60 days) and surfaces in the Action Inbox that far ahead of its renewal date.
+export const LICENSE_CATEGORIES = [
+  'Business Licence', 'Health & Safety Permit', 'Fire Safety', 'Signboard Licence',
+  'Insurance', 'Certification', 'Tenancy', 'Other',
+] as const
+export type LicenseCategory = typeof LICENSE_CATEGORIES[number]
+export const LICENSE_DEFAULT_REMINDER_DAYS = 30
 
 export const WINBACK_INACTIVE_DAYS = 90       // owner doc: win-back automation trigger
 export const BIRTHDAY_LOOKAHEAD_DAYS = 7      // birthday actions surface a week ahead

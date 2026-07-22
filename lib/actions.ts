@@ -70,6 +70,7 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
     logs,
     lifetimeSpendGroups,
     futureAppts,
+    licenses,
   ] = await Promise.all([
     db.appointment.findMany({
       where: { status: 'Completed', paid: false, price: { not: null } },
@@ -115,6 +116,7 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
       where: { scheduledAt: { gt: todayEnd }, status: { in: ['Scheduled', 'CheckedIn'] } },
       select: { customerId: true },
     }),
+    db.license.findMany({ where: { archived: false } }),
   ])
 
   const lifetimeSpend = new Map<string, number>()
@@ -231,6 +233,25 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
       reason: `Expires ${c.vaccinationExpiry.toLocaleDateString('en-MY')} (${c.customer.name ?? c.customer.phone})`,
       customerId: c.customerId, catId: c.id, phone: c.customer.phone,
       waMessage: `Hi! ${c.name}'s vaccination expires on ${c.vaccinationExpiry.toLocaleDateString('en-MY')}. A quick top-up keeps boarding and grooming stress-free — want us to help schedule it?`,
+    }))
+  }
+
+  // 6b · Licence / permit renewal due (internal compliance task — no customer,
+  // no WhatsApp). Surfaces reminderDays ahead of the renewal date; urgency rises
+  // the closer (or more overdue) it is. Keyed by renewal date so each new cycle
+  // produces a fresh card even after a past one was dismissed.
+  for (const l of licenses) {
+    const daysLeft = Math.floor((l.renewalDate.getTime() - todayStart.getTime()) / DAY)
+    if (daysLeft > l.reminderDays) continue
+    const overdue = daysLeft < 0
+    out.push(card({
+      key: `LicenseRenewal:${l.id}:${l.renewalDate.toISOString().slice(0, 10)}`, type: 'LicenseRenewal',
+      priority: overdue || daysLeft <= 14 ? 3 : 6,
+      title: `${overdue ? 'Overdue renewal' : 'Renew'} — ${l.name}`,
+      reason: overdue
+        ? `${l.category} · expired ${l.renewalDate.toLocaleDateString('en-MY')} (${Math.abs(daysLeft)} days ago)`
+        : `${l.category} · due ${l.renewalDate.toLocaleDateString('en-MY')} (in ${daysLeft} day${daysLeft === 1 ? '' : 's'})`,
+      href: '/admin/licenses',
     }))
   }
 
