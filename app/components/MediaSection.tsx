@@ -20,10 +20,11 @@ export async function MediaSection({
         {media.map(m => (
           <div key={m.id} className="relative rounded-lg overflow-hidden"
             style={{ width: 96, height: 96, background: 'rgba(45,25,7,0.06)' }}>
+            {/* Private store → served through the authenticated proxy, not the raw URL */}
             {m.kind === 'video'
-              ? <video src={m.url} className="w-full h-full object-cover" controls preload="metadata" />
+              ? <video src={`/api/media/${m.id}/file`} className="w-full h-full object-cover" controls preload="metadata" />
               // eslint-disable-next-line @next/next/no-img-element
-              : <img src={m.url} alt={m.caption ?? ''} className="w-full h-full object-cover" />}
+              : <img src={`/api/media/${m.id}/file`} alt={m.caption ?? ''} className="w-full h-full object-cover" />}
             <DeleteMediaButton id={m.id} />
           </div>
         ))}

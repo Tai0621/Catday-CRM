@@ -33,8 +33,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `File too large (max ${Math.round(maxBytesFor(kind) / 1024 / 1024)} MB)` }, { status: 413 })
   }
 
+  // Private store: blobs aren't world-readable. They're served to signed-in
+  // staff only, through GET /api/media/[id]/file (keeps customer photos off
+  // public URLs).
   const pathname = blobPathname(ownerType, ownerId, file.name || `${kind}.bin`)
-  const blob = await put(pathname, file, { access: 'public', contentType: file.type })
+  const blob = await put(pathname, file, { access: 'private', contentType: file.type })
 
   const asset = await db.mediaAsset.create({
     data: {

@@ -68,7 +68,9 @@ try {
   // ── Cat page renders the gallery ──
   const cat = await getHtml(`/cats/${catId}`)
   check('cat page has a Photos section', cat.includes('Photos &amp; videos') || cat.includes('Photos & videos'))
-  check('cat page renders the existing media thumbnail', cat.includes(SEED_URL))
+  // Private store: the thumbnail is served through the auth proxy, not the raw URL.
+  check('cat page renders the media via the auth proxy', cat.includes(`/api/media/${assetId}/file`))
+  check('raw private blob URL is NOT exposed in HTML', !cat.includes(SEED_URL))
 
   // ── Upload endpoint guards ──
   // Unauthenticated requests are stopped at the proxy (redirect to /login).
