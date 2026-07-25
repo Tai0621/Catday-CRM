@@ -18,15 +18,16 @@ export async function fetchSlots(dateStr: string, serviceId: string) {
   return { slots, capacity, duration }
 }
 
-// Rooms with no overlapping stay for the requested window — so a room can't be
-// double-booked by hand.
+// Rooms with space for the requested window. Rooms hold multiple cats up to
+// their capacity (Standard 2, Suite 6), so a room is offered while its
+// overlapping-stay count is below capacity — with the remaining space shown.
 export async function fetchFreeRooms(startISO: string, endISO: string) {
   await requireAuth()
   const start = new Date(startISO), end = new Date(endISO)
   if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return { rooms: [] }
 
   const [rooms, clashes] = await Promise.all([
-    db.room.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' }, select: { id: true, name: true, type: true } }),
+    db.room.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' }, select: { id: true, name: true, type: true, capacity: true } }),
     db.appointment.findMany({
       where: {
         roomId: { not: null },
@@ -37,8 +38,13 @@ export async function fetchFreeRooms(startISO: string, endISO: string) {
       select: { roomId: true },
     }),
   ])
-  const taken = new Set(clashes.map(c => c.roomId))
-  return { rooms: rooms.filter(r => !taken.has(r.id)) }
+  const used = new Map<string, number>()
+  for (const c of clashes) if (c.roomId) used.set(c.roomId, (used.get(c.roomId) ?? 0) + 1)
+  return {
+    rooms: rooms
+      .map(r => ({ id: r.id, name: r.name, type: r.type, capacity: r.capacity, remaining: r.capacity - (used.get(r.id) ?? 0) }))
+      .filter(r => r.remaining > 0),
+  }
 }
 
 export type BookPayload = {
@@ -79,11 +85,23 @@ export async function createAppointment(payloadJson: string): Promise<BookResult
     price = Math.round(service.price * boardingNights(scheduledAt, endsAt, new Date()) * 100) / 100
     // The rate names its room class — a mismatched room means a wrong charge
     if (p.roomId) {
+      const room = await db.room.findUnique({ where: { id: p.roomId }, select: { type: true, name: true, capacity: true } })
       const wantType = roomTypeForBoardingService(service.name)
-      if (wantType) {
-        const room = await db.room.findUnique({ where: { id: p.roomId }, select: { type: true, name: true } })
-        if (room && room.type !== wantType) {
-          return { ok: false, error: `${room.name} is a ${room.type} room, but this rate is for ${wantType}. Pick a ${wantType} room or change the rate.` }
+      if (room && wantType && room.type !== wantType) {
+        return { ok: false, error: `${room.name} is a ${room.type} room, but this rate is for ${wantType}. Pick a ${wantType} room or change the rate.` }
+      }
+      // Rooms hold multiple cats — reject only when the window is already full.
+      if (room) {
+        const overlapping = await db.appointment.count({
+          where: {
+            roomId: p.roomId,
+            status: { notIn: ['Cancelled', 'NoShow', 'Completed'] },
+            scheduledAt: { lt: endsAt },
+            OR: [{ endsAt: { gt: scheduledAt } }, { endsAt: null }],
+          },
+        })
+        if (overlapping >= room.capacity) {
+          return { ok: false, error: `${room.name} is full for those dates (${room.capacity}/${room.capacity} cats). Pick another room.` }
         }
       }
     }

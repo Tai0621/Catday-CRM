@@ -41,6 +41,7 @@ export default async function EditRoomPage({
         data: {
           name,
           type: (data.get('type') as string) || 'Standard',
+          capacity: Math.max(1, parseInt((data.get('capacity') as string) || '2', 10) || 2),
           status: (data.get('status') as string) || 'Available',
           description: ((data.get('description') as string) || '').trim() || null,
           isActive: data.get('isActive') === 'on',
@@ -106,6 +107,10 @@ export default async function EditRoomPage({
             <select name="status" defaultValue={room.status} className="cd-input">
               {ROOM_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
+          </div>
+          <div>
+            <label className="cd-label">Capacity <span className="cd-muted font-normal">· cats at once</span></label>
+            <input name="capacity" type="number" min="1" max="10" defaultValue={room.capacity} className="cd-input" />
           </div>
         </div>
         <div>

@@ -11,7 +11,7 @@ interface CustomerOpt { id: string; name: string | null; phone: string }
 interface CatOpt { id: string; name: string; customerId: string }
 interface ServiceOpt { id: string; name: string; category: string; price: number; durationMin: number }
 interface StaffOpt { id: string; name: string; role: string }
-interface RoomOpt { id: string; name: string; type: string }
+interface RoomOpt { id: string; name: string; type: string; capacity: number; remaining: number }
 
 const GROOM = { color: '#B14919', bg: 'rgba(177,73,25,0.13)' }
 const BOARD = { color: '#729094', bg: 'rgba(114,144,148,0.16)' }
@@ -272,10 +272,14 @@ export function NewAppointmentClient({
                 <>
                   <select value={roomId} onChange={e => setRoomId(e.target.value)} className="cd-input">
                     <option value="">Assign later</option>
-                    {offeredRooms.map(r => <option key={r.id} value={r.id}>{r.name} ({r.type})</option>)}
+                    {offeredRooms.map(r => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} ({r.type}){r.remaining < r.capacity ? ` · ${r.remaining} of ${r.capacity} space${r.remaining === 1 ? '' : 's'} left` : ` · holds ${r.capacity}`}
+                      </option>
+                    ))}
                   </select>
                   <p className="text-xs cd-muted mt-1">
-                    {offeredRooms.length} {rateRoomType ? `${rateRoomType} room` : 'room'}{offeredRooms.length === 1 ? '' : 's'} free for these dates
+                    {offeredRooms.length} {rateRoomType ? `${rateRoomType} room` : 'room'}{offeredRooms.length === 1 ? '' : 's'} with space · one cat per booking, priced per cat
                   </p>
                 </>
               )}

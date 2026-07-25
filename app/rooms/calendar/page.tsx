@@ -67,48 +67,71 @@ export default async function RoomCalendarPage({
   const dayBg = (d: Date) => (isToday(d) ? 'rgba(177,73,25,0.10)' : isWeekend(d) ? 'rgba(45,25,7,0.05)' : 'transparent')
   const dividerLeft = (d: Date, i: number) => (weekDivider(d, i) ? '2px solid rgba(45,25,7,0.28)' : undefined)
 
-  function stayFor(roomId: string, day: Date) {
-    const dayEnd = new Date(day.getTime() + DAY)
-    return bookings.find(b =>
-      b.roomId === roomId &&
-      b.scheduledAt < dayEnd &&
-      (b.endsAt ? b.endsAt > day : b.scheduledAt >= day),
-    )
+  // Rooms hold multiple cats, so each stay gets its own bar-row under the room.
+  type Stay = (typeof bookings)[number]
+  const staysByRoom = new Map<string, Stay[]>()
+  for (const b of bookings) {
+    if (!b.roomId) continue
+    const arr = staysByRoom.get(b.roomId) ?? []
+    arr.push(b)
+    staysByRoom.set(b.roomId, arr)
   }
 
-  // Rooms with no stay at all in the shown window
+  // A stay's contiguous bar within the visible window, or null if off-window.
+  function stayBar(stay: Stay) {
+    let startIdx = -1, endIdx = -1
+    for (let idx = 0; idx < DAYS_SHOWN; idx++) {
+      const day = days[idx], dayEnd = new Date(day.getTime() + DAY)
+      const covers = stay.scheduledAt < dayEnd && (stay.endsAt ? stay.endsAt > day : stay.scheduledAt >= day)
+      if (covers) { if (startIdx < 0) startIdx = idx; endIdx = idx }
+    }
+    if (startIdx < 0) return null
+    const span = endIdx - startIdx + 1
+    const spanKeys = new Set(Array.from({ length: span }, (_, k) => dayKey(days[startIdx + k])))
+    return {
+      startIdx, span,
+      startsBefore: stay.scheduledAt < days[startIdx],
+      endsAfter: stay.endsAt != null && stay.endsAt > new Date(days[startIdx + span - 1].getTime() + DAY),
+      groomDays: (groomByCat.get(stay.catId) ?? []).filter(k => spanKeys.has(k)),
+    }
+  }
+  type Bar = NonNullable<ReturnType<typeof stayBar>>
+
+  // "Empty" = no stays at all in the window (the toggle keeps its meaning).
   const bookedRoomIds = new Set(bookings.filter(b => b.roomId).map(b => b.roomId as string))
   const freeRoomCount = rooms.filter(r => !bookedRoomIds.has(r.id)).length
   const shownRooms = freeOnly ? rooms.filter(r => !bookedRoomIds.has(r.id)) : rooms
 
-  // One row = a run of cells; each stay collapses into a single bar spanning its days
-  type Cell = { kind: 'empty'; key: number; day: Date } | {
-    kind: 'stay'; key: number; span: number
-    stay: (typeof bookings)[number]; startsBefore: boolean; endsAfter: boolean; groomDays: string[]
-  }
-  function rowCells(roomId: string): Cell[] {
-    const cells: Cell[] = []
-    let i = 0
-    while (i < DAYS_SHOWN) {
-      const stay = stayFor(roomId, days[i])
-      if (!stay) {
-        cells.push({ kind: 'empty', key: i, day: days[i] })
-        i++
-        continue
-      }
-      let span = 1
-      while (i + span < DAYS_SHOWN && stayFor(roomId, days[i + span])?.id === stay.id) span++
-      // Grooming day-keys that fall within this bar's visible span
-      const spanKeys = new Set(Array.from({ length: span }, (_, k) => dayKey(days[i + k])))
-      const groomDays = (groomByCat.get(stay.catId) ?? []).filter(k => spanKeys.has(k))
-      cells.push({
-        kind: 'stay', key: i, span, stay,
-        startsBefore: stay.scheduledAt < days[i],
-        endsAfter: stay.endsAt != null && stay.endsAt > new Date(days[i].getTime() + span * DAY),
-        groomDays,
-      })
-      i += span
-    }
+  const emptyTd = (i: number) => (
+    <td key={`e${i}`} className="text-center" style={{ padding: '0.2rem', background: dayBg(days[i]), borderLeft: dividerLeft(days[i], i) }}>
+      <div className="rounded" style={{ height: '1.9rem', background: 'rgba(45,25,7,0.03)' }} />
+    </td>
+  )
+  const barTd = (stay: Stay, bar: Bar) => (
+    <td key="bar" colSpan={bar.span} style={{ padding: '0.2rem', borderLeft: dividerLeft(days[bar.startIdx], bar.startIdx) }}>
+      <Link href={`/appointments/${stay.id}`}
+        className="flex items-center gap-1 px-2 truncate font-medium hover:opacity-80"
+        style={{
+          background: seg.bg, color: seg.text, height: '1.9rem',
+          borderRadius: `${bar.startsBefore ? 0 : 6}px ${bar.endsAfter ? 0 : 6}px ${bar.endsAfter ? 0 : 6}px ${bar.startsBefore ? 0 : 6}px`,
+          borderLeft: bar.startsBefore ? `3px solid ${seg.color}` : undefined,
+          borderRight: bar.endsAfter ? `3px solid ${seg.color}` : undefined,
+          boxShadow: bar.groomDays.length > 0 ? `inset 0 -3px 0 ${groomColor}` : undefined,
+        }}
+        title={`${stay.cat.name} · ${stay.scheduledAt.toLocaleDateString('en-MY')} → ${stay.endsAt?.toLocaleDateString('en-MY') ?? '?'}`
+          + (bar.groomDays.length > 0 ? `\n✂ Grooming: ${bar.groomDays.map(k => { const [, m, d] = k.split('-'); return `${Number(d)}/${Number(m)}` }).join(', ')}` : '')}>
+        {bar.startsBefore && '← '}
+        {bar.groomDays.length > 0 && <span style={{ color: groomColor, fontWeight: 700 }}>✂</span>}
+        <span className="truncate">{stay.cat.name}</span>
+        {bar.endsAfter && ' →'}
+      </Link>
+    </td>
+  )
+  const stayRowCells = (stay: Stay, bar: Bar) => {
+    const cells: React.ReactNode[] = []
+    for (let i = 0; i < bar.startIdx; i++) cells.push(emptyTd(i))
+    cells.push(barTd(stay, bar))
+    for (let i = bar.startIdx + bar.span; i < DAYS_SHOWN; i++) cells.push(emptyTd(i))
     return cells
   }
 
@@ -184,43 +207,32 @@ export default async function RoomCalendarPage({
                   : `No rooms are free for the whole ${DAYS_SHOWN}-day window.`}
               </td></tr>
             )}
-            {shownRooms.map(room => (
-              <tr key={room.id}>
-                <td className="px-3 py-2 font-medium whitespace-nowrap"
+            {shownRooms.flatMap(room => {
+              const bars = (staysByRoom.get(room.id) ?? [])
+                .map(s => ({ stay: s, bar: stayBar(s) }))
+                .filter((x): x is { stay: Stay; bar: Bar } => x.bar !== null)
+                .sort((a, b) => a.bar.startIdx - b.bar.startIdx)
+              const rowCount = Math.max(1, bars.length)
+              const nameTd = (
+                <td rowSpan={rowCount} className="px-3 py-2 font-medium whitespace-nowrap align-top"
                   style={{ color: '#2D1907', position: 'sticky', left: 0, background: '#ECDBB6', zIndex: 1 }}>
                   {room.name}
                   <span className="cd-muted font-normal"> · {room.type}</span>
+                  <div className="text-[10px] cd-muted font-normal">holds {room.capacity}</div>
                 </td>
-                {rowCells(room.id).map(cell =>
-                  cell.kind === 'empty' ? (
-                    <td key={cell.key} className="text-center"
-                      style={{ padding: '0.2rem', background: dayBg(cell.day), borderLeft: dividerLeft(cell.day, cell.key) }}>
-                      <div className="rounded" style={{ height: '1.9rem', background: 'rgba(45,25,7,0.03)' }} />
-                    </td>
-                  ) : (
-                    <td key={cell.key} colSpan={cell.span}
-                      style={{ padding: '0.2rem', borderLeft: dividerLeft(days[cell.key], cell.key) }}>
-                      <Link href={`/appointments/${cell.stay.id}`}
-                        className="flex items-center gap-1 px-2 truncate font-medium hover:opacity-80"
-                        style={{
-                          background: seg.bg, color: seg.text, height: '1.9rem',
-                          borderRadius: `${cell.startsBefore ? 0 : 6}px ${cell.endsAfter ? 0 : 6}px ${cell.endsAfter ? 0 : 6}px ${cell.startsBefore ? 0 : 6}px`,
-                          borderLeft: cell.startsBefore ? `3px solid ${seg.color}` : undefined,
-                          borderRight: cell.endsAfter ? `3px solid ${seg.color}` : undefined,
-                          boxShadow: cell.groomDays.length > 0 ? `inset 0 -3px 0 ${groomColor}` : undefined,
-                        }}
-                        title={`${cell.stay.cat.name} · ${cell.stay.scheduledAt.toLocaleDateString('en-MY')} → ${cell.stay.endsAt?.toLocaleDateString('en-MY') ?? '?'}`
-                          + (cell.groomDays.length > 0 ? `\n✂ Grooming: ${cell.groomDays.map(k => { const [, m, d] = k.split('-'); return `${Number(d)}/${Number(m)}` }).join(', ')}` : '')}>
-                        {cell.startsBefore && '← '}
-                        {cell.groomDays.length > 0 && <span style={{ color: groomColor, fontWeight: 700 }}>✂</span>}
-                        <span className="truncate">{cell.stay.cat.name}</span>
-                        {cell.endsAfter && ' →'}
-                      </Link>
-                    </td>
-                  ),
-                )}
-              </tr>
-            ))}
+              )
+              if (bars.length === 0) {
+                return [
+                  <tr key={room.id}>{nameTd}{days.map((_, i) => emptyTd(i))}</tr>,
+                ]
+              }
+              return bars.map(({ stay, bar }, ri) => (
+                <tr key={stay.id}>
+                  {ri === 0 && nameTd}
+                  {stayRowCells(stay, bar)}
+                </tr>
+              ))
+            })}
           </tbody>
         </table>
       </div>
