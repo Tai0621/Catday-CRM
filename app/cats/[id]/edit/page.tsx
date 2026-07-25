@@ -2,7 +2,7 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import { LIFE_STAGES, GENDERS } from '@/lib/constants'
+import { LIFE_STAGES, GENDERS, DIET_TYPES } from '@/lib/constants'
 
 const COAT_TYPES = ['Short', 'Long']
 const asDate = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '')
@@ -18,6 +18,8 @@ export default async function EditCatPage({ params }: { params: Promise<{ id: st
         id: true, name: true, breed: true, gender: true, lifeStage: true, coatType: true,
         dateOfBirth: true, vaccinationExpiry: true, careNotes: true, healthNotes: true,
         groomingInterval: true, customerId: true,
+        lastDewormAt: true, lastDefleaAt: true, dietType: true, mealsPerDay: true,
+        portion: true, feedingNotes: true, medication: true,
       },
     }),
     db.customer.findMany({ select: { id: true, name: true, phone: true }, orderBy: { name: 'asc' } }),
@@ -44,6 +46,13 @@ export default async function EditCatPage({ params }: { params: Promise<{ id: st
         healthNotes: ((data.get('healthNotes') as string) || '').trim() || null,
         groomingInterval: data.get('groomingInterval') ? parseInt(data.get('groomingInterval') as string, 10) : null,
         customerId: (data.get('customerId') as string) || cat!.customerId,
+        lastDewormAt: (data.get('lastDewormAt') as string) ? new Date(data.get('lastDewormAt') as string) : null,
+        lastDefleaAt: (data.get('lastDefleaAt') as string) ? new Date(data.get('lastDefleaAt') as string) : null,
+        dietType: (data.get('dietType') as string) || null,
+        mealsPerDay: data.get('mealsPerDay') ? parseInt(data.get('mealsPerDay') as string, 10) : null,
+        portion: ((data.get('portion') as string) || '').trim() || null,
+        feedingNotes: ((data.get('feedingNotes') as string) || '').trim() || null,
+        medication: ((data.get('medication') as string) || '').trim() || null,
       },
     })
     redirect(`/cats/${id}`)
@@ -114,6 +123,48 @@ export default async function EditCatPage({ params }: { params: Promise<{ id: st
           <label className="cd-label">Grooming interval (days)</label>
           <input name="groomingInterval" type="number" min="1" defaultValue={cat.groomingInterval ?? ''} placeholder="Blank = coat/breed default" className="cd-input" />
         </div>
+        {/* Parasite control (monthly per boarding SOP) */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="cd-label">Last dewormed</label>
+            <input name="lastDewormAt" type="date" defaultValue={asDate(cat.lastDewormAt)} className="cd-input" />
+          </div>
+          <div>
+            <label className="cd-label">Last flea treatment</label>
+            <input name="lastDefleaAt" type="date" defaultValue={asDate(cat.lastDefleaAt)} className="cd-input" />
+          </div>
+        </div>
+
+        {/* Feeding profile (boarding SOP S002) */}
+        <div className="rounded-lg p-3 space-y-3" style={{ background: 'rgba(114,144,148,0.08)', border: '1px solid rgba(114,144,148,0.2)' }}>
+          <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#5c7378' }}>Feeding profile</div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="cd-label">Diet type</label>
+              <select name="dietType" defaultValue={cat.dietType ?? ''} className="cd-input">
+                <option value="">—</option>
+                {DIET_TYPES.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="cd-label">Meals/day</label>
+              <input name="mealsPerDay" type="number" min="1" max="6" defaultValue={cat.mealsPerDay ?? ''} placeholder="by life stage" className="cd-input" />
+            </div>
+            <div>
+              <label className="cd-label">Portion/meal</label>
+              <input name="portion" defaultValue={cat.portion ?? ''} placeholder="e.g. 60g" className="cd-input" />
+            </div>
+          </div>
+          <div>
+            <label className="cd-label">Medication / supplements</label>
+            <input name="medication" defaultValue={cat.medication ?? ''} placeholder="given with food, if any" className="cd-input" />
+          </div>
+          <div>
+            <label className="cd-label">Special feeding instructions</label>
+            <input name="feedingNotes" defaultValue={cat.feedingNotes ?? ''} placeholder="allergies, owner-supplied food, schedule…" className="cd-input" />
+          </div>
+        </div>
+
         <div>
           <label className="cd-label">Care notes (boarding)</label>
           <textarea name="careNotes" rows={2} defaultValue={cat.careNotes ?? ''} placeholder="Feeding, medication, quirks…" className="cd-input" />

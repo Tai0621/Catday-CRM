@@ -7,6 +7,7 @@ import { displayPhone, whatsappUrl } from '@/lib/phone'
 import { FOUNDER_CIRCLE_LIMIT } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
 import { MediaSection } from '@/app/components/MediaSection'
+import { boardingHealthGate, mealsPerDayFor, type HealthStatus } from '@/lib/health'
 
 export default async function CatDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAuth()
@@ -43,6 +44,18 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
     redirect(`/cats/${id}`)
   }
 
+  async function markDeworm() {
+    'use server'
+    await db.cat.update({ where: { id }, data: { lastDewormAt: new Date() } })
+    redirect(`/cats/${id}`)
+  }
+
+  async function markDeflea() {
+    'use server'
+    await db.cat.update({ where: { id }, data: { lastDefleaAt: new Date() } })
+    redirect(`/cats/${id}`)
+  }
+
   async function setFoundingNumber(data: FormData) {
     'use server'
     const raw = (data.get('foundingNumber') as string) || ''
@@ -56,6 +69,8 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
     redirect(`/cats/${id}`)
   }
 
+  const gate = boardingHealthGate(cat)
+  const meals = mealsPerDayFor(cat)
   const lastGroomed = cat.appointments.find(a => a.type === 'Grooming' && a.status === 'Completed')?.scheduledAt ?? null
   const nextDue = predictNextGrooming(lastGroomed, cat.breed, cat.groomingInterval, cat.coatType)
   const daysUntil = Math.ceil((nextDue.getTime() - Date.now()) / 86400000)
@@ -151,20 +166,76 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
         </div>
       </div>
 
-      {/* Vaccination */}
-      <div className="cd-card p-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-sm font-semibold" style={{ color: '#2D1907' }}>Vaccination</div>
-          <div className="text-xs cd-muted">
-            {cat.vaccinationExpiry ? `Expires ${cat.vaccinationExpiry.toLocaleDateString('en-MY')}` : 'No expiry recorded'}
-          </div>
+      {/* Health & Care (boarding SOP: vaccination + parasite control + feeding) */}
+      <div className="cd-card p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold" style={{ color: '#2D1907' }}>Health &amp; Care</h2>
+          {gate.blockers.length > 0 ? (
+            <span className="cd-pill" style={{ background: 'rgba(177,73,25,0.12)', color: '#B14919', border: '1px solid rgba(177,73,25,0.3)' }}>
+              Not boarding-ready · {gate.blockers.join(', ')} needed
+            </span>
+          ) : gate.treatmentsNeeded.length > 0 ? (
+            <span className="cd-pill" style={{ background: 'rgba(184,144,43,0.16)', color: '#8a6c00', border: '1px solid rgba(184,144,43,0.4)' }}>
+              Boarding: {gate.treatmentsNeeded.join(' + ')} treatment (RM {gate.autoChargeRM} on check-in)
+            </span>
+          ) : (
+            <span className="cd-pill" style={{ background: 'rgba(95,122,63,0.16)', color: '#4d6330', border: '1px solid rgba(95,122,63,0.4)' }}>
+              ✓ Boarding-ready
+            </span>
+          )}
         </div>
-        <form action={setVaccination} className="flex items-center gap-2">
-          <input name="vaccinationExpiry" type="date"
-            defaultValue={cat.vaccinationExpiry ? cat.vaccinationExpiry.toISOString().split('T')[0] : ''}
-            className="cd-input" style={{ width: 'auto' }} />
-          <button type="submit" className="cd-btn-sec text-sm">Save</button>
-        </form>
+
+        {/* Vaccination — explicit expiry date */}
+        <div className="flex flex-wrap items-center justify-between gap-2 py-1" style={{ borderTop: '1px solid rgba(45,25,7,0.08)' }}>
+          <div className="flex items-center gap-2">
+            <StatusChip status={gate.vaccination} />
+            <div>
+              <div className="text-sm font-medium" style={{ color: '#2D1907' }}>Vaccination <span className="cd-muted font-normal">· annual</span></div>
+              <div className="text-xs cd-muted">{cat.vaccinationExpiry ? `Expires ${cat.vaccinationExpiry.toLocaleDateString('en-MY')}` : 'Not recorded'}</div>
+            </div>
+          </div>
+          <form action={setVaccination} className="flex items-center gap-2">
+            <input name="vaccinationExpiry" type="date"
+              defaultValue={cat.vaccinationExpiry ? cat.vaccinationExpiry.toISOString().split('T')[0] : ''}
+              className="cd-input" style={{ width: 'auto' }} />
+            <button type="submit" className="cd-btn-sec text-sm">Save</button>
+          </form>
+        </div>
+
+        {/* Deworm — last done + monthly interval */}
+        <div className="flex flex-wrap items-center justify-between gap-2 py-1" style={{ borderTop: '1px solid rgba(45,25,7,0.08)' }}>
+          <div className="flex items-center gap-2">
+            <StatusChip status={gate.deworm} />
+            <div>
+              <div className="text-sm font-medium" style={{ color: '#2D1907' }}>Deworming <span className="cd-muted font-normal">· monthly</span></div>
+              <div className="text-xs cd-muted">{cat.lastDewormAt ? `Last ${cat.lastDewormAt.toLocaleDateString('en-MY')}` : 'Not recorded'}</div>
+            </div>
+          </div>
+          <form action={markDeworm}><button type="submit" className="cd-btn-sec text-sm">Mark done today</button></form>
+        </div>
+
+        {/* Deflea — last done + monthly interval */}
+        <div className="flex flex-wrap items-center justify-between gap-2 py-1" style={{ borderTop: '1px solid rgba(45,25,7,0.08)' }}>
+          <div className="flex items-center gap-2">
+            <StatusChip status={gate.deflea} />
+            <div>
+              <div className="text-sm font-medium" style={{ color: '#2D1907' }}>Flea treatment <span className="cd-muted font-normal">· monthly</span></div>
+              <div className="text-xs cd-muted">{cat.lastDefleaAt ? `Last ${cat.lastDefleaAt.toLocaleDateString('en-MY')}` : 'Not recorded'}</div>
+            </div>
+          </div>
+          <form action={markDeflea}><button type="submit" className="cd-btn-sec text-sm">Mark done today</button></form>
+        </div>
+
+        {/* Feeding profile (edited on the Edit page) */}
+        <div className="py-1" style={{ borderTop: '1px solid rgba(45,25,7,0.08)' }}>
+          <div className="text-sm font-medium mb-1" style={{ color: '#2D1907' }}>Feeding</div>
+          <div className="text-xs cd-muted">
+            {cat.dietType ?? 'Diet not set'} · {meals} meal{meals === 1 ? '' : 's'}/day{cat.mealsPerDay ? '' : ' (by life stage)'}
+            {cat.portion ? ` · ${cat.portion}/meal` : ''}
+            {cat.medication ? ` · 💊 ${cat.medication}` : ''}
+          </div>
+          {cat.feedingNotes && <div className="text-xs cd-muted mt-0.5">Note: {cat.feedingNotes}</div>}
+        </div>
       </div>
 
       {/* Founding Cat number */}
@@ -307,6 +378,20 @@ function InfoCard({ label, value }: { label: string; value: string }) {
       <div className="text-xs cd-muted mb-0.5">{label}</div>
       <div className="text-sm font-medium" style={{ color: '#2D1907' }}>{value}</div>
     </div>
+  )
+}
+
+function StatusChip({ status }: { status: HealthStatus }) {
+  const map = {
+    ok:       { label: 'Current',  color: '#4d6330', bg: 'rgba(95,122,63,0.16)' },
+    due:      { label: 'Due soon', color: '#8a6c00', bg: 'rgba(184,144,43,0.16)' },
+    overdue:  { label: 'Overdue',  color: '#B14919', bg: 'rgba(177,73,25,0.12)' },
+    missing:  { label: 'Not set',  color: 'rgba(45,25,7,0.5)', bg: 'rgba(45,25,7,0.06)' },
+  }[status.state]
+  return (
+    <span className="cd-pill shrink-0 text-center" style={{ background: map.bg, color: map.color, minWidth: '4.7rem' }}>
+      {map.label}
+    </span>
   )
 }
 

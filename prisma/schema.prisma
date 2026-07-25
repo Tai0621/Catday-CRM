@@ -47,7 +47,14 @@ model Cat {
   foundingNumber   Int?      @unique // Founding Cats permanent number CAT-001…CAT-100
   careNotes        String?   // boarding care instructions: feeding, medication, quirks
   healthNotes      String?
-  vaccinationExpiry DateTime? // drives the "vaccination expiring" dashboard alert
+  vaccinationExpiry DateTime? // drives the "vaccination expiring" dashboard alert; annual, mandatory for boarding
+  lastDewormAt     DateTime? // parasite control — monthly per boarding SOP; if not current at boarding → RM50 treatment
+  lastDefleaAt     DateTime?
+  dietType         String?   // Commercial | Prescription | Owner-supplied (DIET_TYPES) — feeding SOP S002
+  mealsPerDay      Int?      // null = derive from lifeStage (Adult 2 / Kitten 3 / Senior 2)
+  portion          String?   // e.g. "60g" per meal
+  feedingNotes     String?   // special feeding instructions
+  medication       String?   // meds / supplements given with food
   groomingInterval Int?      // days between sessions; null = use coat/breed default
   photos           String?   // JSON array of data URLs
   customerId       String

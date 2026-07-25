@@ -95,11 +95,26 @@ export type IncidentType = typeof INCIDENT_TYPES[number]
 // Dashboard alert windows (days)
 export const VACCINATION_ALERT_DAYS = 30
 
+// ── Health & feeding (boarding SOPs S002/S004) ──
+// Parasite control is monthly; both are mandatory for boarding — if a cat isn't
+// current on check-in, an on-site treatment is auto-charged (owner decision).
+export const DEWORM_INTERVAL_DAYS = 30
+export const DEFLEA_INTERVAL_DAYS = 30
+export const TREATMENT_ALERT_DAYS = 7          // surface the reminder this far ahead of due
+export const BOARDING_TREATMENT_CHARGE = 50    // RM, on-site deworm/deflea when not current at boarding
+
+export const DIET_TYPES = ['Commercial', 'Prescription', 'Owner-supplied'] as const
+export type DietType = typeof DIET_TYPES[number]
+
+// Meals/day auto-derived from life stage when the cat's mealsPerDay is unset (S002).
+export const MEALS_BY_LIFE_STAGE: Record<string, number> = { Kitten: 3, Adult: 2, Senior: 2 }
+export const DEFAULT_MEALS_PER_DAY = 2
+
 // ── Action Inbox ──
 export const ACTION_TYPES = [
   'OutstandingPayment', 'VipArrival', 'RebookCheckout', 'WinBack',
   'MembershipExpiry', 'VaccinationExpiry', 'GroomingDue', 'Birthday', 'GoldEligible',
-  'PrivateClubEligible', 'VipCheckIn', 'LicenseRenewal',
+  'PrivateClubEligible', 'VipCheckIn', 'LicenseRenewal', 'TreatmentDue',
 ] as const
 export type ActionType = typeof ACTION_TYPES[number]
 

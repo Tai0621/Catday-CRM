@@ -1,5 +1,6 @@
 import { db } from './db'
 import { buildGroomingPredictions } from './grooming-reminder'
+import { dewormStatus, defleaStatus } from './health'
 import { trailingAnnualSpend } from './loyalty'
 import { ACTION_SEGMENT, type SegmentKey } from './segments'
 import {
@@ -101,7 +102,8 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
       // select keeps base64 photo blobs out of this whole-table scan
       select: {
         id: true, name: true, breed: true, coatType: true, groomingInterval: true,
-        dateOfBirth: true, vaccinationExpiry: true, foundingNumber: true, customerId: true,
+        dateOfBirth: true, vaccinationExpiry: true, lastDewormAt: true, lastDefleaAt: true,
+        foundingNumber: true, customerId: true,
         customer: { select: { id: true, name: true, phone: true } },
         appointments: { select: { scheduledAt: true, status: true, type: true } },
       },
@@ -252,6 +254,26 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
         ? `${l.category} · expired ${l.renewalDate.toLocaleDateString('en-MY')} (${Math.abs(daysLeft)} days ago)`
         : `${l.category} · due ${l.renewalDate.toLocaleDateString('en-MY')} (in ${daysLeft} day${daysLeft === 1 ? '' : 's'})`,
       href: '/admin/licenses',
+    }))
+  }
+
+  // 6c · Deworm / deflea due (monthly parasite control, boarding SOP). One card
+  // per cat covering whichever is due; monthly-scoped key so it re-fires each
+  // cycle. Owner-facing — required before the next boarding stay.
+  const treatmentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  for (const c of cats) {
+    const dw = dewormStatus(c.lastDewormAt, now)
+    const df = defleaStatus(c.lastDefleaAt, now)
+    const due: string[] = []
+    if (dw.state === 'due' || dw.state === 'overdue') due.push('deworming')
+    if (df.state === 'due' || df.state === 'overdue') due.push('flea treatment')
+    if (due.length === 0) continue
+    out.push(card({
+      key: `TreatmentDue:${c.id}:${treatmentMonth}`, type: 'TreatmentDue', priority: 6,
+      title: `${due.map(d => d[0].toUpperCase() + d.slice(1)).join(' & ')} due — ${c.name}`,
+      reason: `Monthly parasite control · ${c.customer.name ?? c.customer.phone} · required before boarding`,
+      customerId: c.customerId, catId: c.id, phone: c.customer.phone,
+      waMessage: `Hi! ${c.name} is due for ${due.join(' and ')} 🐾 It's a monthly must for a healthy kitty (and required before boarding). Want us to help arrange it?`,
     }))
   }
 
