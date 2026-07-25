@@ -40,6 +40,7 @@ export const ACTION_SEGMENT: Record<ActionType, SegmentKey> = {
   VipCheckIn:          'membership',
   LicenseRenewal:      'business',
   TreatmentDue:        'grooming',
+  HealthConcern:       'boarding',
 }
 
 /** Which segment each appointment type belongs to. */

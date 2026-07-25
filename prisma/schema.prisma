@@ -161,6 +161,7 @@ model Staff {
   appointments   Appointment[]
   careTasks      CareTask[]
   boardingChecks BoardingCheck[]
+  dailyCareLogs  DailyCareLog[]
 }
 
 // ─── Service menu (single source of truth for prices & durations) ────────────
@@ -210,6 +211,34 @@ model BoardingItem {
   returned      Boolean     @default(false)
   createdAt     DateTime    @default(now())
 
+  @@index([appointmentId])
+}
+
+// Structured daily health & behaviour log (SOP S004) — one row per stay per day
+// per period (AM/PM). Tap-to-select fields, not free text, so low-literacy staff
+// can log fast and red flags are machine-detectable. See lib/care-log.ts.
+model DailyCareLog {
+  id            String      @id @default(cuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  catId         String
+  date          String // YYYY-MM-DD
+  period        String // AM | PM
+  appetite      String? // LOG_APPETITE
+  stool         String? // LOG_STOOL
+  urine         String? // LOG_URINE
+  energy        String? // LOG_ENERGY
+  behavior      String? // comma-joined LOG_BEHAVIOR
+  respiratory   String? // LOG_RESPIRATORY
+  skin          String? // LOG_SKIN
+  vomiting      Boolean     @default(false)
+  notes         String?
+  staffId       String?
+  staff         Staff?      @relation(fields: [staffId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([appointmentId, date, period])
   @@index([appointmentId])
 }
 
@@ -471,6 +500,7 @@ model Appointment {
   transactionLines TransactionLine[]
   boardingChecks   BoardingCheck[]
   boardingItems    BoardingItem[]
+  dailyCareLogs    DailyCareLog[]
 
   @@index([customerId])
   @@index([catId])

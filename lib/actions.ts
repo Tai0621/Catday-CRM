@@ -1,5 +1,6 @@
 import { db } from './db'
 import { buildGroomingPredictions } from './grooming-reminder'
+import { logRedFlags } from './care-log'
 import { dewormStatus, defleaStatus } from './health'
 import { trailingAnnualSpend } from './loyalty'
 import { ACTION_SEGMENT, type SegmentKey } from './segments'
@@ -60,6 +61,7 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
   const expiryThreshold = new Date(now.getTime() + MEMBERSHIP_EXPIRY_ALERT_DAYS * DAY)
   const logWindow = new Date(now.getTime() - (ACTION_DISMISS_WINDOW_DAYS + 15) * DAY)
   const yearAgo = new Date(now.getTime() - 365 * DAY)
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
   const [
     unpaid,
@@ -72,6 +74,7 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
     lifetimeSpendGroups,
     futureAppts,
     licenses,
+    careLogs,
   ] = await Promise.all([
     db.appointment.findMany({
       where: { status: 'Completed', paid: false, price: { not: null } },
@@ -119,6 +122,10 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
       select: { customerId: true },
     }),
     db.license.findMany({ where: { archived: false } }),
+    db.dailyCareLog.findMany({
+      where: { date: todayStr },
+      include: { appointment: { select: { status: true, customerId: true, customer: { select: { name: true, phone: true } }, cat: { select: { name: true } } } } },
+    }),
   ])
 
   const lifetimeSpend = new Map<string, number>()
@@ -148,6 +155,29 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
       customerId: a.customerId, catId: a.catId, phone: a.customer.phone, amountRM: a.price!,
       waMessage: `Hi! Gentle reminder — ${a.cat.name}'s ${a.type.toLowerCase()} on ${a.scheduledAt.toLocaleDateString('en-MY')} (RM ${a.price!.toFixed(2)}) is still pending payment. Thank you! 🐾`,
       href: `/appointments/${a.id}`,
+    }))
+  }
+
+  // 1b · Boarding health concern — a red flag in today's structured care log
+  // (SOP S004 immediate-action). One card per cat, with an owner-notification
+  // WhatsApp for the manager to approve.
+  const concernByCat = new Map<string, { flags: Set<string>; catName: string; customerId: string; phone: string }>()
+  for (const l of careLogs) {
+    if (l.appointment.status !== 'CheckedIn') continue
+    const flags = logRedFlags(l)
+    if (flags.length === 0) continue
+    const e = concernByCat.get(l.catId) ?? { flags: new Set<string>(), catName: l.appointment.cat.name, customerId: l.appointment.customerId, phone: l.appointment.customer.phone }
+    flags.forEach(f => e.flags.add(f))
+    concernByCat.set(l.catId, e)
+  }
+  for (const [catId, e] of concernByCat) {
+    const list = [...e.flags]
+    out.push(card({
+      key: `HealthConcern:${catId}:${todayStr}`, type: 'HealthConcern', priority: 1,
+      title: `Health flag — ${e.catName}`,
+      reason: `Today's log: ${list.join(', ')} · check on the cat and update the owner`,
+      customerId: e.customerId, catId, phone: e.phone,
+      waMessage: `Hi! A quick update on ${e.catName} 🐾 We noticed ${list.join(' and ').toLowerCase()} today and are keeping a close eye — we'll let you know if anything changes, and will involve a vet if needed. Please reach out with any questions.`,
     }))
   }
 

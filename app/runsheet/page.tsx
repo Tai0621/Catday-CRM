@@ -2,7 +2,7 @@ import { requireAuth, getSession } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
-import { CARE_TASKS, CARE_TASK_MEDICATION } from '@/lib/constants'
+import { careTasksForStay, logRedFlags } from '@/lib/care-log'
 import { boardingHealthGate } from '@/lib/health'
 import { SEGMENTS } from '@/lib/segments'
 import { displayPhone, whatsappUrl } from '@/lib/phone'
@@ -44,9 +44,10 @@ export default async function RunSheetPage() {
   const have = new Set(existing.map(t => `${t.appointmentId}|${t.task}`))
   const toCreate: { date: string; appointmentId: string; catId: string; task: string }[] = []
   for (const s of stays) {
-    const tasks: string[] = [...CARE_TASKS]
-    if (s.cat.careNotes || s.cat.healthNotes) tasks.push(CARE_TASK_MEDICATION)
-    for (const task of tasks) {
+    const nights = Math.floor((todayStart.getTime() - s.scheduledAt.getTime()) / DAY)
+    const checkoutToday = !!s.endsAt && s.endsAt < todayEnd
+    const fullLitterDue = checkoutToday || (nights > 0 && nights % 7 === 0) // weekly or on checkout (S003)
+    for (const task of careTasksForStay(s.cat, { fullLitterDue })) {
       if (!have.has(`${s.id}|${task}`)) toCreate.push({ date: today, appointmentId: s.id, catId: s.catId, task })
     }
   }
@@ -60,6 +61,19 @@ export default async function RunSheetPage() {
   for (const t of tasks) {
     if (!byStay.has(t.appointmentId)) byStay.set(t.appointmentId, [])
     byStay.get(t.appointmentId)!.push(t)
+  }
+
+  // Today's AM/PM structured logs, by stay — drives the log buttons + red flags.
+  const todayLogs = await db.dailyCareLog.findMany({ where: { appointmentId: { in: stays.map(s => s.id) }, date: today } })
+  const logByStay = new Map<string, { AM?: (typeof todayLogs)[number]; PM?: (typeof todayLogs)[number] }>()
+  for (const l of todayLogs) {
+    const e = logByStay.get(l.appointmentId) ?? {}
+    if (l.period === 'AM') e.AM = l; else e.PM = l
+    logByStay.set(l.appointmentId, e)
+  }
+  const flagsFor = (apptId: string) => {
+    const e = logByStay.get(apptId)
+    return [...new Set([...(e?.AM ? logRedFlags(e.AM) : []), ...(e?.PM ? logRedFlags(e.PM) : [])])]
   }
 
   async function toggleTask(data: FormData) {
@@ -204,6 +218,30 @@ export default async function RunSheetPage() {
                     {s.cat.healthNotes && <div><strong>Health:</strong> {s.cat.healthNotes}</div>}
                   </div>
                 )}
+
+                {/* Red-flag banner from today's structured logs (SOP S004) */}
+                {flagsFor(s.id).length > 0 && (
+                  <div className="px-4 py-2 text-xs font-medium" style={{ background: 'rgba(177,73,25,0.14)', color: '#B14919' }}>
+                    ⚠ {flagsFor(s.id).join(' · ')} — tell the manager/owner
+                  </div>
+                )}
+
+                {/* AM/PM structured health log */}
+                <div className="px-4 py-2 flex items-center gap-2" style={{ borderTop: '1px solid rgba(45,25,7,0.06)' }}>
+                  <span className="text-xs cd-muted">Health log:</span>
+                  {(['AM', 'PM'] as const).map(p => {
+                    const done = !!logByStay.get(s.id)?.[p]
+                    return (
+                      <Link key={p} href={`/runsheet/${s.id}/log?period=${p}`}
+                        className="text-xs px-2.5 py-1 rounded-lg font-medium"
+                        style={done
+                          ? { background: 'rgba(122,138,79,0.2)', color: '#5c6b3c' }
+                          : { background: seg.color, color: '#F2EDE0' }}>
+                        {done ? `✓ ${p}` : `Log ${p}`}
+                      </Link>
+                    )
+                  })}
+                </div>
 
                 <ul>
                   {list.map(t => (

@@ -114,7 +114,7 @@ export const DEFAULT_MEALS_PER_DAY = 2
 export const ACTION_TYPES = [
   'OutstandingPayment', 'VipArrival', 'RebookCheckout', 'WinBack',
   'MembershipExpiry', 'VaccinationExpiry', 'GroomingDue', 'Birthday', 'GoldEligible',
-  'PrivateClubEligible', 'VipCheckIn', 'LicenseRenewal', 'TreatmentDue',
+  'PrivateClubEligible', 'VipCheckIn', 'LicenseRenewal', 'TreatmentDue', 'HealthConcern',
 ] as const
 export type ActionType = typeof ACTION_TYPES[number]
 
@@ -200,6 +200,17 @@ export type PayMethod = typeof PAY_METHODS[number]
 // Boarding check-in / check-out condition (visual chips for low-literacy staff)
 export const ROOM_CONDITIONS = ['Clean & ready', 'Needs cleaning', 'Damage noted'] as const
 export const CAT_CONDITIONS = ['Calm', 'Alert', 'Stressed', 'Lethargic', 'Injury / wound'] as const
+
+// Daily health & behaviour log chips (SOP S004). Values marked with a red flag
+// in lib/care-log.ts trigger an alert.
+export const LOG_APPETITE = ['Ate fully', 'Partial', 'Refused'] as const
+export const LOG_STOOL = ['Normal', 'Soft', 'Diarrhea', 'None'] as const
+export const LOG_URINE = ['Normal', 'Discolored', 'Low / none'] as const
+export const LOG_ENERGY = ['Normal', 'Low', 'Lethargic'] as const
+export const LOG_BEHAVIOR = ['Relaxed', 'Playful', 'Shy', 'Hiding', 'Hissing', 'Aggressive', 'Over-grooming'] as const
+export const LOG_RESPIRATORY = ['Clear', 'Sneezing', 'Coughing', 'Labored'] as const
+export const LOG_SKIN = ['Normal', 'Matted', 'Dry', 'Parasites'] as const
+export const LOG_PERIODS = ['AM', 'PM'] as const
 
 export const CARE_TASKS = [
   'Morning feeding',
