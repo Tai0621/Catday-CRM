@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { CARE_TASKS, CARE_TASK_MEDICATION } from '@/lib/constants'
+import { boardingHealthGate } from '@/lib/health'
 import { SEGMENTS } from '@/lib/segments'
 import { displayPhone, whatsappUrl } from '@/lib/phone'
 
@@ -29,6 +30,13 @@ export default async function RunSheetPage() {
     },
     include: { cat: true, customer: true, room: true },
     orderBy: { room: { sortOrder: 'asc' } },
+  })
+
+  // Today's arrivals still waiting to be checked in
+  const arrivals = await db.appointment.findMany({
+    where: { type: 'Boarding', status: 'Scheduled', scheduledAt: { gte: todayStart, lt: todayEnd } },
+    include: { cat: true, customer: true, room: true },
+    orderBy: { scheduledAt: 'asc' },
   })
 
   // Ensure today's tasks exist for each stay (idempotent)
@@ -74,6 +82,10 @@ export default async function RunSheetPage() {
   const doneTasks = tasks.filter(t => t.done).length
   const donePct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
 
+  // Split the in-house cats: those leaving today go to the Check-out section.
+  const departures = stays.filter(s => s.endsAt && s.endsAt < todayEnd)
+  const ongoing = stays.filter(s => !(s.endsAt && s.endsAt < todayEnd))
+
   return (
     <div className="max-w-4xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
@@ -90,6 +102,36 @@ export default async function RunSheetPage() {
         </div>
         <Link href="/rooms/calendar" className="cd-btn-sec text-sm">Room calendar</Link>
       </div>
+
+      {/* ── Section 1 · Checking in today ── */}
+      {arrivals.length > 0 && (
+        <div className="space-y-2">
+          <SectionHeader color="#B8902B" label={`Checking in today (${arrivals.length})`} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {arrivals.map(a => {
+              const g = boardingHealthGate(a.cat)
+              return (
+                <div key={a.id} className="cd-card p-3" style={{ borderLeft: '4px solid #B8902B' }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <Link href={`/cats/${a.catId}`} className="font-semibold text-sm hover:underline" style={{ color: '#2D1907' }}>{a.cat.name}</Link>
+                      <div className="text-xs cd-muted">{a.room?.name ?? 'No room'} · {a.customer.name ?? displayPhone(a.customer.phone)}</div>
+                    </div>
+                    <Link href={`/runsheet/${a.id}/checkin`} className="cd-btn text-sm">Check in →</Link>
+                  </div>
+                  {(g.blockers.length > 0 || g.treatmentsNeeded.length > 0) && (
+                    <div className="text-xs mt-2 rounded px-2 py-1" style={g.blockers.length > 0
+                      ? { background: 'rgba(177,73,25,0.12)', color: '#B14919' }
+                      : { background: 'rgba(184,144,43,0.16)', color: '#8a6c00' }}>
+                      {g.blockers.length > 0 ? `⚠ ${g.blockers.join(', ')} needed` : `${g.treatmentsNeeded.join(' + ')} treatment (RM ${g.autoChargeRM})`}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Today's care progress */}
       {totalTasks > 0 && (
@@ -109,14 +151,16 @@ export default async function RunSheetPage() {
         </div>
       )}
 
-      {stays.length === 0 ? (
+      {stays.length === 0 && arrivals.length === 0 ? (
         <div className="cd-card py-16 text-center">
           <div className="text-3xl mb-2">🛏️</div>
           <p className="cd-muted text-sm">No cats checked in for boarding right now. Check-ins appear here automatically with their daily care list.</p>
         </div>
-      ) : (
+      ) : ongoing.length > 0 && (
+        <div className="space-y-2">
+        <SectionHeader color={seg.color} label={`In house (${ongoing.length})`} />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {stays.map(s => {
+          {ongoing.map(s => {
             const list = byStay.get(s.id) ?? []
             const doneCount = list.filter(t => t.done).length
             const checkoutToday = s.endsAt && s.endsAt < todayEnd
@@ -194,7 +238,37 @@ export default async function RunSheetPage() {
             )
           })}
         </div>
+        </div>
       )}
+
+      {/* ── Section 3 · Checking out today ── */}
+      {departures.length > 0 && (
+        <div className="space-y-2">
+          <SectionHeader color="#B14919" label={`Checking out today (${departures.length})`} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {departures.map(s => (
+              <div key={s.id} className="cd-card p-3" style={{ borderLeft: '4px solid #B14919' }}>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <Link href={`/cats/${s.catId}`} className="font-semibold text-sm hover:underline" style={{ color: '#2D1907' }}>{s.cat.name}</Link>
+                    <div className="text-xs cd-muted">{s.room?.name ?? 'No room'} · {s.customer.name ?? displayPhone(s.customer.phone)}</div>
+                  </div>
+                  <Link href={`/runsheet/${s.id}/checkout`} className="cd-btn text-sm">Check out →</Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SectionHeader({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2 pb-1" style={{ borderBottom: `2px solid ${color}` }}>
+      <span className="rounded-full" style={{ width: 9, height: 9, background: color }} />
+      <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color }}>{label}</h2>
     </div>
   )
 }

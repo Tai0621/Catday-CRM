@@ -158,8 +158,9 @@ model Staff {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  appointments Appointment[]
-  careTasks    CareTask[]
+  appointments   Appointment[]
+  careTasks      CareTask[]
+  boardingChecks BoardingCheck[]
 }
 
 // ─── Service menu (single source of truth for prices & durations) ────────────
@@ -179,6 +180,38 @@ model Service {
 }
 
 // ─── Boarding run sheet (daily care checklist per stay) ──────────────────────
+
+// Boarding check-in / check-out record (SOP S004 baseline). One row per phase
+// per stay: room + cat condition, notes, and (checkout) whether all belongings
+// were returned. Photos attach via MediaAsset (ownerType 'condition').
+model BoardingCheck {
+  id            String      @id @default(cuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  phase         String // CheckIn | CheckOut
+  roomCondition String? // ROOM_CONDITIONS
+  catCondition  String? // comma-joined CAT_CONDITIONS
+  allCollected  Boolean     @default(false) // checkout: every belonging returned
+  notes         String?
+  staffId       String?
+  staff         Staff?      @relation(fields: [staffId], references: [id])
+  createdAt     DateTime    @default(now())
+
+  @@index([appointmentId])
+}
+
+// A personal belonging the customer brought at check-in, ticked off as returned
+// at check-out (photos via MediaAsset ownerType 'belongings').
+model BoardingItem {
+  id            String      @id @default(cuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  label         String
+  returned      Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  @@index([appointmentId])
+}
 
 model CareTask {
   id            String    @id @default(cuid())
@@ -436,6 +469,8 @@ model Appointment {
 
   careTasks        CareTask[]
   transactionLines TransactionLine[]
+  boardingChecks   BoardingCheck[]
+  boardingItems    BoardingItem[]
 
   @@index([customerId])
   @@index([catId])

@@ -197,6 +197,10 @@ export const PAY_METHODS = ['Cash', 'Card', 'QR', 'Wallet'] as const
 export type PayMethod = typeof PAY_METHODS[number]
 
 // ── Boarding run-sheet standard tasks (generated daily per occupied room) ──
+// Boarding check-in / check-out condition (visual chips for low-literacy staff)
+export const ROOM_CONDITIONS = ['Clean & ready', 'Needs cleaning', 'Damage noted'] as const
+export const CAT_CONDITIONS = ['Calm', 'Alert', 'Stressed', 'Lethargic', 'Injury / wound'] as const
+
 export const CARE_TASKS = [
   'Morning feeding',
   'Litter refresh',
