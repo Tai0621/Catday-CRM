@@ -6,10 +6,10 @@ import { DeleteMediaButton } from './DeleteMediaButton'
 // media, then hands off to the client upload/delete controls. Degrades to a
 // friendly notice while Blob storage isn't configured, so pages never break.
 export async function MediaSection({
-  ownerType, ownerId, tag, accept = 'image', label = 'photo', title,
+  ownerType, ownerId, tag, accept = 'image', label = 'photo', title, readOnly = false,
 }: {
   ownerType: string; ownerId: string; tag?: string
-  accept?: 'image' | 'video' | 'both'; label?: string; title?: string
+  accept?: 'image' | 'video' | 'both'; label?: string; title?: string; readOnly?: boolean
 }) {
   const [media, configured] = [await listMediaFor(ownerType, ownerId, tag), isMediaConfigured()]
 
@@ -25,7 +25,7 @@ export async function MediaSection({
               ? <video src={`/api/media/${m.id}/file`} className="w-full h-full object-cover" controls preload="metadata" />
               // eslint-disable-next-line @next/next/no-img-element
               : <img src={`/api/media/${m.id}/file`} alt={m.caption ?? ''} className="w-full h-full object-cover" />}
-            <DeleteMediaButton id={m.id} />
+            {!readOnly && <DeleteMediaButton id={m.id} />}
           </div>
         ))}
         {media.length === 0 && (
@@ -35,9 +35,9 @@ export async function MediaSection({
           </div>
         )}
       </div>
-      {configured
+      {!readOnly && (configured
         ? <MediaUpload ownerType={ownerType} ownerId={ownerId} tag={tag} accept={accept} label={label} />
-        : <p className="text-xs cd-muted">Photo/video storage isn’t set up yet — add the Vercel Blob token to enable uploads.</p>}
+        : <p className="text-xs cd-muted">Photo/video storage isn’t set up yet — add the Vercel Blob token to enable uploads.</p>)}
     </div>
   )
 }

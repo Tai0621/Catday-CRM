@@ -36,6 +36,12 @@ export const BOARD_STAGE_COLORS: Record<string, { color: string; bg: string }> =
   Ready:        { color: '#5F7A3F', bg: 'rgba(95,122,63,0.16)' },
 }
 
+// Grooming before/after media, attached to the grooming appointment (the
+// per-visit unit) so each transformation stays scoped to one visit.
+export const GROOM_MEDIA_TAGS = { before: 'groom-before', after: 'groom-after' } as const
+// Appointment types that carry a service board / grooming assessment.
+export const GROOMING_APPT_TYPES = ['Grooming', 'Bath', 'Diagnosis'] as const
+
 export const ROOM_TYPES = ['Standard', 'Suite', 'DayStay'] as const
 export type RoomType = typeof ROOM_TYPES[number]
 

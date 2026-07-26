@@ -2,24 +2,45 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ASSESSMENT_OPTIONS, COAT_TYPES, COAT_CYCLE_DAYS } from '@/lib/constants'
+import { ASSESSMENT_OPTIONS, COAT_TYPES, COAT_CYCLE_DAYS, GROOM_MEDIA_TAGS, GROOMING_APPT_TYPES } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
+import { MediaSection } from '@/app/components/MediaSection'
 
 // Groomer diagnosis & profiling (建档) — fill after the hands-on check, per SOP:
 // record everything, explain objectively, no upselling.
-export default async function AssessCatPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AssessCatPage({
+  params, searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ appt?: string }>
+}) {
   await requireAuth()
   const { id } = await params
+  const { appt } = await searchParams
 
   const cat = await db.cat.findUnique({
     where: { id },
     include: {
       customer: { select: { name: true, phone: true } },
       assessments: { orderBy: { createdAt: 'desc' }, take: 1 },
+      appointments: {
+        where: { type: { in: [...GROOMING_APPT_TYPES] }, status: { notIn: ['Cancelled', 'NoShow'] } },
+        orderBy: { scheduledAt: 'desc' },
+        select: { id: true, type: true, scheduledAt: true },
+        take: 10,
+      },
     },
   })
   if (!cat) notFound()
   const prev = cat.assessments[0]
+
+  // Before/after media attaches to the grooming visit. Prefer the appointment
+  // the board sent us; else today's in-flight visit; else the most recent one.
+  const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0)
+  const visitAppt =
+    (appt && cat.appointments.find(a => a.id === appt)) ||
+    cat.appointments.find(a => a.scheduledAt >= startOfToday) ||
+    cat.appointments[0] || null
 
   async function saveAssessment(data: FormData) {
     'use server'
@@ -80,6 +101,29 @@ export default async function AssessCatPage({ params }: { params: Promise<{ id: 
           Owner: {cat.customer.name ?? cat.customer.phone} · Record what you found, hand the care plan to the owner, set the rebooking cycle. No upselling — the profile does the selling.
         </p>
       </div>
+
+      {/* Before & after — the transformation, scoped to this grooming visit */}
+      {visitAppt ? (
+        <div className="cd-card p-5 space-y-4">
+          <div>
+            <h2 className="font-semibold flex items-center gap-2" style={{ color: '#2D1907' }}>
+              <span className="rounded-full" style={{ width: 8, height: 8, background: seg.color }} />
+              Before &amp; after
+            </h2>
+            <p className="text-xs cd-muted">
+              {visitAppt.type} · {visitAppt.scheduledAt.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' })} — snap the coat before you start and the finished look after. Photo or short video.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <MediaSection ownerType="appointment" ownerId={visitAppt.id} tag={GROOM_MEDIA_TAGS.before} accept="both" label="before shot" title="Before" />
+            <MediaSection ownerType="appointment" ownerId={visitAppt.id} tag={GROOM_MEDIA_TAGS.after} accept="both" label="after shot" title="After" />
+          </div>
+        </div>
+      ) : (
+        <div className="cd-card px-4 py-3 text-xs cd-muted">
+          Before/after photos attach to a grooming visit — book or check in a grooming appointment to capture them here.
+        </div>
+      )}
 
       <form action={saveAssessment} className="cd-card p-5 space-y-4">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

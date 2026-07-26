@@ -148,9 +148,9 @@ export default async function BoardPage() {
                           {BOARD_ADVANCE_LABELS[a.status]} →
                         </button>
                       </form>
-                      {a.status === 'QualityCheck' && (
-                        <Link href={`/cats/${a.catId}/assess`} className="text-xs px-2 py-1 rounded-lg cd-btn-sec">
-                          Assessment
+                      {(a.status === 'InService' || a.status === 'QualityCheck') && (
+                        <Link href={`/cats/${a.catId}/assess?appt=${a.id}`} className="text-xs px-2 py-1 rounded-lg cd-btn-sec">
+                          {a.status === 'InService' ? 'Photos & assess' : 'Assessment'}
                         </Link>
                       )}
                       {a.status === 'Ready' && (

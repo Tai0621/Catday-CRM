@@ -7,6 +7,8 @@ import { displayPhone, whatsappUrl } from '@/lib/phone'
 import { FOUNDER_CIRCLE_LIMIT } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
 import { MediaSection } from '@/app/components/MediaSection'
+import { listMediaFor } from '@/lib/media'
+import { GROOM_MEDIA_TAGS, GROOMING_APPT_TYPES } from '@/lib/constants'
 import { boardingHealthGate, mealsPerDayFor, type HealthStatus } from '@/lib/health'
 
 export default async function CatDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -71,6 +73,11 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
 
   const gate = boardingHealthGate(cat)
   const meals = mealsPerDayFor(cat)
+  // Latest grooming visit's before/after — read-only gallery, only when it has media.
+  const latestGroomAppt = cat.appointments.find(
+    a => (GROOMING_APPT_TYPES as readonly string[]).includes(a.type) && a.status !== 'Cancelled' && a.status !== 'NoShow',
+  )
+  const groomMedia = latestGroomAppt ? await listMediaFor('appointment', latestGroomAppt.id) : []
   const lastGroomed = cat.appointments.find(a => a.type === 'Grooming' && a.status === 'Completed')?.scheduledAt ?? null
   const nextDue = predictNextGrooming(lastGroomed, cat.breed, cat.groomingInterval, cat.coatType)
   const daysUntil = Math.ceil((nextDue.getTime() - Date.now()) / 86400000)
@@ -150,6 +157,25 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
       <div className="cd-card p-4">
         <MediaSection ownerType="cat" ownerId={cat.id} accept="both" label="photo" title="Photos & videos" />
       </div>
+
+      {/* Grooming before & after — latest visit, read-only (capture happens on the assessment screen) */}
+      {latestGroomAppt && groomMedia.length > 0 && (
+        <div className="cd-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold flex items-center gap-2" style={{ color: '#2D1907' }}>
+              <span className="rounded-full" style={{ width: 7, height: 7, background: SEGMENTS.grooming.color }} />
+              Grooming before &amp; after
+            </h2>
+            <span className="text-xs cd-muted">
+              {latestGroomAppt.type} · {latestGroomAppt.scheduledAt.toLocaleDateString('en-MY')}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <MediaSection ownerType="appointment" ownerId={latestGroomAppt.id} tag={GROOM_MEDIA_TAGS.before} accept="both" label="before shot" title="Before" readOnly />
+            <MediaSection ownerType="appointment" ownerId={latestGroomAppt.id} tag={GROOM_MEDIA_TAGS.after} accept="both" label="after shot" title="After" readOnly />
+          </div>
+        </div>
+      )}
 
       {/* Grooming status */}
       <div className="rounded-xl p-4" style={groomingStyle}>
