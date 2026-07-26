@@ -522,6 +522,13 @@ model Transaction {
   notes      String?
   createdAt  DateTime @default(now())
 
+  // Digital receipt: an unguessable slug lets the customer open a public,
+  // login-free receipt link (sent over WhatsApp). Lives on the primary row
+  // (the one carrying the lines); siblings are found via `reference`.
+  publicToken    String?   @unique
+  receiptSentAt  DateTime? // when the digital receipt was last shared
+  receiptChannel String?   // WhatsApp | Email (email deferred until a sender domain is set)
+
   lines      TransactionLine[]
 
   @@index([customerId])

@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { roleHome, staffCanAccess } from './lib/roles'
 
-const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-forms']
+// '/r/' is the public digital-receipt link (unguessable token) customers open
+// from WhatsApp — no login. The trailing slash keeps it from matching /revenue,
+// /rooms, /runsheet.
+const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-forms', '/r/']
 
 // Paths only managers (owner password or Manager-role staff) may open.
 // Staff hitting these are sent to their service board.

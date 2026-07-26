@@ -3,6 +3,7 @@
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 import { awardPoints } from '@/lib/loyalty'
+import { generateReceiptToken } from '@/lib/receipt'
 
 export interface CheckoutItem {
   kind: 'appointment' | 'product' | 'service' | 'custom'
@@ -81,6 +82,7 @@ export async function checkout(payloadJson: string): Promise<CheckoutResult> {
   const category = [...catTotals.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'Other'
 
   const reference = 'CD-' + Date.now().toString(36).toUpperCase()
+  const receiptToken = generateReceiptToken() // customer-facing receipt link
   const now = new Date()
   const staffName = session.name
 
@@ -98,6 +100,7 @@ export async function checkout(payloadJson: string): Promise<CheckoutResult> {
       category,
       method: remainder > 0 ? p.method : 'Wallet',
       reference,
+      publicToken: receiptToken,
       notes: [p.note?.trim(), `POS · ${staffName}`].filter(Boolean).join(' · '),
       lines: {
         create: items.map(i => ({
@@ -126,7 +129,8 @@ export async function checkout(payloadJson: string): Promise<CheckoutResult> {
       data: {
         id: primaryId,
         customerId: p.customerId, date: now, total: walletAmount, category,
-        method: 'Wallet', reference, notes: [p.note?.trim(), `POS · ${staffName}`].filter(Boolean).join(' · '),
+        method: 'Wallet', reference, publicToken: receiptToken,
+        notes: [p.note?.trim(), `POS · ${staffName}`].filter(Boolean).join(' · '),
         lines: {
           create: items.map(i => ({
             catId: i.catId || null,
