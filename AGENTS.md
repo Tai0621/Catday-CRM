@@ -119,13 +119,19 @@ Single httpOnly cookie named `auth`, two kinds of session sharing one signed-tok
 
 - **Manager** — the owner logs in with one shared `APP_PASSWORD` (env var).
 - **Staff** — individual named accounts in the `Staff` model, each with a personal PIN
-  (`pinHash` = sha256, never store plaintext), and a `role` (`Manager | FrontDesk | Groomer |
-  Boarding`) that decides what nav/pages they see.
+  (`pinHash` = **salted scrypt**, format `scrypt$N$r$p$salt$hash`, never store plaintext), and a
+  `role` (`Manager | FrontDesk | Groomer | Boarding`) that decides what nav/pages they see. Because
+  the hash is salted, login can't look a PIN up directly — `/api/login` fetches active staff and
+  `verifyPassword`s the PIN against each; a legacy unsalted sha256 hash still verifies and is
+  transparently re-hashed to scrypt on that login (`needsRehash` → `hashPassword`).
 
-Token format: `v2.<base64url JSON payload>.<sha256 signature>`, signed with `APP_PASSWORD` as the
-secret (so rotating the owner password invalidates all sessions, including staff — intentional). A
-legacy plain-password-hash cookie format is still accepted as a manager session for backward
-compatibility — don't break that check.
+Token format (`lib/auth.ts`, mirrored edge-side in `proxy.ts`): `v3.<base64url payload>.<HMAC-SHA256
+signature>`. The payload carries `iat`/`exp` (hard 30-day expiry) and `ep` (the `SESSION_EPOCH`),
+signed with `SESSION_SECRET` (falling back to `APP_PASSWORD` until it's set). **Any of these
+invalidates every session: rotating `SESSION_SECRET`/`APP_PASSWORD`, or bumping `SESSION_EPOCH`.** The
+old `v2` sha256 format and the legacy plain-password-hash cookie were removed in the auth-hardening
+phase — don't reintroduce them. When you touch the token shape, change `lib/auth.ts` **and**
+`proxy.ts` together (the edge check is a hand-mirror of the node one).
 
 `proxy.ts` (the middleware) does two things: redirects anyone without a valid cookie to `/login`, and
 maintains a `MANAGER_PATHS` array of route prefixes that non-manager staff get bounced away from

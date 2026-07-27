@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { hashPassword, makeSessionToken } from '@/lib/auth'
+import { verifyPassword, hashPassword, needsRehash, makeSessionToken } from '@/lib/auth'
+import { safeEqual } from '@/lib/http-security'
 import { roleHome } from '@/lib/roles'
 import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
@@ -13,13 +14,19 @@ export async function POST(req: Request) {
   let token: string | null = null
   let landing = '/'
 
-  if (provided && provided === (process.env.APP_PASSWORD ?? '')) {
+  const appPassword = process.env.APP_PASSWORD ?? ''
+  if (provided && appPassword && safeEqual(provided, appPassword)) {
     token = makeSessionToken({ kind: 'manager', name: 'Owner' })
   } else if (provided) {
-    const staff = await db.staff.findFirst({
-      where: { pinHash: hashPassword(provided), active: true },
-    })
+    // PINs are salted now, so we can't look up by a deterministic hash — verify
+    // the PIN against each active staff member's stored hash.
+    const staffList = await db.staff.findMany({ where: { active: true } })
+    const staff = staffList.find(s => verifyPassword(provided, s.pinHash))
     if (staff) {
+      // Transparently upgrade a legacy sha256 PIN to salted scrypt on login.
+      if (needsRehash(staff.pinHash)) {
+        await db.staff.update({ where: { id: staff.id }, data: { pinHash: hashPassword(provided) } }).catch(() => {})
+      }
       token = makeSessionToken({ kind: 'staff', staffId: staff.id, name: staff.name, role: staff.role })
       landing = roleHome(staff.role)
     }

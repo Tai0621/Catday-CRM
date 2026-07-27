@@ -1,41 +1,83 @@
 import { cookies } from 'next/headers'
-import { createHash } from 'crypto'
+import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from 'crypto'
+import { safeEqual } from './http-security'
 
 // ── Sessions ─────────────────────────────────────────────────────────────────
 // Two kinds of login share one cookie:
 //   manager  — the owner password (APP_PASSWORD)
 //   staff    — a personal PIN from the Staff table; role decides what they see
-// Token format: "v2.<base64url payload>.<sha256 signature>"; the pre-staff
-// legacy cookie (plain password hash) is still accepted as a manager session.
+// Token format: "v3.<base64url payload>.<HMAC-SHA256 signature>". The payload
+// carries iat/exp (hard 30-day expiry) and ep (a global epoch); the token is
+// signed with SESSION_SECRET (falling back to APP_PASSWORD until it's set).
+// Bumping SESSION_EPOCH or rotating either secret invalidates every session.
 
 export type Session =
   | { kind: 'manager'; name: string }
   | { kind: 'staff'; staffId: string; name: string; role: string }
 
-export function hashPassword(password: string) {
+// ── Password / PIN hashing — salted scrypt ───────────────────────────────────
+// Stored as `scrypt$N$r$p$saltHex$hashHex` (self-describing so params can move).
+const SCRYPT = { N: 16384, r: 8, p: 1, keylen: 32 }
+
+export function hashPassword(password: string): string {
+  const salt = randomBytes(16)
+  const dk = scryptSync(password, salt, SCRYPT.keylen, { N: SCRYPT.N, r: SCRYPT.r, p: SCRYPT.p })
+  return `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${salt.toString('hex')}$${dk.toString('hex')}`
+}
+
+function legacyHash(password: string): string {
   return createHash('sha256').update(`catday:${password}`).digest('hex')
 }
 
-function secret() {
-  return process.env.APP_PASSWORD ?? ''
+/** Verify a plaintext against a stored hash (salted scrypt, or legacy sha256). */
+export function verifyPassword(password: string, stored: string): boolean {
+  if (stored.startsWith('scrypt$')) {
+    const [, N, r, p, saltHex, hashHex] = stored.split('$')
+    const want = Buffer.from(hashHex, 'hex')
+    const dk = scryptSync(password, Buffer.from(saltHex, 'hex'), want.length, { N: +N, r: +r, p: +p })
+    return dk.length === want.length && timingSafeEqual(dk, want)
+  }
+  return safeEqual(legacyHash(password), stored) // legacy unsalted — caller should re-hash
 }
 
-function sign(payloadB64: string) {
-  return createHash('sha256').update(`catday-session:${payloadB64}:${secret()}`).digest('hex')
+/** True when a stored hash is legacy and should be upgraded on next login. */
+export function needsRehash(stored: string): boolean {
+  return !stored.startsWith('scrypt$')
 }
+
+// ── Session tokens ────────────────────────────────────────────────────────────
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
+
+function sessionSecret(): string {
+  return process.env.SESSION_SECRET || process.env.APP_PASSWORD || ''
+}
+export function sessionEpoch(): string {
+  return process.env.SESSION_EPOCH || '1'
+}
+function sign(payloadB64: string): string {
+  return createHmac('sha256', sessionSecret()).update(`v3:${payloadB64}`).digest('hex')
+}
+
+type TokenPayload = Session & { iat: number; exp: number; ep: string }
 
 export function makeSessionToken(session: Session): string {
-  const payload = Buffer.from(JSON.stringify(session)).toString('base64url')
-  return `v2.${payload}.${sign(payload)}`
+  const now = Date.now()
+  const payload: TokenPayload = { ...session, iat: now, exp: now + SESSION_TTL_MS, ep: sessionEpoch() }
+  const b64 = Buffer.from(JSON.stringify(payload)).toString('base64url')
+  return `v3.${b64}.${sign(b64)}`
 }
 
 export function parseSessionToken(token: string): Session | null {
-  if (token === hashPassword(secret())) return { kind: 'manager', name: 'Owner' } // legacy cookie
   const parts = token.split('.')
-  if (parts.length !== 3 || parts[0] !== 'v2') return null
-  if (sign(parts[1]) !== parts[2]) return null
+  if (parts.length !== 3 || parts[0] !== 'v3') return null
+  if (!safeEqual(sign(parts[1]), parts[2])) return null
   try {
-    return JSON.parse(Buffer.from(parts[1], 'base64url').toString()) as Session
+    const p = JSON.parse(Buffer.from(parts[1], 'base64url').toString()) as TokenPayload
+    if (typeof p.exp !== 'number' || Date.now() > p.exp) return null
+    if (p.ep !== sessionEpoch()) return null
+    if (p.kind === 'manager') return { kind: 'manager', name: p.name }
+    if (p.kind === 'staff') return { kind: 'staff', staffId: p.staffId, name: p.name, role: p.role }
+    return null
   } catch {
     return null
   }
