@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { createHmac } from 'crypto'
+import { safeEqual } from '@/lib/http-security'
 
 // WhatsApp Cloud API webhook
 export async function GET(req: Request) {
@@ -18,14 +19,18 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const body = await req.text()
 
-  // Verify HMAC signature
+  // Verify the Meta HMAC signature. Fail-closed in production: a missing secret
+  // means the webhook is misconfigured, not that anyone may post — only local
+  // dev is allowed to skip it.
   const appSecret = process.env.WHATSAPP_APP_SECRET
   if (appSecret) {
-    const sig = req.headers.get('x-hub-signature-256')
+    const sig = req.headers.get('x-hub-signature-256') ?? ''
     const expected = 'sha256=' + createHmac('sha256', appSecret).update(body).digest('hex')
-    if (sig !== expected) {
+    if (!safeEqual(sig, expected)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 403 })
     }
+  } else if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 })
   }
 
   const payload = JSON.parse(body)

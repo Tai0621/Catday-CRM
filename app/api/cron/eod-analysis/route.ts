@@ -2,14 +2,23 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { analyzeWhatsAppMessage } from '@/lib/whatsapp/analyze'
 import { normalisePhone } from '@/lib/phone'
+import { getSession, isManager } from '@/lib/auth'
+import { safeEqual } from '@/lib/http-security'
+
+// This endpoint spends Anthropic tokens, so it is fail-closed: the scheduled run
+// carries the CRON_SECRET bearer token; the manual "Run analysis" button on the
+// (manager-only) WhatsApp page carries a signed-in manager session. Nothing else
+// gets in.
+async function authorized(req: Request): Promise<boolean> {
+  const cronSecret = process.env.CRON_SECRET
+  const auth = req.headers.get('authorization') ?? ''
+  if (cronSecret && auth.startsWith('Bearer ') && safeEqual(auth.slice(7), cronSecret)) return true
+  return isManager(await getSession())
+}
 
 export async function POST(req: Request) {
-  // Allow both cron (GET with secret) and manual trigger (POST from UI)
-  const cronSecret = process.env.CRON_SECRET
-  const auth = req.headers.get('authorization')
-  if (cronSecret && auth !== `Bearer ${cronSecret}`) {
-    // Check if it's an internal/authed request — for now allow POST from authenticated UI
-    // In production, add cookie check here
+  if (!(await authorized(req))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const unprocessed = await db.whatsAppMessage.findMany({
@@ -53,9 +62,10 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
+  // Vercel Cron calls GET with the bearer token; POST re-checks it too.
   const cronSecret = process.env.CRON_SECRET
-  const auth = req.headers.get('authorization')
-  if (!cronSecret || auth !== `Bearer ${cronSecret}`) {
+  const auth = req.headers.get('authorization') ?? ''
+  if (!cronSecret || !auth.startsWith('Bearer ') || !safeEqual(auth.slice(7), cronSecret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   return POST(req)

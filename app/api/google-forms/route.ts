@@ -1,16 +1,21 @@
 import { NextResponse } from 'next/server'
 import { resolveCustomer, resolveOrCreateCat } from '@/lib/customer-resolve'
+import { safeEqual } from '@/lib/http-security'
 
 // Google Forms webhook via Apps Script
 // Apps Script should POST JSON to this endpoint with the form response
 // Example Apps Script: see DEPLOY.md
 export async function POST(req: Request) {
+  // This endpoint ingests customer PII, so it is fail-closed in production: a
+  // missing secret means misconfiguration, not open access. Local dev may skip.
   const secret = process.env.GOOGLE_FORMS_SECRET
   if (secret) {
-    const auth = req.headers.get('x-webhook-secret')
-    if (auth !== secret) {
+    const auth = req.headers.get('x-webhook-secret') ?? ''
+    if (!safeEqual(auth, secret)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+  } else if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 })
   }
 
   const body = await req.json()

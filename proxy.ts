@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { roleHome, staffCanAccess } from './lib/roles'
 
-// '/r/' is the public digital-receipt link (unguessable token) customers open
-// from WhatsApp — no login. The trailing slash keeps it from matching /revenue,
-// /rooms, /runsheet.
-const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-forms', '/r/']
+// Paths the cookie gate skips because they authenticate themselves:
+//  • '/api/cron' — Vercel Cron (Bearer CRON_SECRET) has no cookie; the route
+//    does its own strict Bearer-or-manager check, so gating it here would only
+//    break the scheduled run.
+//  • webhooks — signed by the caller (HMAC / shared secret).
+//  • '/r/' — the public digital-receipt link (unguessable token) customers open
+//    from WhatsApp. The trailing slash keeps it from matching /revenue etc.
+const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-forms', '/api/cron', '/r/']
 
 // Paths only managers (owner password or Manager-role staff) may open.
 // Staff hitting these are sent to their service board.
