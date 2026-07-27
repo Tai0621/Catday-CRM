@@ -1,15 +1,26 @@
 import { NextResponse } from 'next/server'
 import { verifyPassword, hashPassword, needsRehash, makeSessionToken } from '@/lib/auth'
 import { safeEqual } from '@/lib/http-security'
+import { isLoginBlocked, recordLoginFailure, clearLoginFailures } from '@/lib/rate-limit'
 import { roleHome } from '@/lib/roles'
 import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
+
+function clientIp(req: Request): string {
+  return (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
+}
 
 // One field, two doors: the owner password opens the management view,
 // a personal staff PIN opens that person's staff view.
 export async function POST(req: Request) {
   const data = await req.formData()
   const provided = ((data.get('password') as string) ?? '').trim()
+  const ip = clientIp(req)
+
+  // Throttle brute force: too many recent failed attempts from this IP → refuse.
+  if (await isLoginBlocked(ip)) {
+    return NextResponse.redirect(new URL('/login?error=rate', req.url))
+  }
 
   let token: string | null = null
   let landing = '/'
@@ -33,8 +44,11 @@ export async function POST(req: Request) {
   }
 
   if (!token) {
+    await recordLoginFailure(ip)
     return NextResponse.redirect(new URL('/login?error=1', req.url))
   }
+
+  await clearLoginFailures(ip) // legitimate login — reset the failure counter
 
   const jar = await cookies()
   jar.set('auth', token, {
