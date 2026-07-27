@@ -2,6 +2,7 @@
 
 import { db } from '@/lib/db'
 import { getSession, isManager } from '@/lib/auth'
+import { recordAudit } from '@/lib/audit'
 import { revalidatePath } from 'next/cache'
 
 export type DeleteResult =
@@ -85,6 +86,16 @@ export async function deleteTransaction(id: string): Promise<DeleteResult> {
   ops.push(db.transaction.deleteMany({ where: { id: { in: ids } } }))
 
   await db.$transaction(ops)
+
+  const roundedTotal = Math.round(total * 100) / 100
+  const roundedRefund = Math.round(walletRefunded * 100) / 100
+  await recordAudit({
+    action: 'transaction.delete',
+    entityType: 'Transaction',
+    entityId: id,
+    summary: `Deleted sale ${reference ?? id} (RM ${roundedTotal.toFixed(2)}) — ${ids.length} row(s), ${pointsReversed} pts reversed, RM ${roundedRefund.toFixed(2)} wallet refunded, ${restocked} restocked, ${apptsReopened} appt(s) reopened`,
+    detail: { reference, ids, total: roundedTotal, pointsReversed, walletRefunded: roundedRefund, restocked, apptsReopened },
+  }, session)
 
   revalidatePath('/revenue')
   revalidatePath('/finance/income-statement')

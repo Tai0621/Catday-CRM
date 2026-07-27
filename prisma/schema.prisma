@@ -348,6 +348,26 @@ model MediaAsset {
   @@index([ownerType, ownerId])
 }
 
+// Append-only audit trail for sensitive/financial actions — who did what, when.
+// Written best-effort by lib/audit.ts recordAudit(); a write failure never
+// blocks the underlying operation. Read-only manager view at /admin/audit.
+model AuditLog {
+  id         String   @id @default(cuid())
+  at         DateTime @default(now())
+  actorKind  String // manager | staff
+  actorId    String? // staff id when known
+  actorName  String
+  action     String // dotted verb, e.g. transaction.delete, staff.create, wallet.topup
+  entityType String // Transaction | Staff | Customer | ...
+  entityId   String?
+  summary    String // human-readable one-liner
+  detail     String? // optional JSON blob
+  ip         String?
+
+  @@index([at])
+  @@index([entityType, entityId])
+}
+
 // Administrative — Fixed Asset Register. Each asset depreciates straight-line
 // over usefulLifeMonths down to salvageValue. Finance reads these (never writes
 // back): net book value auto-fills the balance-sheet fixed-assets line, the

@@ -102,6 +102,7 @@ const SEGMENTS: NavSegment[] = [
         links: [
           { href: '/admin/assets', label: 'Asset Register', icon: 'asset' },
           { href: '/admin/licenses', label: 'Licenses & Renewals', icon: 'license' },
+          { href: '/admin/audit', label: 'Audit Log', icon: 'audit' },
         ],
       },
       {

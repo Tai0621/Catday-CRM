@@ -7,6 +7,7 @@ import { displayPhone, whatsappUrl } from '@/lib/phone'
 import { predictNextGrooming } from '@/lib/grooming-reminder'
 import { awardPoints, trailingAnnualSpend, goldProgress } from '@/lib/loyalty'
 import { topUpWallet, spendWallet } from '@/lib/wallet'
+import { recordAudit } from '@/lib/audit'
 import {
   POINTS_REASON_LABELS, GOLD_SPEND_THRESHOLD, WALLET_PACKAGES,
   PRIVATE_CLUB_TIER, PRIVATE_CLUB_SPEND, PRIVATE_CLUB_VISITS,
@@ -65,7 +66,10 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     const points = parseInt((data.get('points') as string) || '0', 10)
     const reason = (data.get('reason') as string) || 'Manual'
     const note = (data.get('note') as string) || undefined
-    if (points !== 0) await awardPoints(id, points, reason, note)
+    if (points !== 0) {
+      await awardPoints(id, points, reason, note)
+      await recordAudit({ action: 'loyalty.adjust', entityType: 'Customer', entityId: id, summary: `${points > 0 ? 'Awarded' : 'Deducted'} ${Math.abs(points)} pts (${reason})`, detail: { points, reason, note } })
+    }
     revalidatePath(`/customers/${id}`)
   }
 
@@ -73,7 +77,10 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     'use server'
     const amount = parseFloat((data.get('amount') as string) || '0')
     const bonus = parseFloat((data.get('bonus') as string) || '0')
-    if (amount > 0) await topUpWallet(id, amount, Math.max(0, bonus))
+    if (amount > 0) {
+      await topUpWallet(id, amount, Math.max(0, bonus))
+      await recordAudit({ action: 'wallet.topup', entityType: 'Customer', entityId: id, summary: `Wallet top-up RM ${amount.toFixed(2)}${bonus > 0 ? ` (+RM ${bonus.toFixed(2)} bonus)` : ''}`, detail: { amount, bonus } })
+    }
     revalidatePath(`/customers/${id}`)
   }
 
@@ -82,7 +89,10 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     const amount = parseFloat((data.get('amount') as string) || '0')
     const note = ((data.get('note') as string) || '').trim() || undefined
     try {
-      if (amount > 0) await spendWallet(id, amount, note)
+      if (amount > 0) {
+        await spendWallet(id, amount, note)
+        await recordAudit({ action: 'wallet.spend', entityType: 'Customer', entityId: id, summary: `Wallet charge RM ${amount.toFixed(2)}${note ? ` — ${note}` : ''}`, detail: { amount, note } })
+      }
     } catch {
       // insufficient balance — nothing charged
     }

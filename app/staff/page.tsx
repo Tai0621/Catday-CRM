@@ -1,4 +1,5 @@
 import { requireManager, hashPassword } from '@/lib/auth'
+import { recordAudit } from '@/lib/audit'
 import { db } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 import { STAFF_ROLES, STAFF_ROLE_LABELS } from '@/lib/constants'
@@ -17,7 +18,8 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
     if (!name || pin.length < 4) return
     const { redirect } = await import('next/navigation')
     try {
-      await db.staff.create({ data: { name, role, pinHash: hashPassword(pin) } })
+      const created = await db.staff.create({ data: { name, role, pinHash: hashPassword(pin) } })
+      await recordAudit({ action: 'staff.create', entityType: 'Staff', entityId: created.id, summary: `Added staff ${name} (${role})` })
     } catch {
       redirect('/staff?err=pin') // PIN already in use by someone else
     }
@@ -32,6 +34,8 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
     const { redirect } = await import('next/navigation')
     try {
       await db.staff.update({ where: { id }, data: { pinHash: hashPassword(pin) } })
+      const s = await db.staff.findUnique({ where: { id }, select: { name: true } })
+      await recordAudit({ action: 'staff.reset_pin', entityType: 'Staff', entityId: id, summary: `Reset PIN for ${s?.name ?? id}` })
     } catch {
       redirect('/staff?err=pin')
     }
@@ -42,7 +46,10 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
     'use server'
     const id = data.get('id') as string
     const s = await db.staff.findUnique({ where: { id } })
-    if (s) await db.staff.update({ where: { id }, data: { active: !s.active } })
+    if (s) {
+      await db.staff.update({ where: { id }, data: { active: !s.active } })
+      await recordAudit({ action: 'staff.toggle_active', entityType: 'Staff', entityId: id, summary: `${s.active ? 'Disabled' : 'Enabled'} staff ${s.name}` })
+    }
     revalidatePath('/staff')
   }
 
