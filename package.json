@@ -7,6 +7,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "postinstall": "prisma generate",
     "demo:reset": "node scripts/setup-local-demo.mjs && node scripts/seed-demo-data.mjs",
     "dev:demo": "node scripts/dev-demo.mjs"

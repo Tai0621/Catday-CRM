@@ -1,0 +1,48 @@
+name: CI
+
+# Build + typecheck gate on every PR and push to main. The end-to-end
+# scripts/verify-*.mjs suite needs live Turso credentials + a running server, so
+# it runs locally against a production build (see AGENTS.md), not here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx prisma generate
+
+      # Blocking gates — both must stay green.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+        env:
+          # The build is fully dynamic (no DB access), but module load constructs
+          # the Prisma/libSQL client — give it harmless placeholders.
+          DATABASE_URL: libsql://placeholder.turso.io
+          DATABASE_AUTH_TOKEN: placeholder
+          APP_PASSWORD: ci-placeholder-password
+
+      # Advisory — surfaced but non-blocking, because the repo carries some
+      # pre-existing lint debt and audit advisories can come from transitive deps.
+      - name: Lint (advisory)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Dependency audit (advisory)
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
