@@ -2,7 +2,6 @@ import 'dotenv/config'
 
 // E2E for Phase 3 commit 1: the public health probe + the backup cron's
 // auth/graceful-degrade. (Error boundaries are build-verified.)
-import 'dotenv/config'
 
 const BASE = process.env.VERIFY_BASE ?? 'http://localhost:3100'
 const mk = ok => (ok ? '✓' : '✗')
