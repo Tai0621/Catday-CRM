@@ -50,3 +50,6 @@ next-env.d.ts
 /prisma/demo.db
 /prisma/demo.db-wal
 /prisma/demo.db-shm
+
+# database backups (scripts/backup-db.mjs) — may contain real customer data
+/backups/

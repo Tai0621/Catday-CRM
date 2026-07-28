@@ -1,8 +1,12 @@
 'use client'
 
+import { useEffect } from 'react'
+import { reportError } from '@/lib/report-error'
+
 // Friendly branded error boundary — replaces the raw "server error" screen.
 // Most sightings are a stale tab submitting across a deploy; retry fixes it.
-export default function Error({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => { reportError(error) }, [error])
   return (
     <div className="flex items-center justify-center" style={{ minHeight: '70vh' }}>
       <div className="cd-card p-8 text-center max-w-md space-y-3">
