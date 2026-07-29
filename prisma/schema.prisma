@@ -162,6 +162,7 @@ model Staff {
   careTasks      CareTask[]
   boardingChecks BoardingCheck[]
   dailyCareLogs  DailyCareLog[]
+  timeEntries    TimeEntry[]
 }
 
 // ─── Service menu (single source of truth for prices & durations) ────────────
@@ -366,6 +367,29 @@ model AuditLog {
 
   @@index([at])
   @@index([entityType, entityId])
+}
+
+// HR · time clock. One row per shift: a clock-in that later gets a clock-out.
+// Anti-buddy-punch = a required selfie (MediaAsset) + the IP each punch came
+// from, checked against the on-premises allowlist (see lib/hr.ts). onPremise
+// flags are null when the allowlist isn't configured yet.
+model TimeEntry {
+  id              String    @id @default(cuid())
+  staffId         String
+  staff           Staff     @relation(fields: [staffId], references: [id])
+  clockInAt       DateTime  @default(now())
+  clockOutAt      DateTime?
+  clockInPhotoId  String? // MediaAsset id (ownerType 'timeclock')
+  clockOutPhotoId String?
+  clockInIp       String?
+  clockOutIp      String?
+  onPremiseIn     Boolean?
+  onPremiseOut    Boolean?
+  note            String?
+  createdAt       DateTime  @default(now())
+
+  @@index([staffId, clockInAt])
+  @@index([clockInAt])
 }
 
 // Administrative — Fixed Asset Register. Each asset depreciates straight-line

@@ -6,7 +6,7 @@ import { db } from './db'
 // Finance-style rule of thumb: keep the DB row small, keep the bytes in Blob.
 
 // Owners a MediaAsset may attach to (validated at the upload boundary).
-export const MEDIA_OWNER_TYPES = ['cat', 'assessment', 'appointment', 'belongings', 'condition', 'room'] as const
+export const MEDIA_OWNER_TYPES = ['cat', 'assessment', 'appointment', 'belongings', 'condition', 'room', 'timeclock'] as const
 export type MediaOwnerType = typeof MEDIA_OWNER_TYPES[number]
 
 export const MEDIA_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']

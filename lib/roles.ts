@@ -27,8 +27,10 @@ export const STAFF_ROLE_PATHS: Record<string, string[]> = {
   Boarding: ['/runsheet', '/rooms', '/cats'],
 }
 
-// Endpoints any signed-in staff member may hit regardless of role (e.g. logout).
-export const STAFF_COMMON_PATHS = ['/api/logout']
+// Paths any signed-in staff member may reach regardless of role: logout, the
+// time clock (everyone clocks in/out), and media upload/serve (clock-in selfies
+// + assessment photos post to /api/media/*).
+export const STAFF_COMMON_PATHS = ['/api/logout', '/timeclock', '/api/media']
 
 export function roleHome(role: string): string {
   return ROLE_HOME[role] ?? '/board'
