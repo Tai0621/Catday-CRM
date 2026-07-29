@@ -10,7 +10,8 @@ import { roleHome, staffCanAccess } from './lib/roles'
 //  • '/r/' — the public digital-receipt link (unguessable token) customers open
 //    from WhatsApp. The trailing slash keeps it from matching /revenue etc.
 //  • '/api/health' — public liveness probe for uptime monitors.
-const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-forms', '/api/cron', '/api/health', '/r/']
+//  • '/careers' + '/api/careers' — the public job-application form.
+const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-forms', '/api/cron', '/api/health', '/careers', '/api/careers', '/r/']
 
 // Paths only managers (owner password or Manager-role staff) may open.
 // Staff hitting these are sent to their service board.

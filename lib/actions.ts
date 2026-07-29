@@ -301,6 +301,17 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
     }))
   }
 
+  // 6b2 · New job applications — one aggregate manager card into the pipeline.
+  const newApps = await db.jobApplication.count({ where: { status: 'New' } })
+  if (newApps > 0) {
+    out.push(card({
+      key: 'ApplicationReview:new', type: 'ApplicationReview', priority: 4,
+      title: `${newApps} new job application${newApps === 1 ? '' : 's'}`,
+      reason: 'Review candidates and move them through the hiring pipeline',
+      href: '/hr/applications',
+    }))
+  }
+
   // 6c · Deworm / deflea due (monthly parasite control, boarding SOP). One card
   // per cat covering whichever is due; monthly-scoped key so it re-fires each
   // cycle. Owner-facing — required before the next boarding stay.

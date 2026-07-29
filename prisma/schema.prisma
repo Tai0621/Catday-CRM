@@ -395,6 +395,28 @@ model TimeEntry {
   @@index([clockInAt])
 }
 
+// HR · recruiting. A candidate applies through the public /careers form; the
+// manager moves them through the pipeline (New → Reviewing → Interview →
+// Hired/Rejected) on /hr/applications.
+model JobApplication {
+  id           String    @id @default(cuid())
+  name         String
+  phone        String
+  email        String?
+  roleApplied  String?
+  experience   String? // free text: experience / message
+  availability String? // when they can start / hours
+  status       String    @default("New") // New | Reviewing | Interview | Hired | Rejected
+  notes        String? // manager's internal notes
+  source       String    @default("Careers form")
+  reviewedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
 // HR · leave. Staff request; a manager approves/rejects. Day-level dates are
 // stored as "YYYY-MM-DD" strings (project convention for period identifiers),
 // which keeps calendar overlap a simple string comparison.

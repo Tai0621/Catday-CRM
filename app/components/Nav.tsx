@@ -56,6 +56,7 @@ const SEGMENTS: NavSegment[] = [
       { href: '/hr/attendance', label: 'Attendance', icon: 'clock' },
       { href: '/hr/leave', label: 'Leave', icon: 'calendar' },
       { href: '/hr/commission', label: 'Commission', icon: 'wallet' },
+      { href: '/hr/applications', label: 'Applications', icon: 'staff' },
       { href: '/staff', label: 'Staff & PINs', icon: 'staff' },
     ] }],
   },
