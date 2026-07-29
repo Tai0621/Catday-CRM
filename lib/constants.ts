@@ -121,7 +121,7 @@ export const ACTION_TYPES = [
   'OutstandingPayment', 'VipArrival', 'RebookCheckout', 'WinBack',
   'MembershipExpiry', 'VaccinationExpiry', 'GroomingDue', 'Birthday', 'GoldEligible',
   'PrivateClubEligible', 'VipCheckIn', 'LicenseRenewal', 'TreatmentDue', 'HealthConcern',
-  'LeaveApproval', 'ApplicationReview',
+  'LeaveApproval', 'ApplicationReview', 'LowStock',
 ] as const
 export type ActionType = typeof ACTION_TYPES[number]
 

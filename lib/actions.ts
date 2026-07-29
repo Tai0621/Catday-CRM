@@ -1,5 +1,6 @@
 import { db } from './db'
 import { buildGroomingPredictions } from './grooming-reminder'
+import { lowStockProducts } from './inventory'
 import { logRedFlags } from './care-log'
 import { dewormStatus, defleaStatus } from './health'
 import { trailingAnnualSpend } from './loyalty'
@@ -309,6 +310,17 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
       title: `${newApps} new job application${newApps === 1 ? '' : 's'}`,
       reason: 'Review candidates and move them through the hiring pipeline',
       href: '/hr/applications',
+    }))
+  }
+
+  // 6b3 · Low stock — one card per product at/below its reorder level.
+  const lowStock = await lowStockProducts()
+  for (const p of lowStock) {
+    out.push(card({
+      key: `LowStock:${p.id}`, type: 'LowStock', priority: 4,
+      title: `Reorder — ${p.name}`,
+      reason: `${p.stockQty} left (reorder at ${p.reorderLevel})`,
+      href: `/products/${p.id}`,
     }))
   }
 

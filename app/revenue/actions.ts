@@ -67,6 +67,7 @@ export async function deleteTransaction(id: string): Promise<DeleteResult> {
   for (const l of productLines) {
     restocked += l.quantity
     ops.push(db.product.update({ where: { id: l.productId! }, data: { stockQty: { increment: l.quantity } } }))
+    ops.push(db.stockMovement.create({ data: { productId: l.productId!, delta: l.quantity, reason: 'SaleReversal', reference: reference ?? null } }))
   }
 
   // ── re-open any appointments this sale settled (mark unpaid again) ──

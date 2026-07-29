@@ -17,7 +17,7 @@ const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-form
 // Staff hitting these are sent to their service board.
 const MANAGER_PATHS = [
   '/revenue', '/plan', '/academy', '/ask', '/api/ask', '/whatsapp',
-  '/staff', '/services', '/cashup', '/memberships/tiers', '/finance', '/admin', '/hr',
+  '/staff', '/services', '/cashup', '/memberships/tiers', '/finance', '/admin', '/hr', '/products',
 ]
 
 // Edge-runtime mirror of lib/auth's v3 token check (Web Crypto, no node:crypto).

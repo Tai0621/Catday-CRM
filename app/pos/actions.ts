@@ -152,6 +152,7 @@ export async function checkout(payloadJson: string): Promise<CheckoutResult> {
   for (const i of items) {
     if (i.kind === 'product' && i.refId) {
       ops.push(db.product.update({ where: { id: i.refId }, data: { stockQty: { decrement: i.qty } } }))
+      ops.push(db.stockMovement.create({ data: { productId: i.refId, delta: -i.qty, reason: 'Sale', reference } }))
     }
   }
   if (walletAmount > 0 && p.customerId) {

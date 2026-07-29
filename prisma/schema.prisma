@@ -653,13 +653,33 @@ model Product {
   price     Float    // sell price
   costPrice Float    @default(0) // unit cost — for COGS + inventory-at-cost on the balance sheet
   stockQty  Int      @default(0)
+  reorderLevel Int?   // low-stock threshold; at or below → Action Inbox reorder alert
   sku       String?
   active    Boolean  @default(true)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lines     TransactionLine[]
+  lines          TransactionLine[]
+  stockMovements StockMovement[]
+}
+
+// Inventory ledger. Product.stockQty is the cached running balance; every change
+// to it — a POS sale, a delete-reversal, a manual receive/adjust/wastage — writes
+// a StockMovement in the same transaction (the ledger+balance rule). The history
+// explains why stock is where it is.
+model StockMovement {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  delta     Int // + received / - sold or wastage
+  reason    String // Sale | SaleReversal | Restock | Adjustment | Wastage | InitialStock
+  reference String? // POS reference, supplier note, etc.
+  note      String?
+  staffId   String?
+  createdAt DateTime @default(now())
+
+  @@index([productId, createdAt])
 }
 
 // ─── WhatsApp ────────────────────────────────────────────────────────────────
