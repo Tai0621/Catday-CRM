@@ -102,10 +102,12 @@ for new fields — don't introduce a different way of representing choice fields
   `aws-ap-northeast-1`. This was tuned after a real incident: wrong region (`sin1`) made the dashboard
   take ~6s (30 queries × ~70ms cross-region round trip); `hnd1` brought it to ~0.5s. Don't move the
   region without a reason, and if you do, re-measure.
-- **Never `include` (or query without an explicit `select`) on the `Cat` model in list/dashboard
-  queries.** `Cat.photos` stores base64 data-URLs and will ride along in a full-table fetch, silently
-  making the query enormous. Always use an explicit `select` that omits `photos` unless you actually
-  need the image (see `lib/dashboard.ts`, `lib/actions.ts`, `app/cats/page.tsx` for the pattern).
+- **Prefer an explicit `select` over `include`/bare fetches on the `Cat` model in list/dashboard
+  queries.** Historically `Cat.photos` stored base64 data-URLs that rode along in a full-table fetch
+  and made the query enormous; that column was removed in the A1 data-protection round (cat photos now
+  live in `MediaAsset` / private Blob, `ownerType 'cat'`, loaded on demand). The `select` discipline
+  still stands — `Cat` carries several free-text notes fields — see `lib/dashboard.ts`,
+  `lib/actions.ts`, `app/cats/page.tsx` for the pattern.
 - Add `@@index` on any column you'll filter/sort by at scale — this project added indexes on
   `Appointment(customerId, catId, status, scheduledAt)`, `Transaction(customerId, date, reference)`,
   etc. after the fact; do it proactively for new hot paths instead.

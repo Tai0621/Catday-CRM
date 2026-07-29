@@ -56,7 +56,9 @@ model Cat {
   feedingNotes     String?   // special feeding instructions
   medication       String?   // meds / supplements given with food
   groomingInterval Int?      // days between sessions; null = use coat/breed default
-  photos           String?   // JSON array of data URLs
+  // NOTE: cat photos live in MediaAsset (private Blob, ownerType 'cat'), not on
+  // this row. The legacy base64 `photos` column was dropped in the A1
+  // data-protection round (migrate-drop-cat-photos.mjs) — do not reintroduce it.
   customerId       String
   customer         Customer  @relation(fields: [customerId], references: [id])
   createdAt        DateTime  @default(now())
