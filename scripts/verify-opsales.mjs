@@ -22,8 +22,12 @@ async function sql(stmt) {
   return r?.response?.result
 }
 
-const hash = s => createHash('sha256').update(`catday:${s}`).digest('hex')
-const managerCookie = 'auth=' + hash(process.env.APP_PASSWORD)
+const hash = s => createHash('sha256').update(`catday:${s}`).digest('hex') // legacy PIN hash for seeding (verifyPassword upgrades it on login)
+const mgrLogin = await fetch(`${BASE}/api/login`, {
+  method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: new URLSearchParams({ password: process.env.APP_PASSWORD ?? '' }).toString(), redirect: 'manual',
+})
+const managerCookie = (mgrLogin.headers.get('set-cookie') ?? '').split(',').map(s => s.trim()).find(s => s.startsWith('auth='))?.split(';')[0] ?? ''
 
 async function get(path, cookie) {
   const r = await fetch(BASE + path, { headers: { Cookie: cookie }, redirect: 'manual' })

@@ -30,7 +30,7 @@ export const STAFF_ROLE_PATHS: Record<string, string[]> = {
 // Paths any signed-in staff member may reach regardless of role: logout, the
 // time clock (everyone clocks in/out), and media upload/serve (clock-in selfies
 // + assessment photos post to /api/media/*).
-export const STAFF_COMMON_PATHS = ['/api/logout', '/timeclock', '/api/media']
+export const STAFF_COMMON_PATHS = ['/api/logout', '/timeclock', '/leave', '/api/media']
 
 export function roleHome(role: string): string {
   return ROLE_HOME[role] ?? '/board'

@@ -21,7 +21,11 @@ async function sql(stmt) {
   return r?.response?.result
 }
 
-const cookie = 'auth=' + createHash('sha256').update(`catday:${process.env.APP_PASSWORD}`).digest('hex')
+const login = await fetch(`${BASE}/api/login`, {
+  method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: new URLSearchParams({ password: process.env.APP_PASSWORD ?? '' }).toString(), redirect: 'manual',
+})
+const cookie = (login.headers.get('set-cookie') ?? '').split(',').map(s => s.trim()).find(s => s.startsWith('auth='))?.split(';')[0] ?? ''
 const get = async path => {
   const r = await fetch(BASE + path, { headers: { Cookie: cookie }, redirect: 'manual' })
   return { status: r.status, text: await r.text() }

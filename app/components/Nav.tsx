@@ -54,6 +54,7 @@ const SEGMENTS: NavSegment[] = [
     key: 'hr', header: 'Human Resource', color: '#729094',
     groups: [{ links: [
       { href: '/hr/attendance', label: 'Attendance', icon: 'clock' },
+      { href: '/hr/leave', label: 'Leave', icon: 'calendar' },
       { href: '/staff', label: 'Staff & PINs', icon: 'staff' },
     ] }],
   },
@@ -121,6 +122,7 @@ const SEGMENTS: NavSegment[] = [
 // Reception (Front Desk) sees the full operational lane.
 const FRONTDESK_LINKS: NavLink[] = [
   { href: '/timeclock', label: 'Clock In / Out', icon: 'clock' },
+  { href: '/leave', label: 'My Leave', icon: 'calendar' },
   { href: '/actions', label: 'Action Inbox', icon: 'inbox' },
   { href: '/board', label: 'Service Board', icon: 'board' },
   { href: '/runsheet', label: 'Run Sheet', icon: 'runsheet' },
@@ -139,11 +141,13 @@ const ROLE_LINKS: Record<string, NavLink[]> = {
   FrontDesk: FRONTDESK_LINKS,
   Groomer: [
     { href: '/timeclock', label: 'Clock In / Out', icon: 'clock' },
+    { href: '/leave', label: 'My Leave', icon: 'calendar' },
     { href: '/board', label: 'My Board', icon: 'board' },
     { href: '/cats', label: 'Cats & Assess', icon: 'cat' },
   ],
   Boarding: [
     { href: '/timeclock', label: 'Clock In / Out', icon: 'clock' },
+    { href: '/leave', label: 'My Leave', icon: 'calendar' },
     { href: '/runsheet', label: 'Run Sheet', icon: 'runsheet' },
     { href: '/rooms', label: 'Rooms', icon: 'rooms' },
     { href: '/cats', label: 'Cats', icon: 'cat' },

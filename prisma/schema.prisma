@@ -163,6 +163,7 @@ model Staff {
   boardingChecks BoardingCheck[]
   dailyCareLogs  DailyCareLog[]
   timeEntries    TimeEntry[]
+  leaveRequests  LeaveRequest[]
 }
 
 // ─── Service menu (single source of truth for prices & durations) ────────────
@@ -390,6 +391,27 @@ model TimeEntry {
 
   @@index([staffId, clockInAt])
   @@index([clockInAt])
+}
+
+// HR · leave. Staff request; a manager approves/rejects. Day-level dates are
+// stored as "YYYY-MM-DD" strings (project convention for period identifiers),
+// which keeps calendar overlap a simple string comparison.
+model LeaveRequest {
+  id         String    @id @default(cuid())
+  staffId    String
+  staff      Staff     @relation(fields: [staffId], references: [id])
+  type       String // Annual | Medical | Emergency | Unpaid
+  startDate  String // YYYY-MM-DD
+  endDate    String // YYYY-MM-DD
+  days       Int
+  reason     String?
+  status     String    @default("Pending") // Pending | Approved | Rejected
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([status])
+  @@index([staffId])
 }
 
 // Administrative — Fixed Asset Register. Each asset depreciates straight-line

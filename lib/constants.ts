@@ -121,8 +121,14 @@ export const ACTION_TYPES = [
   'OutstandingPayment', 'VipArrival', 'RebookCheckout', 'WinBack',
   'MembershipExpiry', 'VaccinationExpiry', 'GroomingDue', 'Birthday', 'GoldEligible',
   'PrivateClubEligible', 'VipCheckIn', 'LicenseRenewal', 'TreatmentDue', 'HealthConcern',
+  'LeaveApproval',
 ] as const
 export type ActionType = typeof ACTION_TYPES[number]
+
+// ── HR · Leave ──
+export const LEAVE_TYPES = ['Annual', 'Medical', 'Emergency', 'Unpaid'] as const
+export type LeaveType = typeof LEAVE_TYPES[number]
+export const LEAVE_STATUSES = ['Pending', 'Approved', 'Rejected'] as const
 
 // ── Licenses & Renewals (Administrative) ──
 // Compliance items with an expiry: business/health/fire permits, insurance,

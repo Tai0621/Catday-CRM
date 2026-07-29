@@ -287,6 +287,20 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
     }))
   }
 
+  // 6b · Pending leave requests — one manager card each, linking to the leave
+  // screen to approve or reject. Disappears once actioned (no longer Pending).
+  const pendingLeave = await db.leaveRequest.findMany({
+    where: { status: 'Pending' }, include: { staff: { select: { name: true } } }, orderBy: { createdAt: 'asc' },
+  })
+  for (const lr of pendingLeave) {
+    out.push(card({
+      key: `LeaveApproval:${lr.id}`, type: 'LeaveApproval', priority: 4,
+      title: `Leave request — ${lr.staff.name}`,
+      reason: `${lr.type} · ${lr.startDate}${lr.endDate !== lr.startDate ? ` → ${lr.endDate}` : ''} (${lr.days} day${lr.days === 1 ? '' : 's'})${lr.reason ? ` · ${lr.reason}` : ''}`,
+      href: '/hr/leave',
+    }))
+  }
+
   // 6c · Deworm / deflea due (monthly parasite control, boarding SOP). One card
   // per cat covering whichever is due; monthly-scoped key so it re-fires each
   // cycle. Owner-facing — required before the next boarding stay.
