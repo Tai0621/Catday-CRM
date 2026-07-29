@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, isManager } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -18,7 +18,8 @@ import { SEGMENTS } from '@/lib/segments'
 import { AwardPointsForm } from './AwardPointsForm'
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAuth()
+  const session = await requireAuth()
+  const canExport = isManager(session)
   const { id } = await params
 
   const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
@@ -120,6 +121,12 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             className="text-sm px-3 py-2 rounded-lg" style={{ background: '#729094', color: '#F2EDE0' }}>
             WhatsApp
           </a>
+          {canExport && (
+            <a href={`/api/customers/${id}/export`} download
+              className="cd-btn-sec text-sm" title="Download this customer's complete data (JSON) — right of access / portability">
+              Export data
+            </a>
+          )}
           <Link href={`/customers/${id}/edit`} className="cd-btn-sec text-sm">Edit</Link>
           <Link href={`/appointments/new?customerId=${id}`} className="cd-btn text-sm">+ Book</Link>
         </div>
