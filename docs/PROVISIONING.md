@@ -73,6 +73,9 @@ a code change:
   buttons, links, inputs and login screen via CSS variables. (Deeper palette
   customisation beyond the accent is a code-level change to the `SEGMENTS` and the
   per-page styles — the seam themes the primary brand surfaces.)
+- **Favicon** — replace `app/icon.svg` with the client's mark (Next.js auto-detects
+  it as the browser-tab icon; no code change). Keep it on a light rounded tile so
+  it stays visible on dark browser chrome.
 - **Localization** — currency code/symbol/locale, timezone.
 - **Tax** — regime + corporate rate.
 - **Data & Privacy** — financial-record retention window (drives erasure purge).
