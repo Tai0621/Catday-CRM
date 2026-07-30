@@ -108,8 +108,12 @@ customer respects the financial-record window — see §5.
      hard-deleted (audit `customer.purge`). This completes the erasure without
      breaching tax retention in the meantime.
 - **Right to rectification:** editable throughout the CRM.
-- **Right to object / withdraw marketing consent:** `Customer.marketingConsent`
-  toggle (with timestamp, A4).
+- **Right to object / withdraw marketing consent (A4):** `Customer.marketingConsent`
+  toggle, recorded together with **when** (`marketingConsentAt`) and **through which
+  channel** (`marketingConsentSource`) it was given — the provenance a regulator
+  asks for. Withdrawing consent clears the stamp. A plain-language public **privacy
+  notice** lives at `/privacy`, linked from the job-application form and the digital
+  receipt.
 
 ---
 

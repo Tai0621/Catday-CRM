@@ -14,7 +14,9 @@ export default async function PublicReceiptPage({ params }: { params: Promise<{ 
     <div className="min-h-screen flex items-start justify-center px-4 py-10" style={{ background: '#F2EDE0' }}>
       <div className="w-full max-w-sm">
         <ReceiptCard view={view} business={config.business} />
-        <p className="text-center text-xs cd-muted mt-4">Digital receipt from {config.business.name}</p>
+        <p className="text-center text-xs cd-muted mt-4">
+          Digital receipt from {config.business.name} · <a href="/privacy" className="cd-link">Privacy</a>
+        </p>
       </div>
     </div>
   )

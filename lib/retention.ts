@@ -50,7 +50,8 @@ export async function anonymizeCustomer(customerId: string): Promise<AnonymizeRe
       data: {
         name: ERASED_NAME, email: null, address: null, notes: null,
         phone: erasedPhone(customerId), source: 'Erased',
-        marketingConsent: false, needsDetails: false, erasedAt: now,
+        marketingConsent: false, marketingConsentAt: null, marketingConsentSource: null,
+        needsDetails: false, erasedAt: now,
       },
     }),
     ...(catIds.length ? [db.cat.updateMany({

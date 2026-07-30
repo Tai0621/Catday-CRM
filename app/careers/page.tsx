@@ -63,6 +63,9 @@ export default async function CareersPage({ searchParams }: { searchParams: Prom
             <button type="submit" className="w-full py-3 rounded-xl text-sm font-semibold" style={{ background: '#B14919', color: '#F7F0E1' }}>
               Submit application
             </button>
+            <p className="text-center text-xs cd-muted">
+              By applying you agree to us processing your details for recruitment · <a href="/privacy" className="cd-link">Privacy</a>
+            </p>
           </form>
         )}
       </div>

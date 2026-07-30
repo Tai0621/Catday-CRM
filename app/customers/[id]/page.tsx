@@ -302,6 +302,10 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             ? `${activeMembership.tier.name} · expires ${activeMembership.expiryDate.toLocaleDateString('en-MY')}`
             : 'Essential (auto)'} />
         <InfoCard label="Cats" value={String(customer.cats.length)} />
+        <InfoCard label="Marketing consent"
+          value={customer.marketingConsent
+            ? `Given${customer.marketingConsentAt ? ` · ${customer.marketingConsentAt.toLocaleDateString('en-MY')}` : ''}${customer.marketingConsentSource ? ` · via ${customer.marketingConsentSource}` : ''}`
+            : 'Not given'} />
       </div>
 
       {customer.notes && (

@@ -16,6 +16,11 @@ model Customer {
   address          String?
   source           String         @default("WalkIn")
   marketingConsent Boolean        @default(false)
+  // Consent provenance (A4): when consent was given and through which channel —
+  // the record a regulator asks for. Set together via lib/consent.ts; cleared
+  // when consent is withdrawn. Null = never recorded (legacy or no consent).
+  marketingConsentAt     DateTime?
+  marketingConsentSource String?   // Staff | GoogleForm | WhatsApp | WalkIn | Import
   needsDetails     Boolean        @default(false)
   notes            String?
   pointsBalance    Int            @default(0) // loyalty / royalty engine balance

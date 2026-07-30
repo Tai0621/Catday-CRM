@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import { normalisePhone } from '@/lib/phone'
 import { CUSTOMER_SOURCES } from '@/lib/constants'
+import { consentUpdate } from '@/lib/consent'
 
 export default async function NewCustomerPage() {
   await requireAuth()
@@ -17,7 +18,7 @@ export default async function NewCustomerPage() {
         email: (data.get('email') as string) || null,
         address: (data.get('address') as string) || null,
         source: (data.get('source') as string) || 'WalkIn',
-        marketingConsent: data.get('marketingConsent') === 'on',
+        ...consentUpdate(data.get('marketingConsent') === 'on', 'Staff'),
         notes: (data.get('notes') as string) || null,
         needsDetails: false,
       },

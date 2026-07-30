@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { normalisePhone } from '@/lib/phone'
 import { CUSTOMER_SOURCES } from '@/lib/constants'
+import { consentUpdate } from '@/lib/consent'
 
 export default async function EditCustomerPage({
   params, searchParams,
@@ -30,7 +31,7 @@ export default async function EditCustomerPage({
           email: ((data.get('email') as string) || '').trim() || null,
           address: ((data.get('address') as string) || '').trim() || null,
           source: (data.get('source') as string) || 'WalkIn',
-          marketingConsent: data.get('marketingConsent') === 'on',
+          ...consentUpdate(data.get('marketingConsent') === 'on', 'Staff', customer),
           notes: ((data.get('notes') as string) || '').trim() || null,
         },
       })

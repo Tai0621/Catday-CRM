@@ -11,7 +11,7 @@ import { roleHome, staffCanAccess } from './lib/roles'
 //    from WhatsApp. The trailing slash keeps it from matching /revenue etc.
 //  • '/api/health' — public liveness probe for uptime monitors.
 //  • '/careers' + '/api/careers' — the public job-application form.
-const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-forms', '/api/cron', '/api/health', '/careers', '/api/careers', '/r/']
+const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-forms', '/api/cron', '/api/health', '/careers', '/api/careers', '/r/', '/privacy']
 
 // Paths only managers (owner password or Manager-role staff) may open.
 // Staff hitting these are sent to their service board.

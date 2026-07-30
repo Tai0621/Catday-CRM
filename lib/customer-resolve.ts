@@ -1,5 +1,6 @@
 import { db } from './db'
 import { normalisePhone } from './phone'
+import { consentUpdate, type ConsentSource } from './consent'
 
 interface CustomerData {
   phone: string
@@ -24,6 +25,8 @@ export async function resolveCustomer(data: CustomerData) {
   const phone = normalisePhone(data.phone)
   const existing = await db.customer.findUnique({ where: { phone } })
 
+  const consentSource = (data.source as ConsentSource | undefined) ?? 'Import'
+
   if (!existing) {
     return db.customer.create({
       data: {
@@ -32,7 +35,7 @@ export async function resolveCustomer(data: CustomerData) {
         email: data.email,
         address: data.address,
         source: data.source ?? 'Other',
-        marketingConsent: data.marketingConsent ?? false,
+        ...consentUpdate(data.marketingConsent ?? false, consentSource),
       },
     })
   }
@@ -44,7 +47,7 @@ export async function resolveCustomer(data: CustomerData) {
       name: existing.name ?? data.name,
       email: existing.email ?? data.email,
       address: existing.address ?? data.address,
-      marketingConsent: existing.marketingConsent || (data.marketingConsent ?? false),
+      ...consentUpdate(existing.marketingConsent || (data.marketingConsent ?? false), consentSource, existing),
     },
   })
 }
