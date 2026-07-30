@@ -12,6 +12,7 @@ import {
   POINTS_REASON_LABELS, GOLD_SPEND_THRESHOLD, WALLET_PACKAGES,
   PRIVATE_CLUB_TIER, PRIVATE_CLUB_SPEND, PRIVATE_CLUB_VISITS,
 } from '@/lib/constants'
+import { getConfig } from '@/lib/config'
 import { buildCustomerIntel, segmentStyle } from '@/lib/intelligence'
 import { customerReceivable } from '@/lib/aging'
 import { SEGMENTS } from '@/lib/segments'
@@ -21,6 +22,7 @@ import { EraseCustomer } from './EraseCustomer'
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth()
   const canExport = isManager(session)
+  const { business } = await getConfig()
   const { id } = await params
 
   const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
@@ -198,7 +200,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             </ul>
             <div className="flex flex-wrap gap-2 pt-1">
               <Link href={`/pos?customerId=${id}`} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ background: '#2D1907', color: '#ECDBB6' }}>Collect at POS →</Link>
-              <a href={whatsappUrl(customer.phone, `Hi! A friendly reminder from Cat Day 🐾 — there's an outstanding balance of RM ${receivable.total.toLocaleString('en-MY')} on your account. Let us know if you'd like to settle it. Thank you!`)}
+              <a href={whatsappUrl(customer.phone, `Hi! A friendly reminder from ${business.name} 🐾 — there's an outstanding balance of RM ${receivable.total.toLocaleString('en-MY')} on your account. Let us know if you'd like to settle it. Thank you!`)}
                 target="_blank" rel="noopener noreferrer"
                 className="text-xs px-3 py-1.5 rounded-lg" style={{ background: '#729094', color: '#F2EDE0' }}>WhatsApp reminder</a>
             </div>
@@ -208,7 +210,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
         {/* Cat Day Wallet (stored value) */}
         <div className="cd-card p-5 space-y-3 md:col-span-2" style={{ borderLeft: `3px solid ${SEGMENTS.membership.color}` }}>
           <div className="flex items-baseline justify-between">
-            <span className="text-xs uppercase tracking-wider" style={{ color: SEGMENTS.membership.text }}>Cat Day Wallet</span>
+            <span className="text-xs uppercase tracking-wider" style={{ color: SEGMENTS.membership.text }}>{business.name} Wallet</span>
             <span className="text-2xl font-bold" style={{ color: SEGMENTS.membership.text }}>
               RM {customer.walletBalance.toFixed(2)}
             </span>

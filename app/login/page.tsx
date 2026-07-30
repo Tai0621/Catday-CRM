@@ -20,10 +20,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         {/* Company logo */}
         <div className="flex flex-col items-center mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/catday-logo.png" alt={config.business.name}
+          <img src={config.brand.logoUrl} alt={config.business.name}
             width={252} height={106}
             className="w-[228px] h-auto select-none" style={{ pointerEvents: 'none' }} />
-          <p className="text-[11px] font-semibold tracking-[0.28em] uppercase mt-4" style={{ color: '#B14919' }}>
+          <p className="text-[11px] font-semibold tracking-[0.28em] uppercase mt-4" style={{ color: 'var(--brand-primary)' }}>
             {config.business.tagline}
           </p>
         </div>
@@ -46,7 +46,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </div>
           <button type="submit"
             className="w-full py-3 rounded-xl text-sm font-semibold tracking-wide transition-opacity hover:opacity-90"
-            style={{ background: '#B14919', color: '#F7F0E1' }}>
+            style={{ background: 'var(--brand-primary)', color: '#F7F0E1' }}>
             Sign In
           </button>
         </form>

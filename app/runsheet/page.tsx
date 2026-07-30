@@ -6,6 +6,7 @@ import { careTasksForStay, logRedFlags } from '@/lib/care-log'
 import { boardingHealthGate } from '@/lib/health'
 import { SEGMENTS } from '@/lib/segments'
 import { displayPhone, whatsappUrl } from '@/lib/phone'
+import { getConfig } from '@/lib/config'
 
 const DAY = 24 * 60 * 60 * 1000
 const dateKey = (d: Date) =>
@@ -15,6 +16,7 @@ const dateKey = (d: Date) =>
 // built from each cat's own care notes. Ticking is the work record.
 export default async function RunSheetPage() {
   const session = await requireAuth()
+  const { business } = await getConfig()
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const todayEnd = new Date(todayStart.getTime() + DAY)
@@ -263,7 +265,7 @@ export default async function RunSheetPage() {
                         </span>
                       </form>
                       {t.task === 'Photo update to owner' && !t.done && (
-                        <a href={whatsappUrl(s.customer.phone, `Hi! Daily update from Cat Day 🐾 ${s.cat.name} is doing great today — photo coming right up! 📸`)}
+                        <a href={whatsappUrl(s.customer.phone, `Hi! Daily update from ${business.name} 🐾 ${s.cat.name} is doing great today — photo coming right up! 📸`)}
                           target="_blank" rel="noopener noreferrer"
                           className="text-xs px-2 py-0.5 rounded" style={{ background: '#729094', color: '#F2EDE0' }}>
                           WhatsApp

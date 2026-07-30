@@ -1,4 +1,5 @@
 import { db } from './db'
+import { getConfig } from './config'
 import { buildGroomingPredictions } from './grooming-reminder'
 import { lowStockProducts } from './inventory'
 import { logRedFlags } from './care-log'
@@ -55,6 +56,8 @@ function daysToBirthday(dob: Date, now: Date): number {
 }
 
 export async function buildActionQueue(now: Date = new Date()): Promise<ActionCard[]> {
+  const { business } = await getConfig()
+  const brand = business.name
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const todayEnd = new Date(todayStart.getTime() + DAY)
   const winbackCutoff = new Date(now.getTime() - WINBACK_INACTIVE_DAYS * DAY)
@@ -225,7 +228,7 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
       title: `Win back ${c.name ?? c.phone}`,
       reason: `Last visit ${days} days ago`,
       customerId: c.id, phone: c.phone,
-      waMessage: `Hi! It's been a while — ${catName} misses us at Cat Day 🐾 We'd love to welcome you back. Book this week and we'll add a complimentary add-on for ${catName}!`,
+      waMessage: `Hi! It's been a while — ${catName} misses us at ${brand} 🐾 We'd love to welcome you back. Book this week and we'll add a complimentary add-on for ${catName}!`,
     }))
   }
 
@@ -253,7 +256,7 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
       title: `Personal check-in — ${c.name ?? c.phone}`,
       reason: 'Private Club / Founding Cat family · monthly one-to-one, never auto-blast',
       customerId: c.id, phone: c.phone,
-      waMessage: `Hi ${c.name ?? ''}! A personal hello from Cat Day — how has ${catName} been doing? If there's anything we can prepare for your next visit, just let us know 🐾`,
+      waMessage: `Hi ${c.name ?? ''}! A personal hello from ${brand} — how has ${catName} been doing? If there's anything we can prepare for your next visit, just let us know 🐾`,
     }))
   }
 
@@ -365,7 +368,7 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
       title: d === 0 ? `🎂 ${c.name}'s birthday is today!` : `🎂 ${c.name}'s birthday in ${d} day${d === 1 ? '' : 's'}`,
       reason: `${c.customer.name ?? c.customer.phone} — send the birthday reward`,
       customerId: c.customerId, catId: c.id, phone: c.customer.phone,
-      waMessage: `Happy birthday to ${c.name}! 🎂🐾 As a Cat Day member, ${c.name} gets a birthday treat on us — come celebrate with a pamper session this month!`,
+      waMessage: `Happy birthday to ${c.name}! 🎂🐾 As a ${brand} member, ${c.name} gets a birthday treat on us — come celebrate with a pamper session this month!`,
     }))
   }
 

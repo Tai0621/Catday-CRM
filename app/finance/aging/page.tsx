@@ -5,10 +5,12 @@ import Link from 'next/link'
 import { buildReceivables, buildPayables, BUCKET_LABELS, type AgingBucket } from '@/lib/aging'
 import { whatsappUrl } from '@/lib/phone'
 import { SEGMENTS } from '@/lib/segments'
+import { getConfig } from '@/lib/config'
 
 // Accounts Receivable & Payable — who owes us, and what we owe, aged.
 export default async function AgingPage() {
   await requireManager()
+  const { business } = await getConfig()
   const now = new Date()
   const [ar, ap] = await Promise.all([buildReceivables(now), buildPayables(now)])
   const seg = SEGMENTS.business
@@ -65,7 +67,7 @@ export default async function AgingPage() {
                   ))}
                   <td className="px-3 py-2 text-right font-semibold tabular-nums" style={{ color: '#2D1907' }}>{rm(c.total)}</td>
                   <td className="px-3 py-2 text-right whitespace-nowrap">
-                    <a href={whatsappUrl(c.phone, `Hi! A friendly reminder from Cat Day 🐾 — there's an outstanding balance of RM ${c.total.toLocaleString('en-MY')} on your account. Let us know if you'd like to settle it. Thank you!`)}
+                    <a href={whatsappUrl(c.phone, `Hi! A friendly reminder from ${business.name} 🐾 — there's an outstanding balance of RM ${c.total.toLocaleString('en-MY')} on your account. Let us know if you'd like to settle it. Thank you!`)}
                       target="_blank" rel="noopener noreferrer"
                       className="text-xs px-2 py-1 rounded mr-1" style={{ background: '#729094', color: '#F2EDE0' }}>Remind</a>
                     <Link href={`/pos?customerId=${c.customerId}`} className="text-xs px-2 py-1 rounded" style={{ background: '#2D1907', color: '#ECDBB6' }}>Collect</Link>

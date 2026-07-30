@@ -1,4 +1,5 @@
 import { db } from './db'
+import { getConfig } from './config'
 
 // Track A / A2 — data-subject access & portability. Assembles a complete,
 // machine-readable copy of everything the OS holds about one customer, for the
@@ -14,6 +15,7 @@ export type CustomerExport = Awaited<ReturnType<typeof buildCustomerExport>>
 export async function buildCustomerExport(customerId: string) {
   const customer = await db.customer.findUnique({ where: { id: customerId } })
   if (!customer) return null
+  const { business } = await getConfig()
 
   const cats = await db.cat.findMany({ where: { customerId } })
   const catIds = cats.map(c => c.id)
@@ -48,7 +50,7 @@ export async function buildCustomerExport(customerId: string) {
       exportedAt: new Date().toISOString(),
       subject: 'customer',
       customerId,
-      note: 'Complete record held by the Cat Day Business OS. Media files are referenced by URL (served only to authenticated staff via the media proxy); bytes are not inlined.',
+      note: `Complete record held by the ${business.name} Business OS. Media files are referenced by URL (served only to authenticated staff via the media proxy); bytes are not inlined.`,
     },
     profile: customer,
     cats,

@@ -1,4 +1,5 @@
 import { requireAuth } from '@/lib/auth'
+import { getConfig } from '@/lib/config'
 import { getDashboardData } from '@/lib/dashboard'
 import { getChartData } from '@/lib/charts'
 import { RevenueLineChart, RevenueMixDonut, BookingsBarChart, ChartLegend } from '@/app/components/DashboardCharts'
@@ -16,7 +17,7 @@ const STREAM_COLORS: Record<string, string> = {
 
 export default async function DashboardPage() {
   await requireAuth()
-  const [d, actionQueue, charts] = await Promise.all([getDashboardData(), buildActionQueue(), getChartData()])
+  const [d, actionQueue, charts, cfg] = await Promise.all([getDashboardData(), buildActionQueue(), getChartData(), getConfig()])
   const { now, revenue, ops, customer, alerts, panels, breakeven, prive } = d
   const topActions = actionQueue.slice(0, 5)
 
@@ -158,7 +159,7 @@ export default async function DashboardPage() {
         <SectionTitle>
           <span className="inline-flex items-center gap-2">
             <span className="rounded-full" style={{ width: 7, height: 7, background: SEGMENTS.membership.color }} />
-            Cat Day Prive
+            {cfg.business.name} Privé
           </span>
         </SectionTitle>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

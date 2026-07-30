@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { getConfig } from '../config'
 
 const client = new Anthropic()
 
@@ -11,6 +12,7 @@ export interface LeadExtraction {
 
 export async function analyzeWhatsAppMessage(content: string, senderPhone: string): Promise<LeadExtraction> {
   const model = process.env.WHATSAPP_ANALYSIS_MODEL ?? 'claude-haiku-4-5-20251001'
+  const { business } = await getConfig()
 
   const response = await client.messages.create({
     model,
@@ -18,7 +20,7 @@ export async function analyzeWhatsAppMessage(content: string, senderPhone: strin
     messages: [
       {
         role: 'user',
-        content: `You are a CRM assistant for Catday, a premium cat grooming and boarding business in Malaysia.
+        content: `You are a CRM assistant for ${business.name}, a premium cat grooming and boarding business.
 
 Analyse this WhatsApp message and extract the lead information.
 

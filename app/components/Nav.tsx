@@ -164,7 +164,7 @@ function isActive(href: string, pathname: string) {
   return pathname.startsWith(href)
 }
 
-export function Nav({ role, userName }: { role: string; userName?: string }) {
+export function Nav({ role, userName, logoUrl, brandName }: { role: string; userName?: string; logoUrl: string; brandName: string }) {
   const isManager = role === 'Manager'
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
@@ -218,7 +218,7 @@ export function Nav({ role, userName }: { role: string; userName?: string }) {
       <div className="flex items-center justify-between px-3 py-4" style={{ borderBottom: '1px solid rgba(236,219,182,0.15)' }}>
         {!collapsed && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src="/catday-logo-cream.png" alt="Cat Day" className="h-7 w-auto select-none" style={{ pointerEvents: 'none' }} />
+          <img src={logoUrl} alt={brandName} className="h-7 w-auto select-none" style={{ pointerEvents: 'none' }} />
         )}
         <button
           onClick={() => setCollapsed(c => !c)}

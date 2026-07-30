@@ -12,9 +12,18 @@
   --font-sans: 'Inter', system-ui, sans-serif;
 }
 
+/* White-label theme seam (Track B). Defaults are Cat Day's palette; a client
+   instance overrides --brand-primary / --brand-ink via an inline :root block
+   injected in the root layout from getConfig(). The cd-* utilities and the key
+   brand surfaces read these, so re-theming the accent flows through the app. */
+:root {
+  --brand-primary: #B14919;
+  --brand-ink: #2D1907;
+}
+
 body {
   background: #F2EDE0;
-  color: #2D1907;
+  color: var(--brand-ink);
   font-family: var(--font-sans);
 }
 
@@ -49,7 +58,7 @@ body {
 
 /* Primary button */
 .cd-btn {
-  background: #B14919;
+  background: var(--brand-primary);
   color: #ECDBB6;
   font-size: 0.875rem;
   padding: 0.5rem 1rem;
@@ -81,7 +90,7 @@ body {
 }
 .cd-input:focus {
   outline: none;
-  border-color: #B14919;
+  border-color: var(--brand-primary);
   box-shadow: 0 0 0 2px rgba(177, 73, 25, 0.15);
 }
 
@@ -109,7 +118,7 @@ body {
 .cd-muted { color: rgba(45, 25, 7, 0.45); }
 
 /* Link accent */
-.cd-link { color: #B14919; }
+.cd-link { color: var(--brand-primary); }
 .cd-link:hover { text-decoration: underline; }
 
 /* Pill / badge base */

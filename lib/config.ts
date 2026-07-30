@@ -37,6 +37,12 @@ export interface AppConfig {
   data: {
     retentionYears: number // financial-record retention window; drives the erasure purge (A3)
   }
+  brand: {
+    logoUrl: string      // light-background logo (login) — URL or /public path
+    logoDarkUrl: string  // logo for the dark sidebar
+    primary: string      // accent hex — buttons, links, active states
+    ink: string          // primary text hex
+  }
   portalLabel: string  // small footer on the login screen
 }
 
@@ -55,6 +61,12 @@ export const DEFAULT_CONFIG: AppConfig = {
   tax: { regime: 'MY-SST', corporateRatePct: 24 },
   ops: { openHour: 10, closeHour: 19, slotStepMin: 30 },
   data: { retentionYears: 7 },
+  brand: {
+    logoUrl: '/catday-logo.png',
+    logoDarkUrl: '/catday-logo-cream.png',
+    primary: '#B14919',
+    ink: '#2D1907',
+  },
   portalLabel: 'Staff Portal',
 }
 
@@ -79,6 +91,10 @@ export const SETTING_FIELDS: Field[] = [
   { group: 'Operations', key: 'ops.closeHour', label: 'Closing hour (24h)', kind: 'number' },
   { group: 'Operations', key: 'ops.slotStepMin', label: 'Booking slot step (min)', kind: 'number' },
   { group: 'Data & Privacy', key: 'data.retentionYears', label: 'Financial record retention (years)', kind: 'number', hint: 'anonymised customers are purged once their newest record ages past this' },
+  { group: 'Branding', key: 'brand.logoUrl', label: 'Logo (light background)', kind: 'text', hint: 'URL or /public path — shown on the login screen' },
+  { group: 'Branding', key: 'brand.logoDarkUrl', label: 'Logo (dark sidebar)', kind: 'text', hint: 'URL or /public path — shown in the sidebar' },
+  { group: 'Branding', key: 'brand.primary', label: 'Accent colour', kind: 'text', hint: 'hex, e.g. #B14919 — buttons, links' },
+  { group: 'Branding', key: 'brand.ink', label: 'Text colour', kind: 'text', hint: 'hex, e.g. #2D1907' },
   { group: 'Business Identity', key: 'portalLabel', label: 'Login portal label', kind: 'text' },
 ]
 
