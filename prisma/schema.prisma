@@ -20,6 +20,11 @@ model Customer {
   notes            String?
   pointsBalance    Int            @default(0) // loyalty / royalty engine balance
   walletBalance    Float          @default(0) // Cat Day Wallet stored value (RM)
+  // Data protection (A3): when set, this record has been anonymised on an
+  // erasure request — identifying fields are redacted while de-identified
+  // financial rows are retained for the statutory window, then purged by the
+  // retention cron (lib/retention.ts). Null = active customer.
+  erasedAt         DateTime?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 

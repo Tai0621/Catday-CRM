@@ -88,16 +88,25 @@ customer respects the financial-record window — see §5.
 
 ## 5. Data-subject rights — how they're honoured
 
-- **Right of access / portability (A2, in build):** a manager can export a
-  customer's complete record (profile, cats, appointments, transactions, wallet &
-  loyalty ledgers, media list, WhatsApp history) as a machine-readable JSON bundle
-  and a human-readable copy. The action is audit-logged.
-- **Right to erasure / "be forgotten" (A3, in build):** because financial records
-  carry a statutory retention obligation, erasure **anonymises** rather than
-  hard-deletes — the customer's identifying fields (name, phone, email, address,
-  free-text notes) and their cats' photos & health notes are removed/redacted,
-  while the de-identified financial totals are retained for the books until the
-  retention window lapses. Guarded, confirm-required, audit-logged.
+- **Right of access / portability (A2):** a manager can export a customer's
+  complete record (profile, cats, appointments, transactions, wallet & loyalty
+  ledgers, media list, WhatsApp history) as a machine-readable JSON bundle from
+  the customer page (`GET /api/customers/[id]/export`). Media bytes stay in
+  private Blob and are referenced by URL. The disclosure is audit-logged
+  (`customer.export`).
+- **Right to erasure / "be forgotten" (A3):** two steps, because financial
+  records carry a statutory retention obligation:
+  1. **Anonymise now** (`POST /api/customers/[id]/erase`, manager-only,
+     confirm-required, audit-logged as `customer.erase`): the customer's
+     identifying fields (name, phone→token, email, address, free-text notes) and
+     their cats' free-text health/care notes are redacted, all photos/videos are
+     deleted, and linked WhatsApp content is blanked. De-identified financial rows
+     are kept so the books stay correct. `Customer.erasedAt` is set.
+  2. **Purge after the window** (`/api/cron/retention`, daily): once an anonymised
+     customer's newest financial record has aged past `data.retentionYears`
+     (default **7**, editable in Settings), the remaining de-identified rows are
+     hard-deleted (audit `customer.purge`). This completes the erasure without
+     breaching tax retention in the meantime.
 - **Right to rectification:** editable throughout the CRM.
 - **Right to object / withdraw marketing consent:** `Customer.marketingConsent`
   toggle (with timestamp, A4).
@@ -115,5 +124,5 @@ customer respects the financial-record window — see §5.
 
 ---
 
-_Last reviewed: A1 data-protection round. Update this file whenever a schema change
-adds, removes, or repurposes personal data._
+_Last reviewed: A3 data-protection round (export + erasure + retention purge live).
+Update this file whenever a schema change adds, removes, or repurposes personal data._

@@ -34,6 +34,9 @@ export interface AppConfig {
     closeHour: number
     slotStepMin: number
   }
+  data: {
+    retentionYears: number // financial-record retention window; drives the erasure purge (A3)
+  }
   portalLabel: string  // small footer on the login screen
 }
 
@@ -51,6 +54,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   timezone: 'Asia/Kuala_Lumpur',
   tax: { regime: 'MY-SST', corporateRatePct: 24 },
   ops: { openHour: 10, closeHour: 19, slotStepMin: 30 },
+  data: { retentionYears: 7 },
   portalLabel: 'Staff Portal',
 }
 
@@ -74,6 +78,7 @@ export const SETTING_FIELDS: Field[] = [
   { group: 'Operations', key: 'ops.openHour', label: 'Opening hour (24h)', kind: 'number' },
   { group: 'Operations', key: 'ops.closeHour', label: 'Closing hour (24h)', kind: 'number' },
   { group: 'Operations', key: 'ops.slotStepMin', label: 'Booking slot step (min)', kind: 'number' },
+  { group: 'Data & Privacy', key: 'data.retentionYears', label: 'Financial record retention (years)', kind: 'number', hint: 'anonymised customers are purged once their newest record ages past this' },
   { group: 'Business Identity', key: 'portalLabel', label: 'Login portal label', kind: 'text' },
 ]
 

@@ -16,6 +16,7 @@ import { buildCustomerIntel, segmentStyle } from '@/lib/intelligence'
 import { customerReceivable } from '@/lib/aging'
 import { SEGMENTS } from '@/lib/segments'
 import { AwardPointsForm } from './AwardPointsForm'
+import { EraseCustomer } from './EraseCustomer'
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth()
@@ -131,6 +132,12 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           <Link href={`/appointments/new?customerId=${id}`} className="cd-btn text-sm">+ Book</Link>
         </div>
       </div>
+
+      {customer.erasedAt && (
+        <div className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(177,73,25,0.1)', border: '1px solid rgba(177,73,25,0.4)', color: '#B14919' }}>
+          <strong>This record was erased</strong> on {customer.erasedAt.toLocaleDateString('en-MY')} — identifying data has been anonymised on the customer&apos;s request. De-identified financial records are retained until they age past the retention window, then purged automatically.
+        </div>
+      )}
 
       {/* Intelligence strip */}
       <div className="cd-card px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -408,6 +415,14 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           )}
         </div>
       </section>
+
+      {/* Danger zone — data erasure (manager only, hidden once erased) */}
+      {canExport && !customer.erasedAt && (
+        <section>
+          <h2 className="font-semibold mb-3" style={{ color: '#B14919' }}>Danger zone</h2>
+          <EraseCustomer id={id} name={customer.name ?? displayPhone(customer.phone)} />
+        </section>
+      )}
     </div>
   )
 }
