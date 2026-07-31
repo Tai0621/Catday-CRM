@@ -260,8 +260,11 @@ export default async function RunSheetPage() {
                           }}>
                           ✓
                         </button>
-                        <span className="text-sm" style={{ color: t.done ? 'rgba(45,25,7,0.4)' : '#2D1907', textDecoration: t.done ? 'line-through' : 'none' }}>
-                          {t.task}
+                        <span className="flex items-baseline gap-1.5 text-sm">
+                          <span aria-hidden className="text-[15px] leading-none" style={{ opacity: t.done ? 0.45 : 1 }}>{taskEmoji(t.task)}</span>
+                          <span style={{ color: t.done ? 'rgba(45,25,7,0.4)' : '#2D1907', textDecoration: t.done ? 'line-through' : 'none' }}>
+                            {t.task}
+                          </span>
                         </span>
                       </form>
                       {t.task === 'Photo update to owner' && !t.done && (
@@ -302,6 +305,20 @@ export default async function RunSheetPage() {
       )}
     </div>
   )
+}
+
+// A glyph per care-task type, matched on the task label, so staff can scan the
+// checklist at a glance. Full-litter-change is checked before the generic litter
+// clean (order matters).
+function taskEmoji(task: string): string {
+  if (/^feed/i.test(task)) return '🍽️'
+  if (/water/i.test(task)) return '💧'
+  if (/full litter/i.test(task)) return '🧺'
+  if (/litter/i.test(task)) return '🧹'
+  if (/medication/i.test(task)) return '💊'
+  if (/play|enrich/i.test(task)) return '🧶'
+  if (/photo/i.test(task)) return '📸'
+  return '🐾'
 }
 
 function SectionHeader({ color, label }: { color: string; label: string }) {
