@@ -228,23 +228,6 @@ export default async function RunSheetPage() {
                   </div>
                 )}
 
-                {/* AM/PM structured health log */}
-                <div className="px-4 py-2 flex items-center gap-2" style={{ borderTop: '1px solid rgba(45,25,7,0.06)' }}>
-                  <span className="text-xs cd-muted">Health log:</span>
-                  {(['AM', 'PM'] as const).map(p => {
-                    const done = !!logByStay.get(s.id)?.[p]
-                    return (
-                      <Link key={p} href={`/runsheet/${s.id}/log?period=${p}`}
-                        className="text-xs px-2.5 py-1 rounded-lg font-medium"
-                        style={done
-                          ? { background: 'rgba(122,138,79,0.2)', color: '#5c6b3c' }
-                          : { background: seg.color, color: '#F2EDE0' }}>
-                        {done ? `✓ ${p}` : `Log ${p}`}
-                      </Link>
-                    )
-                  })}
-                </div>
-
                 <ul>
                   {list.map(t => (
                     <li key={t.id} className="px-4 py-1.5 flex items-center justify-between" style={{ borderTop: '1px solid rgba(45,25,7,0.06)' }}>
@@ -277,6 +260,29 @@ export default async function RunSheetPage() {
                     </li>
                   ))}
                 </ul>
+
+                {/* Daily health log (SOP S004) — the prominent action below the
+                    checklist: two big AM/PM buttons so it's never missed. */}
+                <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(45,25,7,0.12)', background: 'rgba(114,144,148,0.1)' }}>
+                  <div className="text-xs font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5" style={{ color: seg.text }}>
+                    <span aria-hidden>🩺</span> Daily health log
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([['AM', '☀️', 'Morning'], ['PM', '🌙', 'Evening']] as const).map(([p, emoji, label]) => {
+                      const done = !!logByStay.get(s.id)?.[p]
+                      return (
+                        <Link key={p} href={`/runsheet/${s.id}/log?period=${p}`}
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold"
+                          style={done
+                            ? { background: 'rgba(122,138,79,0.2)', color: '#5c6b3c', border: '1px solid rgba(122,138,79,0.45)' }
+                            : { background: seg.color, color: '#F2EDE0' }}>
+                          <span aria-hidden className="text-[15px] leading-none">{emoji}</span>
+                          {done ? `${label} logged ✓` : `Log ${label}`}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
               </div>
             )
           })}
