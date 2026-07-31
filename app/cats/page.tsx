@@ -61,6 +61,19 @@ export default async function CatsPage({ searchParams }: { searchParams: Promise
           const coverId = coverByCat.get(cat.id)
           return (
             <div key={cat.id} className="cd-card p-4 relative hover:opacity-90 transition-opacity flex items-start gap-3">
+              {/* Cover photo (or a cat-glyph placeholder when none) */}
+              <div className="shrink-0 w-[88px] h-[88px] rounded-lg overflow-hidden flex items-center justify-center"
+                style={{ background: 'rgba(45,25,7,0.06)' }}>
+                {coverId ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={`/api/media/${coverId}/file`} alt={cat.name} className="w-full h-full object-cover" />
+                ) : (
+                  <svg width="36" height="36" viewBox="0 0 512 512" fill="rgba(45,25,7,0.28)" aria-hidden>
+                    <path d="M128 232C120 196 118 150 126 112C130 96 148 92 160 104C186 130 214 158 232 182C247 178 265 178 280 182C298 158 326 130 352 104C364 92 382 96 386 112C394 150 392 196 384 232C398 258 406 288 406 318C406 388 340 440 256 440C172 440 106 388 106 318C106 288 114 258 128 232Z" />
+                  </svg>
+                )}
+              </div>
+
               <div className="flex-1 min-w-0">
                 <Link href={`/cats/${cat.id}`} className="font-semibold" style={{ color: '#2D1907' }}>
                   {cat.name}
@@ -78,19 +91,6 @@ export default async function CatsPage({ searchParams }: { searchParams: Promise
                     ? overdue ? `Grooming overdue by ${Math.abs(daysUntil)}d` : `Next grooming in ${daysUntil}d`
                     : 'No grooming history'}
                 </div>
-              </div>
-
-              {/* Cover photo (or a cat-glyph placeholder when none) */}
-              <div className="shrink-0 w-[88px] h-[88px] rounded-lg overflow-hidden flex items-center justify-center"
-                style={{ background: 'rgba(45,25,7,0.06)' }}>
-                {coverId ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={`/api/media/${coverId}/file`} alt={cat.name} className="w-full h-full object-cover" />
-                ) : (
-                  <svg width="36" height="36" viewBox="0 0 512 512" fill="rgba(45,25,7,0.28)" aria-hidden>
-                    <path d="M128 232C120 196 118 150 126 112C130 96 148 92 160 104C186 130 214 158 232 182C247 178 265 178 280 182C298 158 326 130 352 104C364 92 382 96 386 112C394 150 392 196 384 232C398 258 406 288 406 318C406 388 340 440 256 440C172 440 106 388 106 318C106 288 114 258 128 232Z" />
-                  </svg>
-                )}
               </div>
             </div>
           )
