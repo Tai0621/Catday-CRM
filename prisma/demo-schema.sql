@@ -7,10 +7,13 @@ CREATE TABLE "Customer" (
     "address" TEXT,
     "source" TEXT NOT NULL DEFAULT 'WalkIn',
     "marketingConsent" BOOLEAN NOT NULL DEFAULT false,
+    "marketingConsentAt" DATETIME,
+    "marketingConsentSource" TEXT,
     "needsDetails" BOOLEAN NOT NULL DEFAULT false,
     "notes" TEXT,
     "pointsBalance" INTEGER NOT NULL DEFAULT 0,
     "walletBalance" REAL NOT NULL DEFAULT 0,
+    "erasedAt" DATETIME,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
 );
@@ -28,8 +31,14 @@ CREATE TABLE "Cat" (
     "careNotes" TEXT,
     "healthNotes" TEXT,
     "vaccinationExpiry" DATETIME,
+    "lastDewormAt" DATETIME,
+    "lastDefleaAt" DATETIME,
+    "dietType" TEXT,
+    "mealsPerDay" INTEGER,
+    "portion" TEXT,
+    "feedingNotes" TEXT,
+    "medication" TEXT,
     "groomingInterval" INTEGER,
-    "photos" TEXT,
     "customerId" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
@@ -110,6 +119,7 @@ CREATE TABLE "Staff" (
     "role" TEXT NOT NULL,
     "pinHash" TEXT NOT NULL,
     "active" BOOLEAN NOT NULL DEFAULT true,
+    "commissionRatePct" REAL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
 );
@@ -123,8 +133,57 @@ CREATE TABLE "Service" (
     "price" REAL NOT NULL,
     "active" BOOLEAN NOT NULL DEFAULT true,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "commissionRatePct" REAL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "BoardingCheck" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "appointmentId" TEXT NOT NULL,
+    "phase" TEXT NOT NULL,
+    "roomCondition" TEXT,
+    "catCondition" TEXT,
+    "allCollected" BOOLEAN NOT NULL DEFAULT false,
+    "notes" TEXT,
+    "staffId" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "BoardingCheck_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "BoardingCheck_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "Staff" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "BoardingItem" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "appointmentId" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "returned" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "BoardingItem_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "DailyCareLog" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "appointmentId" TEXT NOT NULL,
+    "catId" TEXT NOT NULL,
+    "date" TEXT NOT NULL,
+    "period" TEXT NOT NULL,
+    "appetite" TEXT,
+    "stool" TEXT,
+    "urine" TEXT,
+    "energy" TEXT,
+    "behavior" TEXT,
+    "respiratory" TEXT,
+    "skin" TEXT,
+    "vomiting" BOOLEAN NOT NULL DEFAULT false,
+    "notes" TEXT,
+    "staffId" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "DailyCareLog_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "DailyCareLog_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "Staff" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -192,6 +251,125 @@ CREATE TABLE "StatementRowDef" (
 );
 
 -- CreateTable
+CREATE TABLE "Setting" (
+    "key" TEXT NOT NULL PRIMARY KEY,
+    "value" TEXT NOT NULL,
+    "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "MediaAsset" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "url" TEXT NOT NULL,
+    "pathname" TEXT NOT NULL,
+    "kind" TEXT NOT NULL,
+    "contentType" TEXT NOT NULL,
+    "size" INTEGER NOT NULL,
+    "ownerType" TEXT NOT NULL,
+    "ownerId" TEXT NOT NULL,
+    "tag" TEXT,
+    "caption" TEXT,
+    "uploadedBy" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
+CREATE TABLE "AuditLog" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "actorKind" TEXT NOT NULL,
+    "actorId" TEXT,
+    "actorName" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "entityType" TEXT NOT NULL,
+    "entityId" TEXT,
+    "summary" TEXT NOT NULL,
+    "detail" TEXT,
+    "ip" TEXT
+);
+
+-- CreateTable
+CREATE TABLE "TimeEntry" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "staffId" TEXT NOT NULL,
+    "clockInAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "clockOutAt" DATETIME,
+    "clockInPhotoId" TEXT,
+    "clockOutPhotoId" TEXT,
+    "clockInIp" TEXT,
+    "clockOutIp" TEXT,
+    "onPremiseIn" BOOLEAN,
+    "onPremiseOut" BOOLEAN,
+    "note" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "TimeEntry_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "Staff" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "JobApplication" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "phone" TEXT NOT NULL,
+    "email" TEXT,
+    "roleApplied" TEXT,
+    "experience" TEXT,
+    "availability" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'New',
+    "notes" TEXT,
+    "source" TEXT NOT NULL DEFAULT 'Careers form',
+    "reviewedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "LeaveRequest" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "staffId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "startDate" TEXT NOT NULL,
+    "endDate" TEXT NOT NULL,
+    "days" INTEGER NOT NULL,
+    "reason" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'Pending',
+    "reviewedBy" TEXT,
+    "reviewedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "LeaveRequest_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "Staff" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "FixedAsset" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "category" TEXT NOT NULL,
+    "cost" REAL NOT NULL,
+    "salvageValue" REAL NOT NULL DEFAULT 0,
+    "purchaseDate" DATETIME NOT NULL,
+    "usefulLifeMonths" INTEGER NOT NULL,
+    "notes" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "License" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "category" TEXT NOT NULL,
+    "authority" TEXT,
+    "licenseNo" TEXT,
+    "issueDate" DATETIME,
+    "renewalDate" DATETIME NOT NULL,
+    "reminderDays" INTEGER NOT NULL DEFAULT 30,
+    "cost" REAL,
+    "notes" TEXT,
+    "archived" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateTable
 CREATE TABLE "PlanDriver" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "key" TEXT NOT NULL,
@@ -241,6 +419,7 @@ CREATE TABLE "Room" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "type" TEXT NOT NULL DEFAULT 'Standard',
+    "capacity" INTEGER NOT NULL DEFAULT 2,
     "description" TEXT,
     "status" TEXT NOT NULL DEFAULT 'Available',
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
@@ -287,6 +466,9 @@ CREATE TABLE "Transaction" (
     "reference" TEXT,
     "notes" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "publicToken" TEXT,
+    "receiptSentAt" DATETIME,
+    "receiptChannel" TEXT,
     CONSTRAINT "Transaction_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
@@ -314,11 +496,25 @@ CREATE TABLE "Product" (
     "price" REAL NOT NULL,
     "costPrice" REAL NOT NULL DEFAULT 0,
     "stockQty" INTEGER NOT NULL DEFAULT 0,
+    "reorderLevel" INTEGER,
     "sku" TEXT,
     "active" BOOLEAN NOT NULL DEFAULT true,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "StockMovement" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "productId" TEXT NOT NULL,
+    "delta" INTEGER NOT NULL,
+    "reason" TEXT NOT NULL,
+    "reference" TEXT,
+    "note" TEXT,
+    "staffId" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "StockMovement_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -437,6 +633,18 @@ CREATE UNIQUE INDEX "Staff_pinHash_key" ON "Staff"("pinHash");
 CREATE UNIQUE INDEX "Service_name_key" ON "Service"("name");
 
 -- CreateIndex
+CREATE INDEX "BoardingCheck_appointmentId_idx" ON "BoardingCheck"("appointmentId");
+
+-- CreateIndex
+CREATE INDEX "BoardingItem_appointmentId_idx" ON "BoardingItem"("appointmentId");
+
+-- CreateIndex
+CREATE INDEX "DailyCareLog_appointmentId_idx" ON "DailyCareLog"("appointmentId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "DailyCareLog_appointmentId_date_period_key" ON "DailyCareLog"("appointmentId", "date", "period");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "CareTask_date_appointmentId_task_key" ON "CareTask"("date", "appointmentId", "task");
 
 -- CreateIndex
@@ -450,6 +658,39 @@ CREATE INDEX "Expense_paid_idx" ON "Expense"("paid");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "StatementCell_year_month_rowKey_key" ON "StatementCell"("year", "month", "rowKey");
+
+-- CreateIndex
+CREATE INDEX "MediaAsset_ownerType_ownerId_idx" ON "MediaAsset"("ownerType", "ownerId");
+
+-- CreateIndex
+CREATE INDEX "AuditLog_at_idx" ON "AuditLog"("at");
+
+-- CreateIndex
+CREATE INDEX "AuditLog_entityType_entityId_idx" ON "AuditLog"("entityType", "entityId");
+
+-- CreateIndex
+CREATE INDEX "TimeEntry_staffId_clockInAt_idx" ON "TimeEntry"("staffId", "clockInAt");
+
+-- CreateIndex
+CREATE INDEX "TimeEntry_clockInAt_idx" ON "TimeEntry"("clockInAt");
+
+-- CreateIndex
+CREATE INDEX "JobApplication_status_idx" ON "JobApplication"("status");
+
+-- CreateIndex
+CREATE INDEX "JobApplication_createdAt_idx" ON "JobApplication"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "LeaveRequest_status_idx" ON "LeaveRequest"("status");
+
+-- CreateIndex
+CREATE INDEX "LeaveRequest_staffId_idx" ON "LeaveRequest"("staffId");
+
+-- CreateIndex
+CREATE INDEX "FixedAsset_purchaseDate_idx" ON "FixedAsset"("purchaseDate");
+
+-- CreateIndex
+CREATE INDEX "License_archived_renewalDate_idx" ON "License"("archived", "renewalDate");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "PlanDriver_key_key" ON "PlanDriver"("key");
@@ -482,6 +723,9 @@ CREATE INDEX "Appointment_status_idx" ON "Appointment"("status");
 CREATE INDEX "Appointment_scheduledAt_idx" ON "Appointment"("scheduledAt");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Transaction_publicToken_key" ON "Transaction"("publicToken");
+
+-- CreateIndex
 CREATE INDEX "Transaction_customerId_idx" ON "Transaction"("customerId");
 
 -- CreateIndex
@@ -500,6 +744,9 @@ CREATE INDEX "TransactionLine_appointmentId_idx" ON "TransactionLine"("appointme
 CREATE UNIQUE INDEX "Product_name_key" ON "Product"("name");
 
 -- CreateIndex
+CREATE INDEX "StockMovement_productId_createdAt_idx" ON "StockMovement"("productId", "createdAt");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "WhatsAppMessage_externalId_key" ON "WhatsAppMessage"("externalId");
 
 -- CreateIndex
@@ -508,10 +755,3 @@ CREATE INDEX "ActionLog_actionKey_idx" ON "ActionLog"("actionKey");
 -- CreateIndex
 CREATE UNIQUE INDEX "MonthlyTarget_month_key" ON "MonthlyTarget"("month");
 
-
--- CreateTable
-CREATE TABLE "Setting" (
-    "key" TEXT NOT NULL PRIMARY KEY,
-    "value" TEXT NOT NULL,
-    "updatedAt" DATETIME NOT NULL
-);

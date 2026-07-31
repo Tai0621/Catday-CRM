@@ -123,12 +123,17 @@ for (let i = 0; i < customerNames.length; i++) {
   const phone = `+601${randInt(10000000, 99999999)}`
   // Spread signup dates over the last 8 months so segments (New/Regular/VIP/Lost) vary naturally
   const createdAt = daysAgo(randInt(5, 240))
+  const source = pick(['WalkIn', 'GoogleForm', 'WhatsApp', 'Referral', 'WalkIn'])
+  const consent = Math.random() > 0.3
+  const consentSource = source === 'GoogleForm' ? 'GoogleForm' : source === 'WhatsApp' ? 'WhatsApp' : 'Staff'
   const c = await db.customer.create({
     data: {
       name, phone, createdAt, updatedAt: createdAt,
       email: `${name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
-      source: pick(['WalkIn', 'GoogleForm', 'WhatsApp', 'Referral', 'WalkIn']),
-      marketingConsent: Math.random() > 0.3,
+      source,
+      marketingConsent: consent,
+      marketingConsentAt: consent ? createdAt : null,
+      marketingConsentSource: consent ? consentSource : null,
     },
   })
   const catCount = Math.random() > 0.75 ? 2 : 1
@@ -539,6 +544,85 @@ await db.academyEnrollment.create({ data: { studentName: 'Jessica Lim', email: '
 await db.academyEnrollment.create({ data: { studentName: 'Daniel Wong', email: 'daniel.wong@example.com', course: 'Feline First Aid', status: 'Completed', enrolledAt: daysAgo(60) } })
 await db.academyEnrollment.create({ data: { studentName: 'Ain Syafiqah', email: 'ain.syafiqah@example.com', course: 'Cat Grooming Fundamentals', status: 'Pending', enrolledAt: daysAgo(2) } })
 
+// ── 17b. Inventory — reorder levels + a reconciling movement ledger ─────────
+// Each product gets a small StockMovement history (opening + optional restock/
+// wastage + a netting sale) that reconciles to its current cached stockQty, so
+// the Products detail ledger tells a coherent story. Two SKUs sit below the
+// reorder level → low-stock alerts + Action Inbox reorder cards.
+console.log('· Inventory movements & reorder levels')
+for (const p of productList) {
+  const fresh = await db.product.findUnique({ where: { id: p.id }, select: { stockQty: true } })
+  const finalQty = fresh.stockQty
+  const opening = finalQty + randInt(8, 30)
+  const restock = Math.random() < 0.4 ? randInt(20, 60) : 0
+  const wastage = Math.random() < 0.3 ? randInt(1, 4) : 0
+  const saleQty = opening + restock - wastage - finalQty // reconciles to finalQty
+  await db.product.update({ where: { id: p.id }, data: { reorderLevel: 12 } })
+  await db.stockMovement.create({ data: { productId: p.id, delta: opening, reason: 'InitialStock', note: 'Opening stock', createdAt: daysAgo(randInt(150, 200)) } })
+  if (restock) await db.stockMovement.create({ data: { productId: p.id, delta: restock, reason: 'Restock', reference: `PO-${randInt(1000, 9999)}`, note: 'Supplier delivery', createdAt: daysAgo(randInt(30, 90)) } })
+  if (wastage) await db.stockMovement.create({ data: { productId: p.id, delta: -wastage, reason: 'Wastage', note: 'Damaged units', createdAt: daysAgo(randInt(10, 60)) } })
+  if (saleQty > 0) await db.stockMovement.create({ data: { productId: p.id, delta: -saleQty, reason: 'Sale', reference: `CD-${randomUUID().slice(0, 6).toUpperCase()}`, createdAt: daysAgo(randInt(1, 40)) } })
+}
+
+// ── 17c. HR — attendance (timeclock) ────────────────────────────────────────
+console.log('· Staff attendance (clock-in/out)')
+const clockStaff = [staff['Wei Xin'], staff['Faris Iskandar'], staff['Siti Aminah'], staff['Nurul Izzati']]
+const shopIp = () => `203.0.113.${randInt(2, 250)}`
+for (let d = 6; d >= 1; d--) {
+  for (const s of clockStaff) {
+    if (Math.random() < 0.15) continue // occasional day off
+    const inAt = atHour(daysAgo(d), 9, randInt(0, 25))
+    const outAt = atHour(daysAgo(d), 18, randInt(0, 45))
+    await db.timeEntry.create({ data: { staffId: s.id, clockInAt: inAt, clockOutAt: outAt, onPremiseIn: true, onPremiseOut: true, clockInIp: shopIp(), clockOutIp: shopIp(), createdAt: inAt } })
+  }
+}
+// Currently clocked in today (open shift) — shows as active on the attendance board
+for (const s of [staff['Wei Xin'], staff['Siti Aminah']]) {
+  await db.timeEntry.create({ data: { staffId: s.id, clockInAt: atHour(now, 9, randInt(5, 30)), onPremiseIn: true, clockInIp: shopIp() } })
+}
+
+// ── 17d. HR — leave requests ────────────────────────────────────────────────
+console.log('· Leave requests')
+const ymd = d => d.toISOString().slice(0, 10)
+await db.leaveRequest.create({ data: { staffId: staff['Faris Iskandar'].id, type: 'Annual', startDate: ymd(daysFromNow(9)), endDate: ymd(daysFromNow(12)), days: 4, reason: 'Family trip back to Penang', status: 'Pending' } })
+await db.leaveRequest.create({ data: { staffId: staff['Nurul Izzati'].id, type: 'Medical', startDate: ymd(daysFromNow(2)), endDate: ymd(daysFromNow(2)), days: 1, reason: 'Clinic appointment', status: 'Pending' } })
+await db.leaveRequest.create({ data: { staffId: staff['Wei Xin'].id, type: 'Annual', startDate: ymd(daysFromNow(4)), endDate: ymd(daysFromNow(6)), days: 3, reason: 'Short break', status: 'Approved', reviewedBy: 'Amy Tan', reviewedAt: daysAgo(2) } })
+await db.leaveRequest.create({ data: { staffId: staff['Siti Aminah'].id, type: 'Emergency', startDate: ymd(daysAgo(5)), endDate: ymd(daysAgo(5)), days: 1, reason: 'Family emergency', status: 'Rejected', reviewedBy: 'Amy Tan', reviewedAt: daysAgo(6) } })
+
+// ── 17e. HR — commission rates (per-groomer + a per-service override) ────────
+console.log('· Commission rates')
+await db.staff.update({ where: { id: staff['Wei Xin'].id }, data: { commissionRatePct: 12 } })
+await db.staff.update({ where: { id: staff['Faris Iskandar'].id }, data: { commissionRatePct: 10 } })
+await db.service.update({ where: { id: services['De-matting Session'].id }, data: { commissionRatePct: 15 } })
+await db.setting.upsert({ where: { key: 'hr.commissionDefaultPct' }, update: { value: '8' }, create: { key: 'hr.commissionDefaultPct', value: '8' } })
+
+// ── 17f. HR — job applications (careers pipeline) ───────────────────────────
+console.log('· Job applications')
+const applicationDefs = [
+  { name: 'Rachel Ng', phone: '+60125550101', email: 'rachel.ng@example.com', roleApplied: 'Groomer', experience: '3 years at a pet spa; certified in Asian-style grooming.', availability: 'Immediately', status: 'New' },
+  { name: 'Danish Haziq', phone: '+60125550102', email: 'danish.h@example.com', roleApplied: 'Boarding carer', experience: 'Volunteered at an animal shelter for 2 years; comfortable with anxious cats.', availability: '2 weeks notice', status: 'Reviewing' },
+  { name: 'Michelle Tan', phone: '+60125550103', roleApplied: 'Front desk', experience: 'Retail + customer-service background, fluent in EN/BM/中文.', availability: 'Weekdays', status: 'Interview' },
+  { name: 'Kamal Idris', phone: '+60125550104', email: 'kamal.i@example.com', roleApplied: 'Groomer', experience: 'Fresh graduate, eager to learn grooming.', availability: 'Immediately', status: 'Rejected' },
+]
+for (const a of applicationDefs) {
+  const d = daysAgo(randInt(1, 25))
+  await db.jobApplication.create({ data: { ...a, createdAt: d, updatedAt: d, reviewedAt: a.status === 'New' ? null : d } })
+}
+
+// ── 17g. Digital receipts — public tokenised links on recent grooming sales ──
+console.log('· Digital receipts (public links)')
+const receiptTx = await db.transaction.findMany({ where: { category: 'Grooming', customerId: { not: null } }, orderBy: { date: 'desc' }, take: 5 })
+for (const tx of receiptTx) {
+  await db.transaction.update({ where: { id: tx.id }, data: { publicToken: randomUUID().replace(/-/g, '').slice(0, 24), receiptSentAt: daysAgo(randInt(0, 5)), receiptChannel: 'WhatsApp' } })
+}
+
+// ── 17h. Audit log — a few sensitive-action entries ─────────────────────────
+console.log('· Audit log entries')
+await db.auditLog.create({ data: { actorKind: 'manager', actorName: 'Owner', action: 'wallet.topup', entityType: 'Customer', entityId: customers[0].id, summary: 'Wallet top-up RM 500.00 (+RM 50.00 bonus)', at: daysAgo(3) } })
+await db.auditLog.create({ data: { actorKind: 'manager', actorName: 'Owner', action: 'loyalty.adjust', entityType: 'Customer', entityId: customers[1].id, summary: 'Awarded 200 pts (Manual)', at: daysAgo(2) } })
+await db.auditLog.create({ data: { actorKind: 'staff', actorName: 'Amy Tan', action: 'leave.approve', entityType: 'LeaveRequest', summary: 'Approved Annual leave for Wei Xin (3 days)', at: daysAgo(2) } })
+await db.auditLog.create({ data: { actorKind: 'manager', actorName: 'Owner', action: 'staff.reset_pin', entityType: 'Staff', entityId: staff['Nurul Izzati'].id, summary: 'Reset PIN for Nurul Izzati', at: daysAgo(1) } })
+
 // ── 18. Flush accumulated points / wallet balances onto customers ──────────
 console.log('· Finalizing points & wallet balances')
 for (const [customerId, points] of pointsBalanceDelta) {
@@ -602,8 +686,16 @@ for (let m = 6; m >= 0; m--) {
 const [custCount, catCount, apptCount, txnCount, expCount] = await Promise.all([
   db.customer.count(), db.cat.count(), db.appointment.count(), db.transaction.count(), db.expense.count(),
 ])
+const [moveCount, lowCount, timeCount, leaveCount, appCount, receiptCount, auditCount] = await Promise.all([
+  db.stockMovement.count(),
+  db.product.count({ where: { reorderLevel: { not: null }, stockQty: { lte: 12 } } }),
+  db.timeEntry.count(), db.leaveRequest.count(), db.jobApplication.count(),
+  db.transaction.count({ where: { publicToken: { not: null } } }), db.auditLog.count(),
+])
 console.log('\n✓ Demo data seeded:')
 console.log(`  ${custCount} customers · ${catCount} cats · ${apptCount} appointments · ${txnCount} transactions · ${expCount} expenses`)
+console.log(`  ${moveCount} stock movements (${lowCount} low-stock) · ${timeCount} time entries · ${leaveCount} leave requests`)
+console.log(`  ${appCount} job applications · ${receiptCount} digital receipts · ${auditCount} audit entries`)
 console.log('\nStaff PIN logins:')
 for (const s of staffDefs) console.log(`  ${s.name.padEnd(16)} ${s.role.padEnd(10)} PIN ${s.pin}`)
 
