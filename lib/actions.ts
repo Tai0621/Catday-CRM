@@ -7,6 +7,7 @@ import { dewormStatus, defleaStatus } from './health'
 import { trailingAnnualSpend } from './loyalty'
 import { ACTION_SEGMENT, type SegmentKey } from './segments'
 import { buildActionStats, priorityShifts, effectivePriority, isSuppressed, type TypeStats } from './actions-learning'
+import { loadActiveVariants, messageFor } from './action-variants'
 import {
   type ActionType,
   WINBACK_INACTIVE_DAYS,
@@ -37,6 +38,7 @@ export interface ActionCard {
   waMessage?: string // pre-composed WhatsApp text
   href?: string      // in-app link when WhatsApp isn't the action
   amountRM?: number
+  variant?: string   // C4 · which copy arm this card is showing, recorded on the outcome
 }
 
 function band(priority: number): ActionCard['band'] {
@@ -140,6 +142,10 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
     }),
   ])
 
+  // C4 · copy under test. Empty for any type with no variants, in which case the
+  // generators below keep their built-in template.
+  const variants = await loadActiveVariants()
+
   const lifetimeSpend = new Map<string, number>()
   for (const g of lifetimeSpendGroups) {
     if (g.customerId) lifetimeSpend.set(g.customerId, g._sum.total ?? 0)
@@ -210,12 +216,14 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
   const futureByCustomer = new Set(futureAppts.map(a => a.customerId))
   for (const a of checkoutsToday) {
     if (futureByCustomer.has(a.customerId)) continue
+    const msg = messageFor(variants, 'RebookCheckout', a.customerId, { cat: a.cat.name, brand, customer: a.customer.name ?? '' },
+      `Hi! ${a.cat.name} checks out today — we'd love to see you again soon. Shall we lock in the next grooming or boarding date before you head off? 🐾`)
     out.push(card({
       key: `RebookCheckout:${a.id}`, type: 'RebookCheckout', priority: 3,
       title: `Rebook before checkout — ${a.cat.name}`,
       reason: `${a.customer.name ?? a.customer.phone} checks out today with no next booking`,
       customerId: a.customerId, catId: a.catId, phone: a.customer.phone,
-      waMessage: `Hi! ${a.cat.name} checks out today — we'd love to see you again soon. Shall we lock in the next grooming or boarding date before you head off? 🐾`,
+      waMessage: msg.text, variant: msg.variant,
     }))
   }
 
@@ -231,12 +239,14 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
     if (c.appointments.some(a => a.scheduledAt > now)) continue
     const catName = c.cats[0]?.name ?? 'your cat'
     const days = Math.floor((now.getTime() - last.getTime()) / DAY)
+    const msg = messageFor(variants, 'WinBack', c.id, { cat: catName, brand, customer: c.name ?? '', days },
+      `Hi! It's been a while — ${catName} misses us at ${brand} 🐾 We'd love to welcome you back. Book this week and we'll add a complimentary add-on for ${catName}!`)
     out.push(card({
       key: `WinBack:${c.id}`, type: 'WinBack', priority: 4,
       title: `Win back ${c.name ?? c.phone}`,
       reason: `Last visit ${days} days ago`,
       customerId: c.id, phone: c.phone,
-      waMessage: `Hi! It's been a while — ${catName} misses us at ${brand} 🐾 We'd love to welcome you back. Book this week and we'll add a complimentary add-on for ${catName}!`,
+      waMessage: msg.text, variant: msg.variant,
     }))
   }
 
@@ -357,12 +367,14 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
 
   // 7 · Grooming due / overdue
   for (const r of buildGroomingPredictions(cats)) {
+    const msg = messageFor(variants, 'GroomingDue', r.customerId, { cat: r.catName, brand, days: Math.abs(r.daysUntilDue) },
+      `Hi! ${r.catName} is due for grooming — shall we book a session this week? 🐾`)
     out.push(card({
       key: `GroomingDue:${r.catId}`, type: 'GroomingDue', priority: 7,
       title: `${r.isOverdue ? 'Overdue grooming' : 'Grooming due'} — ${r.catName}`,
       reason: r.isOverdue ? `Overdue by ${Math.abs(r.daysUntilDue)} days` : `Due in ${r.daysUntilDue} days`,
       customerId: r.customerId, catId: r.catId, phone: r.customerPhone,
-      waMessage: `Hi! ${r.catName} is due for grooming — shall we book a session this week? 🐾`,
+      waMessage: msg.text, variant: msg.variant,
     }))
   }
 

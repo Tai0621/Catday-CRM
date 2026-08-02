@@ -747,11 +747,34 @@ model ActionLog {
   status      String    // Done | Dismissed | Snoozed
   snoozeUntil DateTime?
   note        String?
+  variant     String?   // C4 · ActionVariant.label the customer was shown, when the type is under test
   createdAt   DateTime  @default(now())
 
   @@index([actionKey])
   // C3 · the learning pass reads every outcome for a type over a rolling year
   @@index([type, createdAt])
+}
+
+// C4 · Competing message copy for one Action Inbox type. Every win-back message
+// the business has ever sent was the same sentence and nobody knew whether it
+// worked; a type with variants assigns them deterministically by customer (so a
+// person never gets whiplash between voices) and the conversion join in
+// lib/actions-learning.ts scores them against each other.
+//
+// A type with no rows here keeps its built-in template — variants are opt-in per
+// type, so adding this changed no existing behaviour.
+model ActionVariant {
+  id        String   @id @default(cuid())
+  type      String   // ActionType under test
+  label     String   // short human name, recorded on ActionLog.variant
+  body      String   // message template — {cat} {brand} {customer} {days} placeholders
+  isActive  Boolean  @default(true)  // in rotation
+  isDefault Boolean  @default(false) // the promoted winner; used when rotation is off
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, label])
+  @@index([type, isActive])
 }
 
 // ─── Business Plan (Breakeven targets) ───────────────────────────────────────

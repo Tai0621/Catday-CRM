@@ -22,6 +22,15 @@ The agentic and marketing cycle. Planned scope is in
   held back. Guardrails: evidence moves a type by at most ±1.5 priority so an unpaid bill can never
   sink below a birthday; types below the minimum sample are left neutral so new ones keep exposure;
   and "Do now" types are never suppressed.
+- **C4 — message A/B variants.** Every win-back message the business has sent was the same sentence
+  and nobody knew whether it worked. Competing copy can now run per action type
+  (`WinBack`, `RebookCheckout`, `GroomingDue`), assigned deterministically by hashing the customer so
+  one household never sees three different voices, and scored on the same conversion join C3 uses.
+  New **Marketing → Message Variants** page shows each arm's conversion, acceptance and volume, and
+  recommends a winner only when both arms have enough *closed* conversion windows and the leader
+  beats the runner-up by a clear margin. Promotion stays a manager's click — this is copy a customer
+  reads. Ships inert: a type with no variants keeps its built-in message, so nothing changed until
+  `scripts/seed-action-variants.mjs` is run.
 - **M8 — brand voice profile.** Tone, languages, emoji policy, signature moves and a never-say list
   in Business Settings, rendered into prompts by `lib/brand-voice.ts` and consumed by the AI
   assistant. One profile every future generator (campaign copy, captions, message variants) imports

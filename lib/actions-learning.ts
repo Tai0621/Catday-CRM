@@ -47,34 +47,32 @@ function decay(ageDays: number): number {
   return Math.pow(0.5, ageDays / ACTION_LEARNING_HALF_LIFE_DAYS)
 }
 
-/**
- * Read every logged action outcome in the lookback window and score each type on
- * acceptance (did staff act on it) and conversion (did a booking or payment
- * follow). Conversion is the real signal; acceptance is only a proxy and is used
- * alone for internal task types that no customer can convert on.
- */
-export async function buildActionStats(now: Date = new Date()): Promise<Map<ActionType, TypeStats>> {
-  const since = new Date(now.getTime() - ACTION_LEARNING_LOOKBACK_DAYS * DAY)
+interface Outcome {
+  type: string
+  status: string
+  customerId: string | null
+  variant: string | null
+  createdAt: Date
+}
 
+interface Pools {
+  bookingsBy: Map<string, number[]>
+  paymentsBy: Map<string, number[]>
+}
+
+/**
+ * Every logged outcome in the lookback window, plus one batched read of
+ * everything that could count as a conversion for the customers involved —
+ * rather than a query per action. Shared by the per-type ranking (C3) and the
+ * per-variant scoring (C4) so both judge conversion identically.
+ */
+async function loadOutcomes(since: Date, where: { type?: string } = {}): Promise<{ logs: Outcome[]; pools: Pools }> {
   const logs = await db.actionLog.findMany({
-    where: { createdAt: { gte: since } },
-    select: { type: true, status: true, customerId: true, createdAt: true },
+    where: { createdAt: { gte: since }, ...(where.type ? { type: where.type } : {}) },
+    select: { type: true, status: true, customerId: true, variant: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
   })
 
-  const stats = new Map<ActionType, TypeStats>()
-  for (const type of ACTION_TYPES) {
-    stats.set(type, {
-      type, sample: 0, done: 0, snoozed: 0, dismissed: 0,
-      acceptance: 0, converted: 0, conversionRate: 0,
-      hasOutcomeWindow: ACTION_OUTCOME_WINDOW_DAYS[type] != null,
-      measured: false, suppressed: false,
-    })
-  }
-  if (logs.length === 0) return stats
-
-  // One batched read of everything that could count as a conversion for any
-  // customer that appears in the log, rather than a query per action.
   const customerIds = [...new Set(logs.map(l => l.customerId).filter((id): id is string => !!id))]
   const [appointments, transactions] = customerIds.length
     ? await Promise.all([
@@ -103,6 +101,44 @@ export async function buildActionStats(now: Date = new Date()): Promise<Map<Acti
     paymentsBy.set(t.customerId, list)
   }
 
+  return { logs, pools: { bookingsBy, paymentsBy } }
+}
+
+/**
+ * Did a booking or payment follow this card inside its window?
+ * `null` means the window has not closed yet — a card logged yesterday has not
+ * had its 21 days, and counting it as a miss would drag the rate down.
+ */
+function converted(log: Outcome, pools: Pools, now: Date): boolean | null {
+  const windowDays = ACTION_OUTCOME_WINDOW_DAYS[log.type as ActionType]
+  if (windowDays == null || !log.customerId) return null
+  const windowEnd = log.createdAt.getTime() + windowDays * DAY
+  if (windowEnd > now.getTime()) return null
+  const pool = log.type === 'OutstandingPayment' ? pools.paymentsBy : pools.bookingsBy
+  return (pool.get(log.customerId) ?? []).some(t => t > log.createdAt.getTime() && t <= windowEnd)
+}
+
+/**
+ * Score each action type on acceptance (did staff act on it) and conversion (did
+ * a booking or payment follow). Conversion is the real signal; acceptance is
+ * only a proxy, used alone for internal task types no customer can convert on.
+ */
+export async function buildActionStats(now: Date = new Date()): Promise<Map<ActionType, TypeStats>> {
+  const since = new Date(now.getTime() - ACTION_LEARNING_LOOKBACK_DAYS * DAY)
+
+  const stats = new Map<ActionType, TypeStats>()
+  for (const type of ACTION_TYPES) {
+    stats.set(type, {
+      type, sample: 0, done: 0, snoozed: 0, dismissed: 0,
+      acceptance: 0, converted: 0, conversionRate: 0,
+      hasOutcomeWindow: ACTION_OUTCOME_WINDOW_DAYS[type] != null,
+      measured: false, suppressed: false,
+    })
+  }
+
+  const { logs, pools } = await loadOutcomes(since)
+  if (logs.length === 0) return stats
+
   // Weighted accumulators, kept separate from the raw counts that gate judgement.
   const acc = new Map<ActionType, { w: number; wDone: number; wEligible: number; wConverted: number }>()
   for (const type of ACTION_TYPES) acc.set(type, { w: 0, wDone: 0, wEligible: 0, wConverted: 0 })
@@ -111,7 +147,7 @@ export async function buildActionStats(now: Date = new Date()): Promise<Map<Acti
     const type = log.type as ActionType
     const s = stats.get(type)
     const a = acc.get(type)
-    if (!s || !a) continue // an action type retired from ACTION_TYPES but still in history
+    if (!s || !a) continue // a type retired from ACTION_TYPES but still in history
 
     const weight = decay((now.getTime() - log.createdAt.getTime()) / DAY)
     s.sample++
@@ -122,21 +158,10 @@ export async function buildActionStats(now: Date = new Date()): Promise<Map<Acti
     a.w += weight
     if (log.status === 'Done') a.wDone += weight
 
-    const windowDays = ACTION_OUTCOME_WINDOW_DAYS[type]
-    if (windowDays == null || !log.customerId) continue
-
-    // Only count outcomes whose window has actually closed — a card logged
-    // yesterday has not had its 21 days to convert and would drag the rate down.
-    const windowEnd = log.createdAt.getTime() + windowDays * DAY
-    if (windowEnd > now.getTime()) continue
-
+    const hit = converted(log, pools, now)
+    if (hit === null) continue
     a.wEligible += weight
-    const pool = type === 'OutstandingPayment' ? paymentsBy : bookingsBy
-    const hit = (pool.get(log.customerId) ?? []).some(t => t > log.createdAt.getTime() && t <= windowEnd)
-    if (hit) {
-      s.converted++
-      a.wConverted += weight
-    }
+    if (hit) { s.converted++; a.wConverted += weight }
   }
 
   for (const type of ACTION_TYPES) {
@@ -149,6 +174,73 @@ export async function buildActionStats(now: Date = new Date()): Promise<Map<Acti
   }
 
   return stats
+}
+
+// ── C4 · per-variant scoring ─────────────────────────────────────────────────
+
+export interface VariantStats {
+  label: string
+  sent: number           // outcomes logged against this variant
+  eligible: number       // outcomes whose conversion window has closed
+  converted: number
+  conversionRate: number
+  acceptance: number
+  measured: boolean
+}
+
+/**
+ * Score the competing message copy for one action type against each other, on
+ * the same conversion definition the type itself is judged by. Unweighted by
+ * age here on purpose: a variant test is a comparison between arms running over
+ * the same period, so decaying it would only add noise.
+ */
+export async function buildVariantStats(type: ActionType, now: Date = new Date()): Promise<VariantStats[]> {
+  const since = new Date(now.getTime() - ACTION_LEARNING_LOOKBACK_DAYS * DAY)
+  const { logs, pools } = await loadOutcomes(since, { type })
+
+  const by = new Map<string, VariantStats>()
+  for (const log of logs) {
+    if (!log.variant) continue
+    const v = by.get(log.variant) ?? {
+      label: log.variant, sent: 0, eligible: 0, converted: 0,
+      conversionRate: 0, acceptance: 0, measured: false,
+    }
+    v.sent++
+    if (log.status === 'Done') v.acceptance++ // running count, divided below
+    const hit = converted(log, pools, now)
+    if (hit !== null) {
+      v.eligible++
+      if (hit) v.converted++
+    }
+    by.set(log.variant, v)
+  }
+
+  return [...by.values()]
+    .map(v => ({
+      ...v,
+      acceptance: v.sent > 0 ? v.acceptance / v.sent : 0,
+      conversionRate: v.eligible > 0 ? v.converted / v.eligible : 0,
+      measured: v.eligible >= ACTION_LEARNING_MIN_SAMPLE,
+    }))
+    .sort((a, b) => b.conversionRate - a.conversionRate)
+}
+
+/**
+ * The variant worth promoting, or null if the evidence is not there yet.
+ *
+ * Deliberately conservative, and deliberately not automatic: both arms must have
+ * closed enough windows to be measured, and the leader must beat the runner-up
+ * by a clear margin rather than a rounding error. Promotion itself stays a
+ * manager's click — this is customer-facing copy, and the house rule is that an
+ * agent proposes while a human confirms.
+ */
+export function recommendedWinner(stats: VariantStats[], marginPct = 0.2): VariantStats | null {
+  const measured = stats.filter(v => v.measured)
+  if (measured.length < 2) return null
+  const [lead, runnerUp] = measured
+  if (lead.conversionRate <= 0) return null
+  if (lead.conversionRate < runnerUp.conversionRate * (1 + marginPct)) return null
+  return lead
 }
 
 /** The metric a type is judged on: conversion where it exists, acceptance otherwise. */

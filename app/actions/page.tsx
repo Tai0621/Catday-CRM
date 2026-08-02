@@ -33,6 +33,9 @@ export default async function ActionsPage({ searchParams }: { searchParams: Prom
         catId: (data.get('catId') as string) || null,
         status,
         snoozeUntil,
+        // C4 · without this the variant test is blind — the arm must be recorded
+        // at the moment the outcome is logged, not inferred later.
+        variant: (data.get('variant') as string) || null,
       },
     })
     revalidatePath('/actions')
@@ -210,6 +213,7 @@ function ActionButtons({ a, logAction }: { a: ActionCard; logAction: (fd: FormDa
           <input type="hidden" name="type" value={a.type} />
           <input type="hidden" name="customerId" value={a.customerId ?? ''} />
           <input type="hidden" name="catId" value={a.catId ?? ''} />
+          <input type="hidden" name="variant" value={a.variant ?? ''} />
           <input type="hidden" name="status" value={status} />
           <button type="submit"
             className="text-xs px-2.5 py-1.5 rounded-lg transition-colors"

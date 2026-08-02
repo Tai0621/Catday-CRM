@@ -167,6 +167,11 @@ export const ACTION_LEARNING_LOOKBACK_DAYS = 365
 // it. Types absent from this map have no customer-side conversion — they are
 // internal tasks (licence renewal, leave approval, stock) and are judged on
 // acceptance alone.
+// C4 · Types whose outbound copy can be A/B tested. Limited to the high-volume
+// nudges that (a) go out over WhatsApp and (b) have a conversion window to score
+// against — testing copy nobody can convert on would only measure noise.
+export const VARIANT_TESTABLE_TYPES = ['WinBack', 'RebookCheckout', 'GroomingDue'] as const
+
 export const ACTION_OUTCOME_WINDOW_DAYS: Partial<Record<ActionType, number>> = {
   OutstandingPayment: 14,
   RebookCheckout: 7,

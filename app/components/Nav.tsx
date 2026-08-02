@@ -96,6 +96,7 @@ const SEGMENTS: NavSegment[] = [
     key: 'marketing', header: 'Marketing', color: '#E7CE7A',
     groups: [{ links: [
       { href: '/academy', label: 'Academy', icon: 'cap' },
+      { href: '/admin/variants', label: 'Message Variants', icon: 'chat' },
     ] }],
   },
   {
