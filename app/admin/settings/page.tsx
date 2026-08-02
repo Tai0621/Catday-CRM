@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { SETTING_FIELDS, defaultFor } from '@/lib/config'
 import { SEGMENTS } from '@/lib/segments'
+import { OS_RELEASE } from '@/lib/version'
 
 // Business Settings — the config seam. Editing these changes the app's
 // identity, currency, tax and operating hours without touching code. Blank a
@@ -93,6 +94,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         Currency, locale and timezone prepare the system to run for a business in any country. Timezone-accurate
         scheduling and non-Malaysia tax rules arrive in a later round; for now they hold the values the app displays.
       </p>
+
+      <div className="flex items-center gap-2 pt-2" style={{ borderTop: '1px solid rgba(45,25,7,0.1)' }}>
+        <span className="cd-pill" style={{ background: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.6)' }}>
+          {OS_RELEASE}
+        </span>
+        <span className="text-xs cd-muted">Quote this version when reporting a problem.</span>
+      </div>
     </div>
   )
 }
