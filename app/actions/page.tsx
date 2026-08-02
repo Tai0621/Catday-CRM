@@ -1,6 +1,9 @@
 import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { buildActionQueue, type ActionCard } from '@/lib/actions'
+import { buildActionInbox, type ActionCard } from '@/lib/actions'
+import type { TypeStats } from '@/lib/actions-learning'
+import { ACTION_SEGMENT } from '@/lib/segments'
+import type { ActionType } from '@/lib/constants'
 import { whatsappUrl } from '@/lib/phone'
 import { ACTION_SNOOZE_DAYS } from '@/lib/constants'
 import { SEGMENTS, SEGMENT_LIST, type SegmentKey } from '@/lib/segments'
@@ -11,7 +14,7 @@ export default async function ActionsPage({ searchParams }: { searchParams: Prom
   await requireAuth()
   const { seg } = await searchParams
   const activeSeg = (seg && seg in SEGMENTS ? seg : null) as SegmentKey | null
-  const fullQueue = await buildActionQueue()
+  const { queue: fullQueue, stats, suppressed } = await buildActionInbox()
   const queue = activeSeg ? fullQueue.filter(a => a.segment === activeSeg) : fullQueue
   const countBySeg = new Map<SegmentKey, number>()
   for (const a of fullQueue) countBySeg.set(a.segment, (countBySeg.get(a.segment) ?? 0) + 1)
@@ -82,6 +85,8 @@ export default async function ActionsPage({ searchParams }: { searchParams: Prom
         </div>
       )}
 
+      <WhatsWorking stats={stats} suppressed={suppressed} />
+
       {bands.map(bandName => {
         const items = byBand[bandName]
         if (items.length === 0) return null
@@ -131,6 +136,68 @@ export default async function ActionsPage({ searchParams }: { searchParams: Prom
         )
       })}
     </div>
+  )
+}
+
+// Sentence case to match the band headings ("Do now", "This week"), with the one
+// acronym the action types contain kept upright.
+const typeLabel = (t: string) =>
+  t.replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\s+(\w)/g, (_, c: string) => ` ${c.toLowerCase()}`)
+    .replace(/^Vip\b/, 'VIP')
+const pct = (n: number) => `${Math.round(n * 100)}%`
+
+/**
+ * What the inbox has learned. Ranking silently on hidden statistics is how a
+ * system loses the room — if the queue reorders itself, staff get to see the
+ * record it reordered on, and the sample size behind it.
+ */
+function WhatsWorking({ stats, suppressed }: { stats: Map<ActionType, TypeStats>; suppressed: { type: ActionType; held: number }[] }) {
+  const measured = [...stats.values()]
+    .filter(s => s.measured)
+    .sort((a, b) => (b.hasOutcomeWindow ? b.conversionRate : b.acceptance) - (a.hasOutcomeWindow ? a.conversionRate : a.acceptance))
+
+  if (measured.length === 0 && suppressed.length === 0) return null
+
+  return (
+    <details className="cd-card p-4">
+      <summary className="cursor-pointer text-sm font-semibold" style={{ color: '#2D1907' }}>
+        What&rsquo;s working
+        <span className="cd-muted font-normal"> · ranking is tuned by these results</span>
+      </summary>
+
+      <div className="mt-3 space-y-1.5">
+        {measured.map(s => {
+          const seg = SEGMENTS[ACTION_SEGMENT[s.type]]
+          return (
+            <div key={s.type} className="flex items-center gap-2 text-xs">
+              <span className="rounded-full shrink-0" style={{ width: 6, height: 6, background: seg.color }} />
+              <span className="flex-1 min-w-0 truncate" style={{ color: '#2D1907' }}>{typeLabel(s.type)}</span>
+              {s.hasOutcomeWindow && (
+                <span className="cd-pill" style={{ background: seg.bg, color: seg.text }}>
+                  {pct(s.conversionRate)} booked
+                </span>
+              )}
+              <span className="cd-muted">{pct(s.acceptance)} actioned</span>
+              <span className="cd-muted" style={{ minWidth: '3.5rem', textAlign: 'right' }}>n={s.sample}</span>
+            </div>
+          )
+        })}
+        {measured.length === 0 && (
+          <p className="text-xs cd-muted">Not enough history yet — the queue is still ranking on its default order.</p>
+        )}
+      </div>
+
+      {suppressed.length > 0 && (
+        <div className="mt-3 pt-3 text-xs" style={{ borderTop: '1px solid rgba(45,25,7,0.12)' }}>
+          <span className="font-medium" style={{ color: '#B14919' }}>Held back: </span>
+          <span className="cd-muted">
+            {suppressed.map(s => `${typeLabel(s.type)} (${s.held})`).join(', ')} — consistently ignored, so
+            they are kept out of the queue. Urgent actions are never held back.
+          </span>
+        </div>
+      )}
+    </details>
   )
 }
 

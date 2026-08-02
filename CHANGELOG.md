@@ -14,8 +14,28 @@ The agentic and marketing cycle. Planned scope is in
 [docs/AGENTIC-ROADMAP.md](docs/AGENTIC-ROADMAP.md) (Track C — Agentic OS, Track M — Marketing).
 
 ### Added
+- **C3 — the Action Inbox learns from its own record.** `ActionLog` has been collecting every
+  Done/Snoozed/Dismissed outcome since the inbox shipped and nothing read it back. The queue now
+  ranks on that evidence: time-decayed acceptance, plus a real conversion join (did a booking or
+  payment actually follow the card, inside a per-type window). A new **What's working** panel on
+  `/actions` shows each type's conversion rate, acceptance and sample size, and names any type being
+  held back. Guardrails: evidence moves a type by at most ±1.5 priority so an unpaid bill can never
+  sink below a birthday; types below the minimum sample are left neutral so new ones keep exposure;
+  and "Do now" types are never suppressed.
+- **M8 — brand voice profile.** Tone, languages, emoji policy, signature moves and a never-say list
+  in Business Settings, rendered into prompts by `lib/brand-voice.ts` and consumed by the AI
+  assistant. One profile every future generator (campaign copy, captions, message variants) imports
+  instead of inventing its own personality.
 - Version control: `CHANGELOG.md`, `docs/VERSIONING.md`, annotated git tags, and the running OS
   version surfaced in Admin → Business Settings.
+
+### Changed
+- Action type labels in the inbox now render in sentence case to match the band headings, with
+  `VIP` kept upright.
+
+### Fixed
+- `scripts/verify-carelog.mjs` asserted the pre-1.1.0 run-sheet button labels and had been failing
+  since they were relabelled.
 
 ---
 

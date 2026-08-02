@@ -4,7 +4,7 @@ import crypto from 'node:crypto'
 // E2E for Round 5 commit 3: structured daily log + SOP care tasks + red-flag
 // alerts. Seeds a checked-in cat with a red-flag AM log (diarrhea + vomiting)
 // and asserts:
-//  • run sheet shows the red-flag banner + "✓ AM" / "Log PM" buttons
+//  • run sheet shows the red-flag banner + the "Morning logged" / "Log Evening" buttons
 //  • SOP-driven care tasks are generated (feed/litter morning…)
 //  • the log page renders the S004 chips, pre-filled from the saved entry
 //  • the Action Inbox raises a Health-flag card with an owner WhatsApp
@@ -81,7 +81,7 @@ try {
   // ── Run sheet: red-flag banner, log buttons, SOP tasks ──
   const rs = await getHtml('/runsheet')
   check('run sheet flags the concern (Diarrhea + Vomiting)', rs.includes('Diarrhea') && rs.includes('Vomiting') && rs.includes('tell the manager'))
-  check('run sheet shows AM logged (✓ AM) and Log PM', rs.includes('✓ AM') && rs.includes('Log PM'))
+  check('run sheet shows the AM log done and PM still to do', rs.includes('Morning logged') && rs.includes('Log Evening'))
   check('SOP care tasks generated (feed + litter morning)', rs.includes('Feed — morning') && rs.includes('Litter clean — morning'))
   check('kitten gets a midday feed (S002)', rs.includes('Feed — midday'))
 

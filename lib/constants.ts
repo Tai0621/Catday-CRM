@@ -151,6 +151,36 @@ export const BIRTHDAY_LOOKAHEAD_DAYS = 7      // birthday actions surface a week
 export const ACTION_DISMISS_WINDOW_DAYS = 30  // dismissed/done actions stay hidden this long
 export const ACTION_SNOOZE_DAYS = 7
 
+// ── Action Inbox learning (C3) ──
+// Every card outcome is already logged to ActionLog; these constants turn that
+// into ranking evidence. Guardrails matter more than the maths here: a type must
+// never be judged on a handful of outcomes, and must never fall to zero exposure
+// (a suppressed type stops producing the evidence that would rehabilitate it).
+export const ACTION_LEARNING_MIN_SAMPLE = 8       // logged outcomes before a type is ranked on its record
+export const ACTION_LEARNING_HALF_LIFE_DAYS = 90  // older outcomes count for less
+export const ACTION_LEARNING_MAX_SHIFT = 1.5      // most a type's priority can move on evidence
+export const ACTION_SUPPRESS_ACCEPTANCE = 0.15    // below this, stop surfacing (never for urgent types)
+export const ACTION_SUPPRESS_MIN_PRIORITY = 4     // priority 1–3 ("Do now") is never suppressed
+export const ACTION_LEARNING_LOOKBACK_DAYS = 365
+
+// How long after a logged action a booking or payment still counts as caused by
+// it. Types absent from this map have no customer-side conversion — they are
+// internal tasks (licence renewal, leave approval, stock) and are judged on
+// acceptance alone.
+export const ACTION_OUTCOME_WINDOW_DAYS: Partial<Record<ActionType, number>> = {
+  OutstandingPayment: 14,
+  RebookCheckout: 7,
+  WinBack: 21,
+  MembershipExpiry: 14,
+  VaccinationExpiry: 30,
+  TreatmentDue: 30,
+  GroomingDue: 21,
+  Birthday: 30,
+  GoldEligible: 30,
+  PrivateClubEligible: 30,
+  VipCheckIn: 30,
+}
+
 export const LEAD_TYPES = ['BookingRequest', 'Inquiry', 'Complaint', 'Reschedule', 'Cancellation', 'Other'] as const
 export type LeadType = typeof LEAD_TYPES[number]
 

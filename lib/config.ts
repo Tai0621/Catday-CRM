@@ -43,6 +43,17 @@ export interface AppConfig {
     primary: string      // accent hex — buttons, links, active states
     ink: string          // primary text hex
   }
+  // M8 · the written voice. Every generator in the OS (assistant replies, and in
+  // future campaign copy, captions and message variants) renders these into its
+  // prompt, so generated text sounds like this business rather than like a
+  // language model. See lib/brand-voice.ts.
+  voice: {
+    tone: string       // how it should read
+    languages: string  // which languages are acceptable, and when
+    emoji: string      // emoji policy — the fastest way to sound off-brand
+    signature: string  // phrases and framings to favour
+    avoid: string      // never-say list
+  }
   portalLabel: string  // small footer on the login screen
 }
 
@@ -66,6 +77,13 @@ export const DEFAULT_CONFIG: AppConfig = {
     logoDarkUrl: '/catday-logo-cream.png',
     primary: '#B14919',
     ink: '#2D1907',
+  },
+  voice: {
+    tone: 'Warm, calm and premium. Speak like an attentive concierge who genuinely knows the cat by name — never pushy, never salesy, never gushing.',
+    languages: 'Malaysian English by default. Mirror the language the customer writes in (English, Bahasa Malaysia or Mandarin) rather than translating at them.',
+    emoji: 'Sparing — at most one, and 🐾 is the house emoji. Never more than one per message.',
+    signature: 'Refer to the cat by name. Offer, never demand ("shall we…", "would you like us to…"). Keep it to a few short sentences a person can read on a phone.',
+    avoid: 'ALL CAPS, exclamation stacking, discount-hype language ("HURRY", "LAST CHANCE"), "dear customer", "furbaby", and any claim about a cat\'s health the record does not support.',
   },
   portalLabel: 'Staff Portal',
 }
@@ -95,6 +113,11 @@ export const SETTING_FIELDS: Field[] = [
   { group: 'Branding', key: 'brand.logoDarkUrl', label: 'Logo (dark sidebar)', kind: 'text', hint: 'URL or /public path — shown in the sidebar' },
   { group: 'Branding', key: 'brand.primary', label: 'Accent colour', kind: 'text', hint: 'hex, e.g. #B14919 — buttons, links' },
   { group: 'Branding', key: 'brand.ink', label: 'Text colour', kind: 'text', hint: 'hex, e.g. #2D1907' },
+  { group: 'Brand Voice', key: 'voice.tone', label: 'Tone', kind: 'text', hint: 'how written messages should read' },
+  { group: 'Brand Voice', key: 'voice.languages', label: 'Languages', kind: 'text', hint: 'which languages, and when to use each' },
+  { group: 'Brand Voice', key: 'voice.emoji', label: 'Emoji policy', kind: 'text', hint: 'the fastest way to sound off-brand' },
+  { group: 'Brand Voice', key: 'voice.signature', label: 'Signature moves', kind: 'text', hint: 'phrases and framings to favour' },
+  { group: 'Brand Voice', key: 'voice.avoid', label: 'Never say', kind: 'text', hint: 'words and claims to avoid entirely' },
   { group: 'Business Identity', key: 'portalLabel', label: 'Login portal label', kind: 'text' },
 ]
 

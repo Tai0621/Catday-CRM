@@ -6,6 +6,7 @@ import { logRedFlags } from './care-log'
 import { dewormStatus, defleaStatus } from './health'
 import { trailingAnnualSpend } from './loyalty'
 import { ACTION_SEGMENT, type SegmentKey } from './segments'
+import { buildActionStats, priorityShifts, effectivePriority, isSuppressed, type TypeStats } from './actions-learning'
 import {
   type ActionType,
   WINBACK_INACTIVE_DAYS,
@@ -55,7 +56,14 @@ function daysToBirthday(dob: Date, now: Date): number {
   return Math.round((next.getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / DAY)
 }
 
-export async function buildActionQueue(now: Date = new Date()): Promise<ActionCard[]> {
+export interface ActionInbox {
+  queue: ActionCard[]
+  stats: Map<ActionType, TypeStats>
+  /** Types held back this run because staff consistently ignore them — shown, not hidden silently. */
+  suppressed: { type: ActionType; held: number }[]
+}
+
+export async function buildActionInbox(now: Date = new Date()): Promise<ActionInbox> {
   const { business } = await getConfig()
   const brand = business.name
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -404,7 +412,32 @@ export async function buildActionQueue(now: Date = new Date()): Promise<ActionCa
     }))
   }
 
-  return out
-    .filter(a => !hidden.has(a.key))
-    .sort((a, b) => a.priority - b.priority)
+  // C3 · rank on evidence. The static priority above stays the anchor; observed
+  // acceptance and conversion move a type by at most ACTION_LEARNING_MAX_SHIFT
+  // around it, and the band is recomputed so a proven performer can climb.
+  const stats = await buildActionStats(now)
+  const shifts = priorityShifts(stats)
+
+  const live = out.filter(a => !hidden.has(a.key))
+  const held = new Map<ActionType, number>()
+  const queue: ActionCard[] = []
+  for (const a of live) {
+    if (isSuppressed(stats.get(a.type), a.priority)) {
+      held.set(a.type, (held.get(a.type) ?? 0) + 1)
+      continue
+    }
+    const priority = effectivePriority(a.priority, shifts.get(a.type) ?? 0)
+    queue.push({ ...a, priority, band: band(priority) })
+  }
+  queue.sort((a, b) => a.priority - b.priority)
+
+  return {
+    queue,
+    stats,
+    suppressed: [...held].map(([type, n]) => ({ type, held: n })),
+  }
+}
+
+export async function buildActionQueue(now: Date = new Date()): Promise<ActionCard[]> {
+  return (await buildActionInbox(now)).queue
 }

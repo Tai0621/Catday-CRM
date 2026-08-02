@@ -750,6 +750,8 @@ model ActionLog {
   createdAt   DateTime  @default(now())
 
   @@index([actionKey])
+  // C3 · the learning pass reads every outcome for a type over a rolling year
+  @@index([type, createdAt])
 }
 
 // ─── Business Plan (Breakeven targets) ───────────────────────────────────────
