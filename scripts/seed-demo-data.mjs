@@ -623,6 +623,106 @@ await db.auditLog.create({ data: { actorKind: 'manager', actorName: 'Owner', act
 await db.auditLog.create({ data: { actorKind: 'staff', actorName: 'Amy Tan', action: 'leave.approve', entityType: 'LeaveRequest', summary: 'Approved Annual leave for Wei Xin (3 days)', at: daysAgo(2) } })
 await db.auditLog.create({ data: { actorKind: 'manager', actorName: 'Owner', action: 'staff.reset_pin', entityType: 'Staff', entityId: staff['Nurul Izzati'].id, summary: 'Reset PIN for Nurul Izzati', at: daysAgo(1) } })
 
+// ── 17i. Action Inbox history + message variants (C3 / C4) ─────────────────
+// The learning features are invisible without a record to learn from, so the
+// demo needs one. Outcomes are derived from the appointment history seeded
+// above rather than invented: a "converted" outcome is placed shortly BEFORE a
+// real booking so the conversion join finds it, and a "missed" one is placed in
+// a genuine gap where that customer booked nothing. The rates below therefore
+// come out of the same join the live app runs, not a hardcoded number.
+console.log('· Action Inbox outcome history & message variants')
+
+const variantDefs = [
+  ['WinBack', 'Offer-led', `Hi! It's been a while since we saw {cat} at {brand} 🐾 Book this week and we'll add a complimentary add-on for {cat}.`],
+  ['WinBack', 'Warm', `Hi! It's been a while — {cat} misses us at {brand} 🐾 Whenever you're ready, we'd love to have {cat} back in.`],
+  ['RebookCheckout', 'Book now', `Hi! {cat} checks out today — shall we lock in the next grooming or boarding date before you head off? 🐾`],
+  ['RebookCheckout', 'Open door', `Hi! {cat} checks out today and has been lovely to have 🐾 Just say the word whenever you'd like the next stay booked.`],
+  ['GroomingDue', 'Simple', `Hi! {cat} is due for a groom — shall we find a slot this week? 🐾`],
+  ['GroomingDue', 'With timing', `Hi! It's been about {days} days since {cat}'s last groom 🐾 Shall we find a slot this week?`],
+]
+for (const [type, label, body] of variantDefs) {
+  await db.actionVariant.create({ data: { type, label, body } })
+}
+
+// Mirrors the FNV-1a assignment in lib/action-variants.ts so the arm recorded
+// against a demo customer is the arm the running app would actually show them.
+const fnv = s => {
+  let h = 0x811c9dc5
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0 }
+  return h >>> 0
+}
+const armsFor = type => variantDefs.filter(v => v[0] === type).map(v => v[1]).sort()
+const armFor = (type, customerId) => {
+  const arms = armsFor(type)
+  return arms.length ? arms[fnv(`${type}:${customerId}`) % arms.length] : null
+}
+
+const apptTimes = new Map()
+for (const a of await db.appointment.findMany({ select: { customerId: true, createdAt: true } })) {
+  const list = apptTimes.get(a.customerId) ?? []
+  list.push(a.createdAt.getTime())
+  apptTimes.set(a.customerId, list)
+}
+for (const list of apptTimes.values()) list.sort((x, y) => x - y)
+
+const DAY_MS = 86400000
+// Place a log just before a real booking (hit) or inside a genuine booking gap
+// (miss). Returns null when this customer has no suitable slot.
+const logTimeFor = (customerId, windowDays, wantHit) => {
+  const times = apptTimes.get(customerId) ?? []
+  const win = windowDays * DAY_MS
+  if (wantHit) {
+    const usable = times.filter(t => t < now.getTime() - (windowDays + 7) * DAY_MS && t > now.getTime() - 300 * DAY_MS)
+    if (!usable.length) return null
+    return new Date(pick(usable) - randInt(1, Math.max(1, windowDays - 2)) * DAY_MS)
+  }
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const t = now.getTime() - randInt(windowDays + 10, 300) * DAY_MS
+    if (!times.some(x => x > t && x <= t + win)) return new Date(t)
+  }
+  return null
+}
+
+// type → [outcomes, share converted, share actioned]. Birthday is deliberately
+// a dud: staff dismiss it, so the inbox suppresses it and the demo shows the
+// "held back" guardrail working rather than just described in a slide.
+const historyPlan = [
+  ['WinBack', 21, 40, 0.45, 0.85],
+  ['RebookCheckout', 7, 24, 0.60, 0.90],
+  ['GroomingDue', 21, 28, 0.40, 0.75],
+  ['VaccinationExpiry', 30, 16, 0.55, 0.80],
+  ['MembershipExpiry', 14, 12, 0.50, 0.75],
+  ['Birthday', 30, 14, 0.10, 0.05],
+]
+
+let logCount = 0
+for (const [type, windowDays, count, convertShare, doneShare] of historyPlan) {
+  for (let i = 0; i < count; i++) {
+    const customer = pick(customers)
+    // Arms are assigned honestly — same hash the running app uses. Only whether
+    // the outcome converted is steered, giving 'Offer-led' and 'Book now' the
+    // edge so the demo has a winner worth promoting. Everything shown in the UI
+    // is then computed back out of these rows by the real conversion join.
+    const variant = armFor(type, customer.id)
+    const boost = variant === 'Offer-led' || variant === 'Book now' ? 0.15 : 0
+    const wantHit = i / count < convertShare + boost
+    const at = logTimeFor(customer.id, windowDays, wantHit)
+    if (!at) continue
+    await db.actionLog.create({
+      data: {
+        actionKey: `DemoHistory:${type}:${i}`, // synthetic — never hides a live card
+        type,
+        customerId: customer.id,
+        status: i / count < doneShare ? 'Done' : (i % 3 === 0 ? 'Snoozed' : 'Dismissed'),
+        variant,
+        createdAt: at,
+      },
+    })
+    logCount++
+  }
+}
+console.log(`  ${logCount} action outcomes across ${historyPlan.length} types · ${variantDefs.length} message variants`)
+
 // ── 18. Flush accumulated points / wallet balances onto customers ──────────
 console.log('· Finalizing points & wallet balances')
 for (const [customerId, points] of pointsBalanceDelta) {

@@ -41,6 +41,11 @@ The agentic and marketing cycle. Planned scope is in
 ### Changed
 - Action type labels in the inbox now render in sentence case to match the band headings, with
   `VIP` kept upright.
+- Demo harness refreshed for this release: `prisma/demo-schema.sql` regenerated from the live schema
+  (43 tables), and the seeder now plants Action Inbox outcome history and message variants. The
+  outcomes are derived from the seeded appointment history — a converted one sits just before a real
+  booking, a missed one inside a genuine booking gap — so the rates the demo displays are computed by
+  the same conversion join the live app runs rather than hardcoded.
 
 ### Fixed
 - `scripts/verify-carelog.mjs` asserted the pre-1.1.0 run-sheet button labels and had been failing

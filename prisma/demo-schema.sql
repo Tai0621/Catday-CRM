@@ -566,7 +566,20 @@ CREATE TABLE "ActionLog" (
     "status" TEXT NOT NULL,
     "snoozeUntil" DATETIME,
     "note" TEXT,
+    "variant" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
+CREATE TABLE "ActionVariant" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "type" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "body" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "isDefault" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
 );
 
 -- CreateTable
@@ -751,6 +764,15 @@ CREATE UNIQUE INDEX "WhatsAppMessage_externalId_key" ON "WhatsAppMessage"("exter
 
 -- CreateIndex
 CREATE INDEX "ActionLog_actionKey_idx" ON "ActionLog"("actionKey");
+
+-- CreateIndex
+CREATE INDEX "ActionLog_type_createdAt_idx" ON "ActionLog"("type", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "ActionVariant_type_isActive_idx" ON "ActionVariant"("type", "isActive");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ActionVariant_type_label_key" ON "ActionVariant"("type", "label");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "MonthlyTarget_month_key" ON "MonthlyTarget"("month");
