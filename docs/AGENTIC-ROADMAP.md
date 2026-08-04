@@ -594,6 +594,25 @@ Boarding-only. Routes live under `/marketing/groups`, which starts giving that s
 **If you only do three things:** C3, M8, M2. They are cheap, they compound, and together they turn
 both the Action Inbox and marketing from guesswork into something measured.
 
+## Part 4b — Parked
+
+### Feature flags & multi-client behaviour *(agreed, deliberately not scheduled)*
+
+One repo deploys to every tenant at once, so a feature built for one client currently ships
+**visible** to all of them — `SETTING_FIELDS` supports only `'text' | 'number'` and `Nav.tsx` is a
+static array, so there is no gating mechanism at all.
+
+Planned: a `features` block in `AppConfig` defaulting all-on, a `'bool'` field kind, nav filtering,
+and a `requireFeature()` page guard mirroring the `MANAGER_PATHS` + `requireManager()` pattern.
+Flags are named after **capabilities, never clients** — wanting to name one after a client is the
+signal the work is bespoke and should be repriced. Per-client version staging, if it is ever needed,
+is fast-forward-only `release/<client>` branches, never forks.
+
+Recommendation on record: build it **before client #2 goes live**. Parked at the owner's request
+until they raise it.
+
+---
+
 ## Part 5 — Risks
 
 - **Token cost.** Every AI feature must respect `ai.enabled` and `ai.dailyTokenBudget` from

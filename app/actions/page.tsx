@@ -2,6 +2,8 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { buildActionInbox, type ActionCard } from '@/lib/actions'
 import type { TypeStats } from '@/lib/actions-learning'
+import { buildAttribution, type Attribution } from '@/lib/attribution'
+import { getConfig, fmtMoney, type AppConfig } from '@/lib/config'
 import { ACTION_SEGMENT } from '@/lib/segments'
 import type { ActionType } from '@/lib/constants'
 import { whatsappUrl } from '@/lib/phone'
@@ -14,7 +16,9 @@ export default async function ActionsPage({ searchParams }: { searchParams: Prom
   await requireAuth()
   const { seg } = await searchParams
   const activeSeg = (seg && seg in SEGMENTS ? seg : null) as SegmentKey | null
-  const { queue: fullQueue, stats, suppressed } = await buildActionInbox()
+  const [{ queue: fullQueue, stats, suppressed }, attribution, cfg] = await Promise.all([
+    buildActionInbox(), buildAttribution(), getConfig(),
+  ])
   const queue = activeSeg ? fullQueue.filter(a => a.segment === activeSeg) : fullQueue
   const countBySeg = new Map<SegmentKey, number>()
   for (const a of fullQueue) countBySeg.set(a.segment, (countBySeg.get(a.segment) ?? 0) + 1)
@@ -88,7 +92,7 @@ export default async function ActionsPage({ searchParams }: { searchParams: Prom
         </div>
       )}
 
-      <WhatsWorking stats={stats} suppressed={suppressed} />
+      <WhatsWorking stats={stats} suppressed={suppressed} attribution={attribution} cfg={cfg} />
 
       {bands.map(bandName => {
         const items = byBand[bandName]
@@ -155,7 +159,12 @@ const pct = (n: number) => `${Math.round(n * 100)}%`
  * system loses the room — if the queue reorders itself, staff get to see the
  * record it reordered on, and the sample size behind it.
  */
-function WhatsWorking({ stats, suppressed }: { stats: Map<ActionType, TypeStats>; suppressed: { type: ActionType; held: number }[] }) {
+function WhatsWorking({ stats, suppressed, attribution, cfg }: {
+  stats: Map<ActionType, TypeStats>
+  suppressed: { type: ActionType; held: number }[]
+  attribution: Attribution
+  cfg: AppConfig
+}) {
   const measured = [...stats.values()]
     .filter(s => s.measured)
     .sort((a, b) => (b.hasOutcomeWindow ? b.conversionRate : b.acceptance) - (a.hasOutcomeWindow ? a.conversionRate : a.acceptance))
@@ -169,13 +178,29 @@ function WhatsWorking({ stats, suppressed }: { stats: Map<ActionType, TypeStats>
         <span className="cd-muted font-normal"> · ranking is tuned by these results</span>
       </summary>
 
+      {attribution.totalAttributedRM > 0 && (
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 pb-3"
+          style={{ borderBottom: '1px solid rgba(45,25,7,0.12)' }}>
+          <span className="text-lg font-bold" style={{ color: '#2D1907' }}>
+            {fmtMoney(attribution.totalAttributedRM, cfg)}
+          </span>
+          <span className="text-xs cd-muted">
+            attributed to these nudges over the past year, against {fmtMoney(attribution.totalSpendRM, cfg)} of messaging
+          </span>
+        </div>
+      )}
+
       <div className="mt-3 space-y-1.5">
         {measured.map(s => {
           const seg = SEGMENTS[ACTION_SEGMENT[s.type]]
+          const money = attribution.byType.get(s.type)
           return (
             <div key={s.type} className="flex items-center gap-2 text-xs">
               <span className="rounded-full shrink-0" style={{ width: 6, height: 6, background: seg.color }} />
               <span className="flex-1 min-w-0 truncate" style={{ color: '#2D1907' }}>{typeLabel(s.type)}</span>
+              {money && money.attributedRM > 0 && (
+                <span className="font-semibold" style={{ color: '#2D1907' }}>{fmtMoney(money.attributedRM, cfg)}</span>
+              )}
               {s.hasOutcomeWindow && (
                 <span className="cd-pill" style={{ background: seg.bg, color: seg.text }}>
                   {pct(s.conversionRate)} booked
@@ -190,6 +215,14 @@ function WhatsWorking({ stats, suppressed }: { stats: Map<ActionType, TypeStats>
           <p className="text-xs cd-muted">Not enough history yet — the queue is still ranking on its default order.</p>
         )}
       </div>
+
+      {attribution.totalAttributedRM > 0 && (
+        <p className="mt-3 text-xs cd-muted">
+          Revenue is <span className="font-medium">attributed, not incremental</span> — a customer who would have
+          booked anyway still counts, and each sale is credited only to the most recent nudge before it. Read it
+          as an upper bound.
+        </p>
+      )}
 
       {suppressed.length > 0 && (
         <div className="mt-3 pt-3 text-xs" style={{ borderTop: '1px solid rgba(45,25,7,0.12)' }}>

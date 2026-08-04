@@ -3,6 +3,8 @@ import { db } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 import { VARIANT_TESTABLE_TYPES, type ActionType } from '@/lib/constants'
 import { buildVariantStats, recommendedWinner, type VariantStats } from '@/lib/actions-learning'
+import { buildAttribution, type VariantRevenue } from '@/lib/attribution'
+import { getConfig, fmtMoney, type AppConfig } from '@/lib/config'
 import { SEGMENTS, ACTION_SEGMENT } from '@/lib/segments'
 
 // C4 · Message variants. Every win-back message this business sent was the same
@@ -21,9 +23,11 @@ export default async function VariantsPage() {
   await requireManager()
 
   const types = VARIANT_TESTABLE_TYPES as readonly ActionType[]
-  const [rows, statsByType] = await Promise.all([
+  const [rows, statsByType, attribution, cfg] = await Promise.all([
     db.actionVariant.findMany({ orderBy: [{ type: 'asc' }, { label: 'asc' }] }),
     Promise.all(types.map(t => buildVariantStats(t))).then(list => new Map(types.map((t, i) => [t, list[i]]))),
+    buildAttribution(),
+    getConfig(),
   ])
 
   async function addVariant(data: FormData) {
@@ -112,7 +116,7 @@ export default async function VariantsPage() {
                     {v.isDefault && <span className="cd-pill" style={{ background: seg.bg, color: seg.text }}>promoted</span>}
                     {!v.isActive && <span className="cd-pill" style={{ background: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.5)' }}>retired</span>}
                     <span className="flex-1" />
-                    <VariantNumbers s={s} />
+                    <VariantNumbers s={s} money={attribution.byVariant.get(v.label)} cfg={cfg} />
                   </div>
 
                   <p className="text-xs" style={{ color: 'rgba(45,25,7,0.7)' }}>{v.body}</p>
@@ -170,10 +174,21 @@ export default async function VariantsPage() {
   )
 }
 
-function VariantNumbers({ s }: { s: VariantStats | undefined }) {
+function VariantNumbers({ s, money, cfg }: {
+  s: VariantStats | undefined
+  money: VariantRevenue | undefined
+  cfg: AppConfig
+}) {
   if (!s || s.sent === 0) return <span className="text-xs cd-muted">not sent yet</span>
   return (
     <span className="text-xs cd-muted flex items-center gap-2">
+      {money && money.attributedRM > 0 && (
+        // Revenue per send is the number that actually decides between two arms:
+        // a variant can convert more often and still be worth less per message.
+        <span className="font-semibold" style={{ color: '#2D1907' }}>
+          {fmtMoney(money.perSendRM, cfg, { decimals: 2 })}/send
+        </span>
+      )}
       <span style={{ color: s.measured ? '#2D1907' : undefined, fontWeight: s.measured ? 600 : undefined }}>
         {s.eligible > 0 ? `${pct(s.conversionRate)} booked` : 'window still open'}
       </span>

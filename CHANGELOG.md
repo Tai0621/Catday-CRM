@@ -22,6 +22,15 @@ The agentic and marketing cycle. Planned scope is in
   held back. Guardrails: evidence moves a type by at most ±1.5 priority so an unpaid bill can never
   sink below a birthday; types below the minimum sample are left neutral so new ones keep exposure;
   and "Do now" types are never suppressed.
+- **M2 — marketing attribution.** C3 answered "did a booking follow this nudge?"; this answers "how
+  much was it worth?". The Action Inbox and the message variants now read as a marketing P&L —
+  attributed revenue per action type, and revenue per message sent per variant, which is the number
+  that actually decides between two arms (a variant can convert more often and still be worth less
+  per send). Cost per message is configurable in Business Settings.
+  Attribution is **last-touch**: when several nudges precede one sale, only the most recent one
+  inside its window is credited, so a single RM 200 groom can never appear as RM 600 of marketing
+  revenue. It is also **attributed, not incremental** — a customer who would have booked anyway
+  still counts — and the UI says so, because measuring incrementality needs a holdout group.
 - **C4 — message A/B variants.** Every win-back message the business has sent was the same sentence
   and nobody knew whether it worked. Competing copy can now run per action type
   (`WinBack`, `RebookCheckout`, `GroomingDue`), assigned deterministically by hashing the customer so
@@ -67,6 +76,8 @@ The agentic and marketing cycle. Planned scope is in
 - The demo now seeds a **fictional** business (Velvet Paw) rather than a live client's branding —
   showing a real client's business shape to prospects is a confidentiality problem, not a tidiness
   one.
+- `scripts/verify-actions-learning.mjs` asserted a literal `n=10`, which only held against an empty
+  database. It now measures a before/after delta, so it is valid against demo and production alike.
 - `scripts/verify-carelog.mjs` asserted the pre-1.1.0 run-sheet button labels and had been failing
   since they were relabelled.
 

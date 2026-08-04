@@ -54,6 +54,12 @@ export interface AppConfig {
     signature: string  // phrases and framings to favour
     avoid: string      // never-say list
   }
+  marketing: {
+    // M2 · what one outbound message costs, so attributed revenue can be shown
+    // against a spend figure instead of on its own. Covers the WhatsApp
+    // conversation fee, or a staff-time estimate while sending is manual.
+    messageCostRM: number
+  }
   portalLabel: string  // small footer on the login screen
 }
 
@@ -85,6 +91,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     signature: 'Refer to the cat by name. Offer, never demand ("shall we…", "would you like us to…"). Keep it to a few short sentences a person can read on a phone.',
     avoid: 'ALL CAPS, exclamation stacking, discount-hype language ("HURRY", "LAST CHANCE"), "dear customer", "furbaby", and any claim about a cat\'s health the record does not support.',
   },
+  marketing: { messageCostRM: 0.35 },
   portalLabel: 'Staff Portal',
 }
 
@@ -118,6 +125,7 @@ export const SETTING_FIELDS: Field[] = [
   { group: 'Brand Voice', key: 'voice.emoji', label: 'Emoji policy', kind: 'text', hint: 'the fastest way to sound off-brand' },
   { group: 'Brand Voice', key: 'voice.signature', label: 'Signature moves', kind: 'text', hint: 'phrases and framings to favour' },
   { group: 'Brand Voice', key: 'voice.avoid', label: 'Never say', kind: 'text', hint: 'words and claims to avoid entirely' },
+  { group: 'Marketing', key: 'marketing.messageCostRM', label: 'Cost per message sent', kind: 'number', hint: 'WhatsApp conversation fee or staff-time estimate; 0 to ignore spend' },
   { group: 'Business Identity', key: 'portalLabel', label: 'Login portal label', kind: 'text' },
 ]
 

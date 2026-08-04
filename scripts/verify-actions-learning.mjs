@@ -81,6 +81,31 @@ try {
        VALUES (?,?,?,'Grooming',?,'Completed',1,0,?,CURRENT_TIMESTAMP)`,
       [t(apptIds[i]), t(winnerCust), t(winnerCat), t(iso(now - 55 * DAY)), t(iso(now - 55 * DAY))]))
   }
+  // Sample counts are read as a BEFORE/AFTER delta, not an absolute. The demo
+  // database already carries seeded action history, so asserting a literal
+  // "n=10" only passes against an empty database — and this script has to be
+  // runnable against demo and production alike.
+  const preLogin = await fetch(`${BASE}/api/login`, {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ password: process.env.APP_PASSWORD }), redirect: 'manual',
+  })
+  const preCookie = (preLogin.headers.get('set-cookie') ?? '').split(';')[0]
+  // React renders `n={s.sample}` as two adjacent nodes, so the payload carries
+  // "n=","38" rather than "n=38" — allow separators between the label and the
+  // digits. Returns null when the row is absent, so a missing row cannot look
+  // like a real zero.
+  const sampleFor = (h, label) => {
+    const i = h.indexOf(label)
+    // No row at all is a genuine zero: the type has not reached the minimum
+    // sample to be reported. Only a row we cannot read is an error worth
+    // surfacing, so those return null and fail the check loudly.
+    if (i === -1) return 0
+    const m = h.slice(i + label.length, i + label.length + 600).match(/n=[^\d]{0,8}(\d+)/)
+    return m ? Number(m[1]) : null
+  }
+  const beforeHtml = strip(await (await fetch(`${BASE}/actions`, { headers: { cookie: preCookie } })).text())
+  const groomBefore = sampleFor(beforeHtml, 'Grooming due')
+
   await pipe(logs)
 
   const login = await fetch(`${BASE}/api/login`, {
@@ -99,7 +124,10 @@ try {
   check('Grooming due appears in the panel', /Grooming due/.test(html))
   const booked = html.match(/(\d+)% booked/g) ?? []
   check('a conversion rate is reported', booked.length > 0, `found ${booked.join(', ') || 'none'}`)
-  check('sample size shown (n=10)', html.includes('n=10'), 'seeded 10 outcomes per type')
+  const groomAfter = sampleFor(html, 'Grooming due')
+  check('seeded outcomes counted (+10)',
+    groomBefore !== null && groomAfter !== null && groomAfter - groomBefore === 10,
+    `sample went ${groomBefore} → ${groomAfter}, expected +10`)
 
   // The dead type is held back, and its live card is gone from the queue.
   const heldIdx = html.indexOf('Held back')
