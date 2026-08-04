@@ -2,11 +2,27 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaLibSql } from '@prisma/adapter-libsql'
 import { createHash, randomUUID } from 'node:crypto'
 
-// Rich, realistic demo data for the LOCAL demo database only (prisma/demo.db).
-// Never touches the shared Turso database that dev/production point at.
-// Run scripts/setup-local-demo.mjs first to create the empty schema, then this.
+// Rich, realistic demo data. Defaults to the local demo database
+// (prisma/demo.db) — run scripts/setup-local-demo.mjs first to create the empty
+// schema, then this.
+//
+// Set DEMO_DATABASE_URL / DEMO_DATABASE_AUTH_TOKEN to seed a hosted demo tenant
+// instead. That database must already have the schema applied:
+//   SKIP_BASELINE=1 PROVISION_DATABASE_URL=… node scripts/provision-client.mjs
+//
+// This script writes hundreds of fabricated customers, appointments and
+// transactions, so pointing it at a live tenant would be unrecoverable. The
+// guard below refuses to run against whatever DATABASE_URL is configured.
+const target = process.env.DEMO_DATABASE_URL ?? 'file:./prisma/demo.db'
+if (process.env.DATABASE_URL && target === process.env.DATABASE_URL) {
+  console.error('Refusing to run: the demo target equals this app’s DATABASE_URL.')
+  process.exit(1)
+}
 
-const adapter = new PrismaLibSql({ url: 'file:./prisma/demo.db' })
+const adapter = new PrismaLibSql({
+  url: target,
+  ...(process.env.DEMO_DATABASE_AUTH_TOKEN ? { authToken: process.env.DEMO_DATABASE_AUTH_TOKEN } : {}),
+})
 const db = new PrismaClient({ adapter })
 
 const hashPin = pin => createHash('sha256').update(`catday:${pin}`).digest('hex')
@@ -21,7 +37,7 @@ const daysFromNow = n => new Date(now.getTime() + n * 86400000)
 const monthKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 const daysInMonth = d => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
 
-console.log('Seeding demo data into prisma/demo.db …\n')
+console.log(`Seeding demo data into ${target.replace(/\/\/.*@/, '//…@')} …\n`)
 
 // ── 0. Tenant identity — a fictional business, deliberately not a real client ─
 // The demo is shown to prospects. Branding it as a live client would put that

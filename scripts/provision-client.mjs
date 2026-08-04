@@ -63,9 +63,15 @@ for (const s of statements) {
 }
 console.log(`   applied ${ok} statements, skipped ${skip} (already present)`)
 
-// 2. Baseline catalog
-console.log('2) Seeding baseline catalog (tiers, services, rooms)')
-await seedBaseline(pipe)
+// 2. Baseline catalog.
+// Skipped when the database is about to receive a full demo dataset, which
+// brings its own tiers, services and rooms and would collide with these.
+if (process.env.SKIP_BASELINE === '1') {
+  console.log('2) Baseline catalog skipped (SKIP_BASELINE=1)')
+} else {
+  console.log('2) Seeding baseline catalog (tiers, services, rooms)')
+  await seedBaseline(pipe)
+}
 
 // 3. Optional: set the client's business name so the app is branded on first boot
 if (clientName) {

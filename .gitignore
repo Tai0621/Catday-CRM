@@ -56,3 +56,6 @@ next-env.d.ts
 
 # Tenant registry — every client's database token. Never commit.
 /clients.json
+
+.vercel
+.env*
