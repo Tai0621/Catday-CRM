@@ -271,7 +271,14 @@ preview pane alone; verify with an authenticated `fetch`/`curl` first.
 
 ## Deployment
 
-- Vercel project, connected to GitHub `main`; pushing to `main` auto-deploys.
+- Vercel project, connected to GitHub `main`; pushing to `main` auto-deploys **to the live OS the
+  business runs on**. `main` is for tagged releases, not work in progress — day-to-day work belongs
+  on `develop`, which deploys to the demo URL against a separate database. The full setup, and the
+  one ordering mistake that would point a preview at real customer data, are in
+  [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
+- Which deployment a process is runs through `lib/environment.ts` (`appEnv()`), derived from
+  `VERCEL_ENV` so a new preview branch is a demo automatically and can never present itself as
+  production. Non-production renders a standing `DEMO` banner and sets `robots: noindex`.
 - **Local default branch is `master`, GitHub's default is `main`** — push with
   `git push origin master:main`, not a bare `git push`.
 - On Windows, the Vercel CLI needs `$env:XDG_DATA_HOME` pointed at a writable path outside any

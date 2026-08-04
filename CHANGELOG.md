@@ -38,9 +38,18 @@ The agentic and marketing cycle. Planned scope is in
 - Version control: `CHANGELOG.md`, `docs/VERSIONING.md`, annotated git tags, and the running OS
   version surfaced in Admin → Business Settings.
 
+- **Environment awareness.** `lib/environment.ts` derives production / demo / local from `VERCEL_ENV`,
+  so a preview branch is a demo automatically and cannot present itself as production. Non-production
+  deployments carry a standing `DEMO` banner and are `noindex`; production renders exactly as before.
+  Groundwork for splitting the live OS from a demo deployment — see
+  [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
+
 ### Changed
 - Action type labels in the inbox now render in sentence case to match the band headings, with
   `VIP` kept upright.
+- Roadmap extended with **C9** (monthly per-department reports, facts computed by the existing
+  statement builders and only narrated by the model) and **M10** (customer groups and targeted
+  marketing, sequenced ahead of M1).
 - Demo harness refreshed for this release: `prisma/demo-schema.sql` regenerated from the live schema
   (43 tables), and the seeder now plants Action Inbox outcome history and message variants. The
   outcomes are derived from the seeded appointment history — a converted one sits just before a real

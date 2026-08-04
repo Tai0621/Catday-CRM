@@ -287,6 +287,57 @@ image-processing step on upload, not new architecture.
 
 ---
 
+### C9 · Monthly department reports
+
+Six reports, one per business segment, generated on the 1st for the month just closed. The bigger
+sibling of C5 — where the daily brief is a nudge, this is the record.
+
+#### The rule that shapes the whole design
+
+**The model never computes a number.** Facts are computed by the existing read-only builders,
+stored, and *then* narrated. The AI writes prose *about* figures it was handed; it never produces
+one.
+
+This is not fussiness. `lib/finance.ts`, `lib/balance-sheet.ts` and `lib/cash-flow.ts` are the same
+code that renders the statements — if a report's revenue figure came from a language model it could
+disagree with the income statement, and the moment an owner shows an accountant a number the OS
+invented, the system is finished. Storing the facts next to the narrative makes every report
+reproducible: you can always see exactly what the prose was written from.
+
+A **numeric grounding check** enforces it — every number the model emits is matched against the
+stored facts, and a mismatch flags the report rather than publishing it.
+
+#### What each department reports on
+
+| Department | Facts drawn from |
+|---|---|
+| **Operations & Sales** | appointments by type/status, no-show and cancellation rate, room occupancy, average stay length, groomer-hour utilisation (`lib/slots.ts`), revenue per available room-night |
+| **Human Resource** | hours per staff (`TimeEntry`), lateness, leave taken vs balance, commission earned (`lib/commission.ts`), hiring pipeline movement |
+| **Finance** | three-statement summary, revenue by stream, gross margin, net profit, cash movement, A/R and A/P aging (`lib/aging.ts`), plan-vs-actual against `MonthlyTarget` |
+| **Customers · CRM** | new vs returning, **segment migration** (who moved Regular → At-risk), churn count, LTV distribution, tier movement, points issued and redeemed, wallet float, incidents |
+| **Marketing** | C3 action performance, C4 variant results, consent base size, campaign ROI once M1/M2 land |
+| **Administrative** | licences due and lapsed, asset additions and depreciation, audit-log volume, backup health, data-protection actions |
+
+Segment migration is the single most valuable line here. It is the earliest signal the business is
+leaking customers, and nothing in the OS surfaces it today.
+
+#### Build
+
+- `MonthlyReport` — `{ month "YYYY-MM", department, factsJson, narrative, status, generatedAt, model }`,
+  unique on `(month, department)`, following the existing period-string convention.
+- `lib/reports/facts/<dept>.ts` — pure and read-only, one per department. **Finance still never
+  writes to operations.**
+- `lib/reports/narrate.ts` — one Haiku call per department producing a headline, three observations
+  and three recommended actions, each linking to a real page. Uses the M8 voice profile.
+- `/api/cron/monthly-report`, `CRON_SECRET`-guarded, added to `vercel.json`. Six calls a month.
+- `/reports`, manager-only (add to `MANAGER_PATHS`), with regenerate-from-stored-facts.
+
+**Phase it: facts first, narrative second.** The fact tables are useful on their own and carry zero
+AI risk. If the key is missing or the budget is spent, the report still generates with its facts and
+the narrative is marked ungenerated — fail closed on the AI, never on the report.
+
+---
+
 ## Part 3b — Track M: the Marketing segment
 
 Marketing is segment 5 of six in the OS, and today it contains exactly one page: `app/academy/`.
@@ -475,16 +526,68 @@ This is a real localisation advantage in the home market, not a copied feature.
 
 ---
 
+### M10 · Customer groups & targeted marketing
+
+The audience half of marketing. **Sequences before M1** — targeting is useful immediately even with
+hand-written copy, and the Campaign Studio then only has to supply the offer.
+
+#### A group is a saved query, not a saved list
+
+Groups re-evaluate every time they are opened. A frozen list is how a win-back gets sent to someone
+who visited yesterday.
+
+Rules are a **typed, validated vocabulary** — never free SQL — over what the OS already knows:
+segment and churn risk (`lib/intelligence.ts`), membership tier, lifetime and trailing-12-month
+spend, visit count, days since last visit, grooming overdue (`lib/grooming-reminder.ts`),
+vaccination expiring, cat coat type / life stage / breed, boarding-only vs grooming-only,
+acquisition source, language (M9).
+
+Evaluation runs in two stages: filter on real columns in the database first, then run
+`buildCustomerIntel` over the survivors. Segment and cadence are *derived*, not stored, so the
+column filter is what keeps this fast on a growing customer base.
+
+#### Three guardrails
+
+**1 · Consent is a floor, not a rule.** Two separate functions: `evaluateGroup()` for counting and
+analysis, `sendableMembers()` for outreach — and the send path always ANDs
+`marketingConsent = true AND erasedAt IS NULL` regardless of what the group's rules say. Asking
+"how many at-risk customers do we have" needs no consent; messaging them does.
+
+**2 · A global frequency cap.** A customer who lands in five groups receives five messages in a week
+and is lost. One hard cap across all groups, enforced at send time, not per campaign.
+
+**3 · Health data is never a targeting rule.** `healthNotes` and `medication` are excluded from the
+rule vocabulary entirely. "We noticed your cat has kidney disease, here's an offer" is a PDPA
+problem and brand damage that does not get recovered.
+
+#### Sending — an honest scope
+
+Ship this as an **assisted send worklist**, not a bulk blast button.
+
+The WhatsApp integration is inbound-only. Outbound at scale needs the Business API with pre-approved
+marketing templates, per-conversation billing and throttling, and a banned business number is
+unrecoverable. A worklist that walks staff through the group one customer at a time — per-customer
+rendered copy, each send logged — delivers real targeting now. True bulk send is a separate piece,
+scoped honestly rather than faked.
+
+Every send records `{ groupId, customerId, variant, sentAt }`, so **M2 attribution can join it
+later**: targeting becomes measurable, not merely convenient.
+
+Seeded system groups: At-risk · Lapsed 90+ · Gold-eligible · New this month · Long-coat overdue ·
+Boarding-only. Routes live under `/marketing/groups`, which starts giving that segment a real home.
+
+---
+
 ## Part 4 — Sequencing
 
 | Phase | Items | Why this order |
 |---|---|---|
 | **1** | C3 · M8 | C3 costs nothing (data already collected) and immediately makes the Action Inbox smarter. M8 (brand voice) is tiny and every later generator depends on it. Do both first. |
 | **2** | C4 → M2 | C4 builds on C3's conversion join; M2 is the same join pointed at campaigns. The first *real* self-improving loop in the OS. |
-| **3** | M4 · M5 | Review engine and referrals: high marketing ROI, no AI dependency, both reuse existing ledgers and the Incident flow. |
+| **3** | M10 → M4 · M5 | Customer groups first — targeting pays off immediately even with hand-written copy, and everything after it targets better. Then the review engine and referrals: high marketing ROI, no AI dependency, both reuse existing ledgers and the Incident flow. |
 | **4** | C1 → C2 | Copilot dock (read-only, low risk) first, then write tools once the confirm-gate UI is proven. |
-| **5** | M1 · M3 | Campaign Studio and Content Studio both reuse C2's propose-and-confirm UI and M8's voice profile. M1 also needs the WhatsApp outbound/template work — scope that honestly. |
-| **6** | C5 | Nightly brief. Cheap, high perceived value, reuses everything above. |
+| **5** | M1 · M3 | Campaign Studio and Content Studio both reuse C2's propose-and-confirm UI and M8's voice profile. M1 consumes M10's audiences and needs the WhatsApp outbound/template work — scope that honestly. |
+| **6** | C5 → C9 | Nightly brief, then the monthly department reports. C5's daily brief is the fact-builders' first customer, so build the facts once and use them at both cadences. |
 | **7** | C6 → M6 → C7 | Productization: generative onboarding, public presence page, brand autopilot. Do this block together when resale becomes the priority — a client should get a live branded bookable page from one description. |
 | **8** | M7 · M9 · C8 | Academy funnel, multilingual, photo polish. |
 
@@ -513,6 +616,12 @@ both the Action Inbox and marketing from guesswork into something measured.
 - **Publishing a customer's cat without permission.** M3 must gate on consent at the query layer and
   show the consent state on every draft. This is the one place where an AI feature could cause real
   reputational damage to the client.
+- **A number the OS invented.** C9's reports will be read by an owner and shown to an accountant.
+  Facts are computed by the existing statement builders and stored; the model narrates them and
+  never calculates. The grounding check is not optional polish — it is the feature's licence to
+  exist.
+- **Message fatigue.** M10 makes it trivial to reach the same person through several groups at once.
+  The frequency cap is global and enforced at send time; a per-campaign cap would not catch it.
 - **Optimizing the wrong number.** Guard against C3/C4 maximising *staff clicks* instead of
   *business outcomes*. The conversion join is the real metric; acceptance rate is only a proxy and
   should never be the sole ranking signal.
