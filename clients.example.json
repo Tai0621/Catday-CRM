@@ -1,0 +1,30 @@
+{
+  "_comment": [
+    "Copy to clients.json and fill in. clients.json is gitignored — it holds every",
+    "tenant's database token, and is the one file in this repo that must never be",
+    "committed.",
+    "",
+    "slug   — short id, used for --only / --skip and in output",
+    "name   — human name, for reading the output",
+    "env    — 'production' for a live client, 'demo' for a sandbox. Anything not",
+    "         explicitly 'demo' is treated as live.",
+    "",
+    "Used by scripts/migrate-all.mjs. See docs/ENVIRONMENTS.md."
+  ],
+  "clients": [
+    {
+      "slug": "demo",
+      "name": "Bizkit Demo",
+      "env": "demo",
+      "databaseUrl": "libsql://bizkit-demo-<org>.turso.io",
+      "authToken": "<demo database token>"
+    },
+    {
+      "slug": "catday",
+      "name": "Cat Day",
+      "env": "production",
+      "databaseUrl": "libsql://catday-<org>.turso.io",
+      "authToken": "<catday database token>"
+    }
+  ]
+}

@@ -53,3 +53,6 @@ next-env.d.ts
 
 # database backups (scripts/backup-db.mjs) — may contain real customer data
 /backups/
+
+# Tenant registry — every client's database token. Never commit.
+/clients.json

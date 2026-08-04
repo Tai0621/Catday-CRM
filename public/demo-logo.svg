@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 120" width="460" height="120" role="img" aria-label="Velvet Paw">
+  <!-- Neutral wordmark for the Bizkit demo tenant. Deliberately not any real
+       client's mark: the demo is shown to prospects. Ink variant, for light
+       backgrounds. -->
+  <g fill="#2D1907">
+    <path d="M62 68C58 51 57 30 61 12C63 5 71 3 77 9C89 21 102 34 110 45C117 43 126 43 133 45C141 34 154 21 166 9C172 3 180 5 182 12C186 30 185 51 181 68C188 80 191 94 191 108C191 140 161 164 122 164C83 164 53 140 53 108C53 94 56 80 62 68Z" transform="translate(0,-8) scale(0.42)" />
+    <text x="112" y="76" font-family="Georgia, 'Times New Roman', serif" font-size="52" letter-spacing="1.5">Velvet Paw</text>
+  </g>
+</svg>

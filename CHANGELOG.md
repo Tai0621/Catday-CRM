@@ -38,6 +38,10 @@ The agentic and marketing cycle. Planned scope is in
 - Version control: `CHANGELOG.md`, `docs/VERSIONING.md`, annotated git tags, and the running OS
   version surfaced in Admin → Business Settings.
 
+- **Tenant registry and migration fan-out.** `clients.json` (gitignored) plus
+  `npm run migrate:all` apply a migration across every tenant database. Tenants share a deploy but
+  not a database, so pushing before every tenant is migrated would break all of them at once. Runs
+  sequentially and stops at the first failure.
 - **Environment awareness.** `lib/environment.ts` derives production / demo / local from `VERCEL_ENV`,
   so a preview branch is a demo automatically and cannot present itself as production. Non-production
   deployments carry a standing `DEMO` banner and are `noindex`; production renders exactly as before.
@@ -57,6 +61,12 @@ The agentic and marketing cycle. Planned scope is in
   the same conversion join the live app runs rather than hardcoded.
 
 ### Fixed
+- **White-label leak**: `lib/version.ts` hardcoded `'Cat Day OS'`, so a second client would have been
+  told they were running the first client's system. Product identity (`Bizkit`) and tenant identity
+  (`config.business.name`) are now separate.
+- The demo now seeds a **fictional** business (Velvet Paw) rather than a live client's branding —
+  showing a real client's business shape to prospects is a confidentiality problem, not a tidiness
+  one.
 - `scripts/verify-carelog.mjs` asserted the pre-1.1.0 run-sheet button labels and had been failing
   since they were relabelled.
 

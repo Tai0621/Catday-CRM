@@ -1,4 +1,66 @@
-# Environments — production vs demo
+# Environments — product, tenants, demo
+
+## Product vs tenant
+
+**Bizkit** is the product: one codebase, one version line, one release process.
+**Cat Day** is a tenant: one deployment, one database, its own branding.
+
+The rule: a tenant's staff never see the word "Bizkit" except where we choose to put it. Everything
+staff-facing reads from `config.business.name` (Track B). The product name appears only in the
+version stamp on Admin → Business Settings, which is what a support conversation starts from.
+
+`lib/version.ts` exports `PRODUCT_NAME` and `PRODUCT_RELEASE` for that stamp. It previously
+hardcoded `'Cat Day OS'`, which would have told the second client they were running the first
+client's system.
+
+## Topology
+
+One Vercel project per tenant, all deploying from this one repo:
+
+```
+bizkit-demo     →  develop  →  demo.bizkit.<tld>      →  demo database
+bizkit-catday   →  main     →  catday.bizkit.<tld>    →  Cat Day's database
+bizkit-<next>   →  main     →  <next>.bizkit.<tld>    →  their database
+```
+
+Each project holds its own `DATABASE_URL`, `APP_PASSWORD` and `SESSION_SECRET`, so isolation is
+enforced at the Vercel project boundary and a config mistake on one tenant cannot reach another.
+
+**Do not collapse this into one hostname-routed multi-tenant app.** The code is single-tenant on
+purpose (see the comment in `lib/config.ts`), auth is one `APP_PASSWORD` per deployment, and "your
+business data never lives outside your own system" is the product's actual selling point. Routing
+tenants by hostname would trade that for hosting convenience.
+
+Tenants start on a `*.bizkit.<tld>` subdomain, which costs nothing and can be provisioned instantly.
+A tenant who wants their own domain (`app.catday.my`) adds a CNAME — a five-minute change, not a
+blocker.
+
+## Migration fan-out — the part that breaks everything if skipped
+
+Deploys are **shared**: every tenant project builds from `main`, so one push updates them all at
+once. Databases are **not** shared: each tenant needs the schema change applied individually.
+
+Deploy before migrating and every tenant breaks simultaneously.
+
+`clients.json` (gitignored — it holds every tenant's database token; see `clients.example.json`) is
+the registry. `scripts/migrate-all.mjs` fans a migration out across it:
+
+```bash
+npm run migrate:all -- --list                                 # show the registry
+npm run migrate:all -- scripts/migrate-<feature>.mjs          # every tenant
+npm run migrate:all -- scripts/migrate-<feature>.mjs --only=demo
+```
+
+It spawns the ordinary migration scripts unchanged with the tenant's credentials injected — dotenv
+does not override variables already in the environment, so the injection wins over `.env`. It runs
+sequentially and **stops at the first failure**, so a partial rollout ends at a known tenant rather
+than in several places at once.
+
+**The release order is: migrate every tenant → verify → then push.** Never the reverse.
+
+---
+
+## Production vs demo
 
 ## The problem this solves
 

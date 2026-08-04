@@ -23,7 +23,33 @@ const daysInMonth = d => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(
 
 console.log('Seeding demo data into prisma/demo.db …\n')
 
-// ── 1. Membership tiers (the real Cat Day Prive structure) ──────────────────
+// ── 0. Tenant identity — a fictional business, deliberately not a real client ─
+// The demo is shown to prospects. Branding it as a live client would put that
+// client's business shape (revenue, headcount, customer names, pricing) in front
+// of people who may be their competitors. Every figure below is generated, but
+// the *brand* has to be fictional too or the demo reads as a real one.
+//
+// Settings override DEFAULT_CONFIG at runtime (lib/config.ts), so this re-skins
+// the whole OS without touching code — which also makes the demo a live
+// demonstration of the Track B white-labelling.
+console.log('· Tenant identity (fictional demo business)')
+const demoIdentity = {
+  'business.name': 'Velvet Paw',
+  'business.tagline': 'A calm day for every cat',
+  'business.legalName': 'Velvet Paw Sdn Bhd',
+  'business.regNo': '202401000000 (1000000-X)',
+  'business.address': '12 Jalan Demo, Bangsar, 59100 Kuala Lumpur',
+  'business.phone': '+60 3-0000 0000',
+  'business.email': 'hello@velvetpaw.example',
+  'portalLabel': 'Staff Portal',
+  'brand.logoUrl': '/demo-logo.svg',
+  'brand.logoDarkUrl': '/demo-logo-cream.svg',
+}
+for (const [key, value] of Object.entries(demoIdentity)) {
+  await db.setting.upsert({ where: { key }, update: { value }, create: { key, value } })
+}
+
+// ── 1. Membership tiers (mirrors the real Prive structure) ──────────────────
 console.log('· Membership tiers')
 const tierDefs = [
   { name: 'Essential', tagline: "Everyone's welcome into the Cat Day ecosystem", monthlyPrice: 0, groomingCredits: 0, boardingDiscount: 0, qualification: 'Auto', pointsMultiplier: 1, cardType: 'Digital', color: '#729094', sortOrder: 0, benefits: ['Birthday rewards for cats', 'Member-only pricing', 'Point collection'] },

@@ -1,10 +1,19 @@
 import pkg from '@/package.json'
 
-// Single-sourced from package.json so a release only ever bumps one number.
-// Surfaced in Admin → Business Settings: once more than one client is live they
-// will not all be on the same version, and "it's broken" looks identical to
-// "you're two releases behind" unless the build is visible in the tenant's own UI.
+// ── Product identity vs tenant identity ──────────────────────────────────────
+// Bizkit is the PRODUCT: one codebase, one version line, many clients. Cat Day
+// is a TENANT — one deployment with its own database and its own branding.
+//
+// These must never be confused in the UI. Everything a tenant's staff see is
+// driven by config.business.name (Track B); the product name belongs only where
+// *we* need it — the version stamp a support conversation starts from.
+//
+// This file previously hardcoded 'Cat Day OS', which would have told the second
+// client they were running the first client's system.
+//
 // Release policy: docs/VERSIONING.md
+export const PRODUCT_NAME = 'Bizkit'
 export const OS_VERSION: string = pkg.version
-export const OS_NAME = 'Cat Day OS'
-export const OS_RELEASE = `${OS_NAME} v${OS_VERSION}`
+
+/** Platform build stamp, e.g. "Bizkit v1.2.0" — for support, not for staff-facing chrome. */
+export const PRODUCT_RELEASE = `${PRODUCT_NAME} v${OS_VERSION}`

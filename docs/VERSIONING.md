@@ -49,8 +49,10 @@ Cut a release when a coherent chunk of work is done, not on a calendar.
 
 1. `npm run build` — clean compile (this also runs `prisma generate`, so it surfaces any
    schema/client mismatch).
-2. Every `scripts/migrate-*.mjs` added this cycle has been run against the real database, and
-   `npx prisma generate` has been run.
+2. Every `scripts/migrate-*.mjs` added this cycle has been fanned out to **every tenant**
+   (`npm run migrate:all -- scripts/migrate-<feature>.mjs`), and `npx prisma generate` has been run.
+   Tenants share a deploy but not a database — pushing before every tenant is migrated breaks all of
+   them at once. See [ENVIRONMENTS.md](ENVIRONMENTS.md).
 3. Every relevant `scripts/verify-*.mjs` passes — including existing ones that shared logic could
    plausibly have regressed, not just the new one. Report the pass count.
 4. Decide the level from the table above. When it is genuinely ambiguous between MINOR and MAJOR,
