@@ -1,19 +1,18 @@
-// Instant route-transition feedback — shows the moment you click a nav link,
-// while the server renders the page.
+import { SkeletonHeader, SkeletonFilters, SkeletonTable } from './components/Skeleton'
+
+// App-wide route-transition feedback, shown the moment a nav link is clicked
+// while the server renders the page. Routes with a distinctly different shape
+// (card grids, the Action Inbox) provide their own loading.tsx; this is the
+// fallback, shaped like the list-and-table pages that dominate the OS.
+//
+// Replaced a centred spinner that also printed the business name in the brand
+// font — which would have shown the first client's name to every other tenant.
 export default function Loading() {
   return (
-    <div className="flex items-center justify-center" style={{ minHeight: '60vh' }}>
-      <div className="text-center space-y-3">
-        <div className="mx-auto rounded-full animate-spin"
-          style={{
-            width: 34, height: 34,
-            border: '3px solid rgba(45,25,7,0.12)',
-            borderTopColor: '#B14919',
-          }} />
-        <p className="text-xs uppercase tracking-widest" style={{ fontFamily: 'var(--font-brand)', color: 'rgba(45,25,7,0.4)', letterSpacing: '0.15em' }}>
-          cat day
-        </p>
-      </div>
+    <div className="max-w-6xl mx-auto space-y-4" role="status" aria-busy="true" aria-label="Loading">
+      <SkeletonHeader />
+      <SkeletonFilters />
+      <SkeletonTable />
     </div>
   )
 }

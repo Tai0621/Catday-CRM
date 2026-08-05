@@ -58,6 +58,11 @@ The agentic and marketing cycle. Planned scope is in
   [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
 
 ### Changed
+- **Skeleton loading screens** replace the centred spinner. Placeholders mirror the shape of the
+  page being fetched — card grid for cats, banded queues for the Action Inbox, table rows elsewhere —
+  so the layout no longer jumps when content lands. Shimmer degrades to a still placeholder under
+  `prefers-reduced-motion`, and the old spinner's hardcoded business name is gone (it would have
+  shown the first client's brand to every other tenant).
 - Action type labels in the inbox now render in sentence case to match the band headings, with
   `VIP` kept upright.
 - Roadmap extended with **C9** (monthly per-department reports, facts computed by the existing
