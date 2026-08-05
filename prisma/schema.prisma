@@ -41,6 +41,43 @@ model Customer {
   loyaltyEntries   LoyaltyEntry[]
   walletEntries    WalletEntry[]
   groupSends       GroupSend[]
+  reviewRequests   ReviewRequest[]
+
+  // M5 · Referrals. The code is this customer's to share; referredBy records who
+  // sent them. Self-relation, so a household's origin is traceable without a
+  // second lookup table.
+  referralCode     String?        @unique
+  referredById     String?
+  referredBy       Customer?      @relation("CustomerReferral", fields: [referredById], references: [id])
+  referred         Customer[]     @relation("CustomerReferral")
+  referralsMade    Referral[]     @relation("ReferralReferrer")
+  referralReceived Referral[]     @relation("ReferralReferred")
+}
+
+// M5 · One referral, from link to credit.
+//
+// Credit is deliberately NOT awarded inside POS checkout. Data-integrity rule 3
+// says everything a checkout creates must be reversible by deleting the sale;
+// wiring wallet credit into that path would mean unpicking two customers'
+// ledgers on every correction. Instead a manager confirms it from the referrals
+// page once the referred customer's first visit is genuinely complete — the same
+// propose-then-confirm discipline used everywhere else money moves.
+model Referral {
+  id               String    @id @default(cuid())
+  referrerId       String
+  referrer         Customer  @relation("ReferralReferrer", fields: [referrerId], references: [id])
+  referredId       String    @unique // a customer can only be referred once
+  referred         Customer  @relation("ReferralReferred", fields: [referredId], references: [id])
+  status           String    @default("Pending") // Pending | Credited | Void
+  referrerCreditRM Float     @default(0)
+  referredCreditRM Float     @default(0)
+  creditedAt       DateTime?
+  note             String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status])
+  @@index([referrerId])
 }
 
 // M10 · One outbound marketing message, sent to one customer, from one audience.
@@ -758,6 +795,34 @@ model Incident {
   resolved    Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+// M4 · A sentiment-gated review request.
+//
+// The gate is the whole design. Asking "how did today go?" BEFORE showing a
+// public review link means a happy customer is routed to Google and an unhappy
+// one is routed into service recovery — a complaint becomes an Incident someone
+// can fix, instead of a one-star review nobody can.
+//
+// This is not review-gating in the prohibited sense: the negative path leads to
+// a real apology and a real fix, and nothing prevents anyone reviewing publicly
+// on their own. What it avoids is *soliciting* a public review from someone the
+// business has just let down.
+model ReviewRequest {
+  id            String    @id @default(cuid())
+  token         String    @unique // unguessable slug for the public page
+  customerId    String
+  customer      Customer  @relation(fields: [customerId], references: [id])
+  appointmentId String?
+  sentAt        DateTime  @default(now())
+  respondedAt   DateTime?
+  sentiment     String?   // Positive | Negative — null until they answer
+  clickedAt     DateTime? // followed through to the public review site
+  incidentId    String?   // the recovery this turned into, when negative
+  staffId       String?
+
+  @@index([customerId, sentAt])
+  @@index([sentAt])
 }
 
 // ─── Action Inbox log (Done/Dismissed/Snoozed decisions) ─────────────────────

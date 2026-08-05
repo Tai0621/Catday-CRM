@@ -97,6 +97,8 @@ const SEGMENTS: NavSegment[] = [
     groups: [{ links: [
       { href: '/academy', label: 'Academy', icon: 'cap' },
       { href: '/marketing/groups', label: 'Customer Groups', icon: 'customers' },
+      { href: '/marketing/reviews', label: 'Reviews', icon: 'star' },
+      { href: '/marketing/referrals', label: 'Referrals', icon: 'compass' },
       { href: '/admin/variants', label: 'Message Variants', icon: 'chat' },
     ] }],
   },

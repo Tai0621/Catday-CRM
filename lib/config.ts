@@ -59,6 +59,12 @@ export interface AppConfig {
     // against a spend figure instead of on its own. Covers the WhatsApp
     // conversation fee, or a staff-time estimate while sending is manual.
     messageCostRM: number
+    // M4 · where a happy customer is sent to leave a public review. Blank
+    // disables the positive path rather than sending anyone to a dead link.
+    reviewUrl: string
+    // M5 · wallet credit for each side once a referral's first visit completes.
+    referrerCreditRM: number
+    referredCreditRM: number
   }
   portalLabel: string  // small footer on the login screen
 }
@@ -91,7 +97,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     signature: 'Refer to the cat by name. Offer, never demand ("shall we…", "would you like us to…"). Keep it to a few short sentences a person can read on a phone.',
     avoid: 'ALL CAPS, exclamation stacking, discount-hype language ("HURRY", "LAST CHANCE"), "dear customer", "furbaby", and any claim about a cat\'s health the record does not support.',
   },
-  marketing: { messageCostRM: 0.35 },
+  marketing: { messageCostRM: 0.35, reviewUrl: '', referrerCreditRM: 20, referredCreditRM: 20 },
   portalLabel: 'Staff Portal',
 }
 
@@ -126,6 +132,9 @@ export const SETTING_FIELDS: Field[] = [
   { group: 'Brand Voice', key: 'voice.signature', label: 'Signature moves', kind: 'text', hint: 'phrases and framings to favour' },
   { group: 'Brand Voice', key: 'voice.avoid', label: 'Never say', kind: 'text', hint: 'words and claims to avoid entirely' },
   { group: 'Marketing', key: 'marketing.messageCostRM', label: 'Cost per message sent', kind: 'number', hint: 'WhatsApp conversation fee or staff-time estimate; 0 to ignore spend' },
+  { group: 'Marketing', key: 'marketing.reviewUrl', label: 'Public review link', kind: 'text', hint: 'Google Business review URL — leave blank to disable review requests' },
+  { group: 'Marketing', key: 'marketing.referrerCreditRM', label: 'Referral credit — referrer', kind: 'number', hint: 'wallet credit for the customer who referred' },
+  { group: 'Marketing', key: 'marketing.referredCreditRM', label: 'Referral credit — new customer', kind: 'number', hint: 'wallet credit for the customer they brought in' },
   { group: 'Business Identity', key: 'portalLabel', label: 'Login portal label', kind: 'text' },
 ]
 

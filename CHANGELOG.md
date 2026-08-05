@@ -22,6 +22,19 @@ The agentic and marketing cycle. Planned scope is in
   held back. Guardrails: evidence moves a type by at most ±1.5 priority so an unpaid bill can never
   sink below a birthday; types below the minimum sample are left neutral so new ones keep exposure;
   and "Do now" types are never suppressed.
+- **M4 — review engine.** A sentiment-gated request under **Marketing → Reviews**: a public
+  token-linked page asks how the visit went *before* showing anything, then routes a happy customer
+  to the public review link and an unhappy one into an `Incident` raised in the same transaction, so
+  a complaint becomes something the team can fix rather than a one-star review nobody can. Funnel
+  reporting covers asked → answered → positive → clicked through. This does not suppress negative
+  reviews — anyone can still review publicly at any time; it stops the business *soliciting* one from
+  a customer it has just let down.
+- **M5 — referral engine.** Referral codes, link tracking, and wallet credit for both sides under
+  **Marketing → Referrals**, payable only once the referred customer's first visit is genuinely
+  complete. Credit follows data-integrity rule 2 exactly — ledger entry and cached balance move in
+  one `db.$transaction` with the referral's own status — and is deliberately **not** wired into POS
+  checkout, since rule 3 would then require unpicking two customers' ledgers on every corrected sale.
+  Guards against self-referral, double-referral and circular pairs.
 - **M10 — customer groups & targeted marketing.** Six live audiences under
   **Marketing → Customer Groups** (at-risk, lapsed 90+, gold-eligible, new this month, long-coat
   overdue, boarding-only), each re-evaluated on open rather than stored as a list, with a send
