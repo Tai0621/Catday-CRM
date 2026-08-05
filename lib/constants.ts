@@ -186,6 +186,15 @@ export const ACTION_OUTCOME_WINDOW_DAYS: Partial<Record<ActionType, number>> = {
   VipCheckIn: 30,
 }
 
+// ── M10 · Customer groups & targeted marketing ──
+// A customer who lands in five audiences must not receive five messages in a
+// week. The cap is GLOBAL and checked at send time, not per campaign — a
+// per-campaign limit cannot see the other four.
+export const MARKETING_FREQUENCY_CAP_DAYS = 14
+
+// How far back the send log is read when applying the cap and reporting reach.
+export const MARKETING_SEND_LOOKBACK_DAYS = 180
+
 export const LEAD_TYPES = ['BookingRequest', 'Inquiry', 'Complaint', 'Reschedule', 'Cancellation', 'Other'] as const
 export type LeadType = typeof LEAD_TYPES[number]
 

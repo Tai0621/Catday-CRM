@@ -22,6 +22,17 @@ The agentic and marketing cycle. Planned scope is in
   held back. Guardrails: evidence moves a type by at most ±1.5 priority so an unpaid bill can never
   sink below a birthday; types below the minimum sample are left neutral so new ones keep exposure;
   and "Do now" types are never suppressed.
+- **M10 — customer groups & targeted marketing.** Six live audiences under
+  **Marketing → Customer Groups** (at-risk, lapsed 90+, gold-eligible, new this month, long-coat
+  overdue, boarding-only), each re-evaluated on open rather than stored as a list, with a send
+  worklist that renders the message per recipient and logs each confirmed send.
+  Three guardrails are enforced in code, not by convention: **consent is a floor** — `evaluateGroup()`
+  counts everyone for analysis, `sendableMembers()` is the only path to outreach and always requires
+  consent and non-erasure; a **global frequency cap** (14 days) applied across all groups, because a
+  per-campaign limit cannot see the other campaigns; and **health data is not targetable** — cat
+  health notes, medication and treatment state are absent from the rule vocabulary and never read.
+  Sending is an assisted worklist, not a bulk blast: the WhatsApp integration is inbound-only, and
+  outbound at scale needs approved templates and throttling.
 - **M2 — marketing attribution.** C3 answered "did a booking follow this nudge?"; this answers "how
   much was it worth?". The Action Inbox and the message variants now read as a marketing P&L —
   attributed revenue per action type, and revenue per message sent per variant, which is the number

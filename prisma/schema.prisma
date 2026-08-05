@@ -40,6 +40,30 @@ model Customer {
   whatsappLeads    WhatsAppLead[]
   loyaltyEntries   LoyaltyEntry[]
   walletEntries    WalletEntry[]
+  groupSends       GroupSend[]
+}
+
+// M10 · One outbound marketing message, sent to one customer, from one audience.
+//
+// Two jobs. It enforces the global frequency cap — a customer who lands in five
+// groups must not receive five messages in a week — and it gives M2's
+// attribution join something to credit, so targeting becomes measurable rather
+// than merely convenient.
+//
+// Written only when a staff member confirms the send, not when the worklist is
+// opened: an unsent message must never suppress a later real one.
+model GroupSend {
+  id         String   @id @default(cuid())
+  groupKey   String   // system group key (lib/customer-groups.ts)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  channel    String   @default("WhatsApp")
+  variant    String?  // copy arm, when the group's message is under test
+  staffId    String?
+  sentAt     DateTime @default(now())
+
+  @@index([customerId, sentAt]) // frequency-cap lookup
+  @@index([groupKey, sentAt])
 }
 
 // source values: GoogleForm | WhatsApp | WalkIn | Referral | Other
