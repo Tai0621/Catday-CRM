@@ -21,6 +21,20 @@ interface Availability {
   scope: { label: string; suggestions: string[] }
 }
 
+// C2 — a write the assistant wants to make, waiting on a human.
+interface Proposal {
+  id: string
+  kind: string
+  summary: string
+  detail: string[]
+}
+type Settled = { id: string; ok: boolean; message: string; link?: string }
+
+const KIND_LABEL: Record<string, string> = {
+  whatsapp: 'Message', appointment: 'Booking', careNote: 'Care log',
+  reorder: 'Stock alert', expense: 'Expense',
+}
+
 export function Copilot() {
   const path = usePathname()
   const [open, setOpen] = useState(false)
@@ -28,6 +42,9 @@ export function Copilot() {
   const [question, setQuestion] = useState('')
   const [asked, setAsked] = useState<string | null>(null)
   const [answer, setAnswer] = useState<string | null>(null)
+  const [proposals, setProposals] = useState<Proposal[]>([])
+  const [settled, setSettled] = useState<Settled[]>([])
+  const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -46,14 +63,39 @@ export function Copilot() {
   // reading it as though it were about what is now on screen.
   useEffect(() => {
     setAnswer(null); setAsked(null); setError(null); setQuestion('')
+    setProposals([]); setSettled([])
   }, [path])
 
   if (!info?.available) return null
+
+  async function decide(p: Proposal, decision: 'confirm' | 'decline') {
+    if (busyId) return
+    setBusyId(p.id)
+    try {
+      const res = await fetch('/api/ask/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: p.id, decision }),
+      })
+      const json = await res.json()
+      setProposals(list => list.filter(x => x.id !== p.id))
+      if (decision === 'decline') return
+      setSettled(list => [...list, res.ok
+        ? { id: p.id, ok: true, message: `${p.summary} — ${json.message}`, link: json.link }
+        : { id: p.id, ok: false, message: json.error ?? 'That could not be done.' }])
+    } catch {
+      setSettled(list => [...list, { id: p.id, ok: false, message: 'Could not reach the server.' }])
+      setProposals(list => list.filter(x => x.id !== p.id))
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   async function ask(q: string) {
     const text = q.trim()
     if (!text || loading) return
     setLoading(true); setError(null); setAnswer(null); setAsked(text); setQuestion('')
+    setProposals([]); setSettled([])
     try {
       const res = await fetch('/api/ask', {
         method: 'POST',
@@ -69,6 +111,7 @@ export function Copilot() {
         )
       } else {
         setAnswer(json.answer)
+        setProposals(json.proposals ?? [])
       }
     } catch {
       setError('Could not reach the assistant.')
@@ -123,6 +166,47 @@ export function Copilot() {
         {answer && (
           <p className="text-sm whitespace-pre-wrap" style={{ color: '#2D1907' }}>{answer}</p>
         )}
+
+        {/* C2 — nothing here has happened yet. The card shows the real content
+            so the decision is made on the write itself, not on the model's
+            description of it. */}
+        {proposals.map(p => (
+          <div key={p.id} className="rounded-xl p-3 space-y-2"
+            style={{ background: 'rgba(177,73,25,0.06)', border: '1px solid rgba(177,73,25,0.25)' }}>
+            <div className="flex items-center gap-2">
+              <span className="cd-pill" style={{ background: 'rgba(177,73,25,0.15)', color: '#B14919' }}>
+                {KIND_LABEL[p.kind] ?? p.kind}
+              </span>
+              <span className="text-xs cd-muted">needs your OK</span>
+            </div>
+            <p className="text-sm font-medium" style={{ color: '#2D1907' }}>{p.summary}</p>
+            {p.detail.map((line, i) => (
+              <p key={i} className="text-xs whitespace-pre-wrap p-2 rounded-lg"
+                style={{ background: 'rgba(255,255,255,0.6)', color: 'rgba(45,25,7,0.8)' }}>{line}</p>
+            ))}
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => decide(p, 'confirm')} disabled={busyId === p.id}
+                className="text-xs px-3 py-1.5 rounded-lg font-medium"
+                style={{ background: '#B14919', color: '#F2EDE0', opacity: busyId === p.id ? 0.6 : 1 }}>
+                {busyId === p.id ? 'Working…' : 'Confirm'}
+              </button>
+              <button type="button" onClick={() => decide(p, 'decline')} disabled={busyId === p.id}
+                className="text-xs cd-muted hover:underline">Discard</button>
+            </div>
+          </div>
+        ))}
+
+        {settled.map(s => (
+          <p key={s.id} className="text-xs" style={{ color: s.ok ? '#5c6b3c' : '#B14919' }}>
+            {s.ok ? '✓ ' : ''}{s.message}
+            {s.link && (
+              <>
+                {' '}
+                <a href={s.link} target="_blank" rel="noopener noreferrer" className="cd-link">Open WhatsApp</a>
+              </>
+            )}
+          </p>
+        ))}
 
         {!asked && !loading && (
           <div className="space-y-1.5">

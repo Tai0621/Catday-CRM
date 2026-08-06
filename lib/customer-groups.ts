@@ -249,6 +249,40 @@ export async function sendableMembers(group: CustomerGroup, now: Date = new Date
   return (await evaluateGroup(group, now)).sendable
 }
 
+export type SendGate =
+  | { ok: true; name: string; phone: string }
+  | { ok: false; reason: string }
+
+/**
+ * The same floor as sendableMembers(), for one customer reached outside a
+ * group — the copilot drafting a message (C2), or any future one-off surface.
+ *
+ * Every customer message originating from the OS goes through this, including
+ * ones that read as operational rather than marketing. Service messages do not
+ * legally need consent, but the alternative is letting the sender classify its
+ * own intent, and when the sender is a model that is not a judgement to
+ * delegate. Staff who need to send an operational message still do it from the
+ * customer's own page, exactly as before.
+ */
+export async function canMessage(customerId: string, now: Date = new Date()): Promise<SendGate> {
+  const c = await db.customer.findFirst({
+    where: { id: customerId, erasedAt: null },
+    select: { name: true, phone: true, marketingConsent: true },
+  })
+  if (!c) return { ok: false, reason: 'That customer is not contactable.' }
+  if (!c.marketingConsent) return { ok: false, reason: `${c.name ?? c.phone} never agreed to marketing.` }
+
+  const capCutoff = new Date(now.getTime() - MARKETING_FREQUENCY_CAP_DAYS * DAY)
+  const recent = await db.groupSend.findFirst({
+    where: { customerId, sentAt: { gte: capCutoff } },
+    select: { sentAt: true },
+  })
+  if (recent) {
+    return { ok: false, reason: `${c.name ?? c.phone} was messaged in the last ${MARKETING_FREQUENCY_CAP_DAYS} days.` }
+  }
+  return { ok: true, name: c.name ?? c.phone, phone: c.phone }
+}
+
 /** Fill {customer} {cat} {brand}; leave unknown tokens visible rather than blank. */
 export function renderMessage(template: string, vars: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (whole, key: string) => (vars[key] ? vars[key] : whole))

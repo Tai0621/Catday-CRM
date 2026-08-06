@@ -33,6 +33,26 @@ The agentic and marketing cycle. Planned scope is in
   without a deploy.
   Every customer- and cat-reading tool now filters `erasedAt` at the **query** layer, so Track A's
   erasure guarantee holds inside the assistant too.
+- **C2 — write tools behind a confirm gate.** The assistant stops answering and starts doing, but
+  never unattended. Five drafts are now possible — a WhatsApp message, a booking, a daily care log,
+  a reorder threshold, an expense — and each one **writes nothing**. It parks a proposal; a human
+  reads the real content on a card and presses Confirm; only then does the write happen, and it goes
+  through the *same server action the manual form submits to*, so validation cannot drift between
+  the two callers. The manual paths for expense, reorder, care log and outreach were extracted into
+  file-level actions to make that literally true rather than approximately true.
+  Proposals are stored server-side, not round-tripped through the browser: that makes Confirm
+  single-use (a double click cannot book twice), makes the `AuditLog` row record what the model
+  actually proposed, and leaves a record of what was *declined* — the more interesting half, since a
+  draft nobody ever confirms is a tool that should not exist. They expire after 30 minutes, because
+  "book her in for tomorrow at 2" is wrong on Thursday.
+  The model works in **names, never ids**: an ambiguous "Luna" is a refusal, not a coin flip.
+  M10's floors hold on the new surface — a drafted message goes through the same consent check and
+  the same global frequency cap as the group worklist, and is logged as the same `GroupSend` row.
+  Every copilot-drafted customer message is treated as marketing even when it reads as operational,
+  because the alternative is letting the sender classify its own intent.
+  **Permanently human-only:** POS checkout, transaction delete or edit, loyalty points, wallet
+  balance, payroll, commission, statement cells, customer erasure. Not a phase-two list — there is
+  no tool for any of them, and the verification script asserts there is none.
 - **M4 — review engine.** A sentiment-gated request under **Marketing → Reviews**: a public
   token-linked page asks how the visit went *before* showing anything, then routes a happy customer
   to the public review link and an unhappy one into an `Incident` raised in the same transaction, so

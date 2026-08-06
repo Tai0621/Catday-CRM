@@ -290,3 +290,8 @@ export const ASSESSMENT_OPTIONS = {
   nailCondition: ['Trimmed', 'Due', 'Overgrown'],
   stressLevel: ['Low', 'Medium', 'High'],
 } as const
+
+// C2 — the groupKey a one-off, copilot-drafted message is filed under. Not a
+// real audience: it keeps ad-hoc sends inside the global frequency cap (which
+// looks across all keys) without polluting any group's own reporting.
+export const AD_HOC_GROUP_KEY = 'copilot'

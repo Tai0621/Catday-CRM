@@ -1,4 +1,4 @@
-import { requireAuth, getSession } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -7,6 +7,7 @@ import {
 } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
 import { MediaSection } from '@/app/components/MediaSection'
+import { saveCareLog } from './actions'
 
 const dateKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const seg = SEGMENTS.boarding
@@ -33,20 +34,13 @@ export default async function DailyLogPage({
 
   async function save(data: FormData) {
     'use server'
-    const s = await getSession()
     const v = (k: string) => ((data.get(k) as string) || null)
-    const payload = {
+    await saveCareLog(id, today, period, {
       appetite: v('appetite'), stool: v('stool'), urine: v('urine'), energy: v('energy'),
-      behavior: data.getAll('behavior').map(String).join(', ') || null,
+      behavior: data.getAll('behavior').map(String),
       respiratory: v('respiratory'), skin: v('skin'),
       vomiting: data.get('vomiting') === 'on',
-      notes: ((data.get('notes') as string) || '').trim() || null,
-      staffId: s?.kind === 'staff' ? s.staffId : null,
-    }
-    await db.dailyCareLog.upsert({
-      where: { appointmentId_date_period: { appointmentId: id, date: today, period } },
-      create: { appointmentId: id, catId: appt!.catId, date: today, period, ...payload },
-      update: payload,
+      notes: v('notes'),
     })
     redirect('/runsheet')
   }

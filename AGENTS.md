@@ -332,6 +332,11 @@ preview pane alone; verify with an authenticated `fetch`/`curl` first.
 - Route-colocated files: a feature at `app/<route>/` typically has `page.tsx` (server), optionally
   `actions.ts` (`'use server'` mutations, when there's more than one or they're reused by a client
   component), and a client component file only when needed (e.g. `PosClient.tsx`, `StatementTable.tsx`).
+- **A `'use server'` module may only export async functions.** Adding an innocuous
+  `export const SOME_KEY = '…'` to an `actions.ts` does not merely fail on that one symbol — the
+  whole module compiles to *no exports at all*, and every importer fails with "the export X was not
+  found … The module has no exports." (Type-only exports are fine; they're erased.) Constants that
+  an action and its callers share belong in `lib/constants.ts`, not next to the action.
 - No comments explaining *what* code does (names should do that); comments are reserved for *why* —
   a non-obvious constraint, a workaround, or an invariant a future reader would otherwise violate. This
   file itself is full of "why" comments for exactly that reason — match that density in code, not more.

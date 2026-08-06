@@ -843,6 +843,37 @@ model AiUsage {
   updatedAt    DateTime @updatedAt
 }
 
+// C2 · A write the assistant wants to make, held until a human confirms it.
+//
+// The proposal is stored server-side rather than handed to the browser and
+// posted back, for three reasons that are all about correctness rather than
+// distrust of the logged-in manager (who could make the same write by hand):
+//
+//   1. Single use. `status` moves Pending → Confirmed exactly once, so a
+//      double-clicked Confirm cannot produce two appointments.
+//   2. Honest audit. The arguments executed are the arguments the model
+//      proposed, not whatever the client last held.
+//   3. A record of what was DECLINED, which is the more interesting half — a
+//      proposal type nobody ever confirms is a tool that should not exist.
+//
+// Proposals expire (see PROPOSAL_TTL_MIN): "book Mochi in tomorrow at 2pm" is
+// wrong if it is confirmed three days later.
+model AiProposal {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  kind      String // whatsapp | appointment | careNote | reorder | expense
+  payload   String // JSON, exactly as validated when proposed
+  summary   String // the one-liner the confirm card shows
+  prompt    String // the question that produced it
+  status    String    @default("Pending") // Pending | Confirmed | Declined
+  decidedAt DateTime?
+  resultId  String? // id of the row the confirmed write created
+  error     String? // why execution failed, when it did
+
+  @@index([status, createdAt])
+  @@index([createdAt])
+}
+
 // ─── Action Inbox log (Done/Dismissed/Snoozed decisions) ─────────────────────
 
 model ActionLog {

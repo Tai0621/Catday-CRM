@@ -3,6 +3,7 @@ import { isAuthenticated } from '@/lib/auth'
 import { askCatday } from '@/lib/ai/ask'
 import { budgetState } from '@/lib/ai/budget'
 import { scopeForPath } from '@/lib/ai/scope'
+import { loadProposals } from '@/lib/ai/proposals'
 
 /**
  * GET — what the copilot needs to render itself: whether it is usable at all,
@@ -35,8 +36,11 @@ export async function POST(req: Request) {
   const path = typeof body?.path === 'string' ? body.path : undefined
 
   try {
-    const answer = await askCatday(question, { path })
-    return NextResponse.json({ answer })
+    const { answer, proposalIds } = await askCatday(question, { path })
+    // Read back from the database rather than echoing what was built: the card
+    // a human approves must show what was actually stored (C2).
+    const proposals = await loadProposals(proposalIds)
+    return NextResponse.json({ answer, proposals })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     // These are expected states rather than failures, so each gets its own code

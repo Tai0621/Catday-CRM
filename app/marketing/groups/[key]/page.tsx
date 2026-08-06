@@ -1,6 +1,6 @@
-import { requireManager, getSession } from '@/lib/auth'
-import { db } from '@/lib/db'
+import { requireManager } from '@/lib/auth'
 import { getConfig } from '@/lib/config'
+import { logSend } from '@/app/marketing/actions'
 import { groupByKey, evaluateGroup, renderMessage } from '@/lib/customer-groups'
 import { whatsappUrl } from '@/lib/phone'
 import { segmentStyle } from '@/lib/intelligence'
@@ -30,8 +30,6 @@ export default async function GroupPage({ params }: { params: Promise<{ key: str
 
   async function markSent(data: FormData) {
     'use server'
-    await requireManager()
-    const session = await getSession()
     const customerId = String(data.get('customerId') ?? '')
     const groupKey = String(data.get('groupKey') ?? '')
     if (!customerId || !groupByKey(groupKey)) return
@@ -39,12 +37,7 @@ export default async function GroupPage({ params }: { params: Promise<{ key: str
     // Logged only on explicit confirmation. Writing this when the worklist is
     // opened would let an unsent message suppress a later real one for a
     // fortnight.
-    await db.groupSend.create({
-      data: {
-        groupKey, customerId, channel: 'WhatsApp',
-        staffId: session?.kind === 'staff' ? session.staffId : null,
-      },
-    })
+    await logSend(customerId, groupKey)
     revalidatePath(`/marketing/groups/${groupKey}`)
   }
 

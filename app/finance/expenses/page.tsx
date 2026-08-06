@@ -1,10 +1,9 @@
 import { requireManager } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { COGS_CATEGORIES, OPEX_CATEGORIES } from '@/lib/finance'
 import { SEGMENTS } from '@/lib/segments'
+import { addExpenseForm, togglePaid, removeExpense } from './actions'
 
 // Cost entry for the income statement: variable costs (cost of services)
 // and fixed operating expenses, per the owner's Excel model.
@@ -13,46 +12,6 @@ export default async function ExpensesPage() {
   const seg = SEGMENTS.business
 
   const expenses = await db.expense.findMany({ orderBy: { date: 'desc' }, take: 60 })
-
-  async function addExpense(data: FormData) {
-    'use server'
-    const amount = parseFloat((data.get('amount') as string) || '0')
-    const dateStr = (data.get('date') as string) || ''
-    const category = (data.get('category') as string) || ''
-    if (!(amount > 0) || !dateStr || !category) return
-    const paid = data.get('paid') !== 'unpaid'
-    const dueStr = (data.get('dueDate') as string) || ''
-    await db.expense.create({
-      data: {
-        date: new Date(`${dateStr}T12:00:00`),
-        category,
-        amount: Math.round(amount * 100) / 100,
-        vendor: ((data.get('vendor') as string) || '').trim() || null,
-        notes: ((data.get('notes') as string) || '').trim() || null,
-        paid,
-        dueDate: !paid && dueStr ? new Date(`${dueStr}T12:00:00`) : null,
-      },
-    })
-    revalidatePath('/finance/expenses')
-    revalidatePath('/finance/aging')
-    redirect('/finance/expenses')
-  }
-
-  async function togglePaid(data: FormData) {
-    'use server'
-    const id = data.get('id') as string
-    const cur = await db.expense.findUnique({ where: { id }, select: { paid: true } })
-    if (cur) await db.expense.update({ where: { id }, data: { paid: !cur.paid } })
-    revalidatePath('/finance/expenses')
-    revalidatePath('/finance/aging')
-    revalidatePath('/finance/balance-sheet')
-  }
-
-  async function removeExpense(data: FormData) {
-    'use server'
-    await db.expense.delete({ where: { id: data.get('id') as string } })
-    revalidatePath('/finance/expenses')
-  }
 
   // Group listing by month for scanning
   const byMonth = new Map<string, typeof expenses>()
@@ -76,7 +35,7 @@ export default async function ExpensesPage() {
         <Link href="/finance/income-statement" className="cd-btn-sec text-sm">Income Statement →</Link>
       </div>
 
-      <form action={addExpense} className="cd-card p-5 space-y-4">
+      <form action={addExpenseForm} className="cd-card p-5 space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="cd-label">Date *</label>
