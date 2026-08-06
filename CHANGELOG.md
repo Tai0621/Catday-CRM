@@ -22,6 +22,17 @@ The agentic and marketing cycle. Planned scope is in
   held back. Guardrails: evidence moves a type by at most ±1.5 priority so an unpaid bill can never
   sink below a birthday; types below the minimum sample are left neutral so new ones keep exposure;
   and "Do now" types are never suppressed.
+- **C1 — copilot dock.** The AI assistant moved from a destination you navigate to into a dock on
+  every page, and it knows where you are: suggestions on the run sheet are about tonight's stays,
+  suggestions in Finance are about the month's numbers. Scope is advisory — it points the model at
+  the likely tools without restricting what can be asked.
+  Spend is controlled by a **daily token budget** in Business Settings, checked *before* each call
+  and recorded after against real token counts, accumulated across every round of a tool loop.
+  **A budget of zero switches the assistant off entirely** — the dock disappears rather than
+  offering an input that errors, which is also how a tenant that never wanted AI turns it off
+  without a deploy.
+  Every customer- and cat-reading tool now filters `erasedAt` at the **query** layer, so Track A's
+  erasure guarantee holds inside the assistant too.
 - **M4 — review engine.** A sentiment-gated request under **Marketing → Reviews**: a public
   token-linked page asks how the visit went *before* showing anything, then routes a happy customer
   to the public review link and an unhappy one into an `Incident` raised in the same transaction, so

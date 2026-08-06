@@ -5,6 +5,7 @@ import { Nav } from './components/Nav'
 import { getSession } from '@/lib/auth'
 import { getConfig } from '@/lib/config'
 import { EnvBanner } from './components/EnvBanner'
+import { Copilot } from './components/Copilot'
 import { isProduction } from '@/lib/environment'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
@@ -40,6 +41,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Nav role={session.kind === 'manager' ? 'Manager' : session.role} userName={session.name}
                 logoUrl={config.brand.logoDarkUrl} brandName={config.business.name} />
               <main className="flex-1 overflow-y-auto p-6">{children}</main>
+              {/* Signed-in only — the copilot reads business data. */}
+              <Copilot />
             </div>
           ) : (
             <main>{children}</main>

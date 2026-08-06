@@ -66,6 +66,13 @@ export interface AppConfig {
     referrerCreditRM: number
     referredCreditRM: number
   }
+  ai: {
+    // C1 · Tokens the copilot may spend per day across the whole tenant.
+    // ZERO DISABLES IT — the assistant disappears rather than erroring, which
+    // also gives a tenant who never wanted AI a way to switch it off without a
+    // deploy. Enforced before each call in lib/ai/budget.ts.
+    dailyTokenBudget: number
+  }
   portalLabel: string  // small footer on the login screen
 }
 
@@ -98,6 +105,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     avoid: 'ALL CAPS, exclamation stacking, discount-hype language ("HURRY", "LAST CHANCE"), "dear customer", "furbaby", and any claim about a cat\'s health the record does not support.',
   },
   marketing: { messageCostRM: 0.35, reviewUrl: '', referrerCreditRM: 20, referredCreditRM: 20 },
+  ai: { dailyTokenBudget: 300000 },
   portalLabel: 'Staff Portal',
 }
 
@@ -135,6 +143,7 @@ export const SETTING_FIELDS: Field[] = [
   { group: 'Marketing', key: 'marketing.reviewUrl', label: 'Public review link', kind: 'text', hint: 'Google Business review URL — leave blank to disable review requests' },
   { group: 'Marketing', key: 'marketing.referrerCreditRM', label: 'Referral credit — referrer', kind: 'number', hint: 'wallet credit for the customer who referred' },
   { group: 'Marketing', key: 'marketing.referredCreditRM', label: 'Referral credit — new customer', kind: 'number', hint: 'wallet credit for the customer they brought in' },
+  { group: 'AI Assistant', key: 'ai.dailyTokenBudget', label: 'Daily token budget', kind: 'number', hint: 'tokens per day across the whole business; 0 switches the assistant off entirely' },
   { group: 'Business Identity', key: 'portalLabel', label: 'Login portal label', kind: 'text' },
 ]
 

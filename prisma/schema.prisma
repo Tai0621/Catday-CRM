@@ -825,6 +825,24 @@ model ReviewRequest {
   @@index([sentAt])
 }
 
+// C1 · Daily AI spend, one row per day.
+//
+// The copilot is reachable from every page, so a stuck loop or an enthusiastic
+// afternoon could run up real cost on a tenant who never agreed to it. The
+// budget is checked BEFORE each call and the actual usage recorded after, so the
+// limit is enforced against what was really spent rather than an estimate.
+//
+// Date is a "YYYY-MM-DD" string, matching the period-identifier convention used
+// for CashUp and CareTask.
+model AiUsage {
+  id           String   @id @default(cuid())
+  date         String   @unique
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  calls        Int      @default(0)
+  updatedAt    DateTime @updatedAt
+}
+
 // ─── Action Inbox log (Done/Dismissed/Snoozed decisions) ─────────────────────
 
 model ActionLog {
