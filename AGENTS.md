@@ -243,13 +243,37 @@ The standing practice is:
    this. When a change touches shared logic (the income statement builder, the checkout reversal,
    etc.), **re-run every existing `verify-*.mjs` script that plausibly regresses**, not just the new one.
 
-**Driving a server action from a verification script (no browser)**: Next's dev server (Turbopack)
-compiles each file-level `'use server'` action into a client-visible export named
+**Driving a server action from a verification script (no browser)**: there are two techniques, and
+which one applies depends on how the action takes its input. Check that first — most of the time it's
+the simpler one.
+
+**A. `<form action={serverFn}>` actions — submit the real form (preferred).** A form rendered from a
+Server Component ships as a genuine no-JS form: `method="POST"`, `encType="multipart/form-data"`, and
+a hidden `$ACTION_ID_<hex>` input carrying the action reference. Submitting it is therefore an
+ordinary multipart POST back to the same URL — no `Next-Action` header, no chunk scraping.
+
+```js
+// 1. Fetch the page HTML (with the auth cookie if the route needs one).
+// 2. Split out each <form ...>…</form>; from each, read:
+//      the hidden  name="$ACTION_ID_<hex>"   → the action reference
+//      every other name="…" value="…"        → the fields the page already filled in
+// 3. Pick the form you want by a marker in its own markup (a hidden id, a distinctive
+//    value=…) rather than by position — pages render many similar forms.
+// 4. POST multipart back to the SAME page URL: append the $ACTION_ID_<hex> key (empty
+//    value), then the form's own fields, then any overrides. Use redirect: 'manual',
+//    because actions that end in redirect() return a 303.
+// 5. Assert on the resulting DB state, not the response body.
+```
+This is what a browser with JavaScript disabled does, which is why it is the more robust option: it
+behaves **identically against `next dev` and `next start`**. `scripts/verify-reviews-referrals.mjs`
+has the reference implementation (`formsIn` / `findForm` / `submitForm`) — reuse it verbatim.
+
+**B. Actions called with arguments (not FormData) — resolve the id from the chunks.** Next's dev
+server (Turbopack) compiles each file-level `'use server'` action into a client-visible export named
 `$$RSC_SERVER_ACTION_n`, itself instantiated via `createServerReference("<40-hex-id>")`, but the
 mapping is spread across whichever chunk Turbopack happens to bundle it into that compile — the
 mapping is **not stable** and production manifests (`.next/server/**/server-reference-manifest.json`)
-use *different* ids than the live dev server, so don't trust the manifest file. The reliable approach,
-used throughout `scripts/verify-*.mjs`:
+use *different* ids than the live dev server, so don't trust the manifest file.
 ```js
 // 1. Fetch the page HTML, collect every /_next/static/chunks/*.js path referenced
 //    anywhere in it (not just <script> tags — client-component chunks often only
@@ -261,8 +285,15 @@ used throughout `scripts/verify-*.mjs`:
 // 5. Dev registers file-level actions lazily on first hit — retry on a 404 a few times with a
 //    short delay before giving up.
 ```
-See any existing `scripts/verify-*.mjs` for the exact regex/retry implementation — reuse it verbatim,
-don't re-derive it.
+See `scripts/verify-hidden-rows.mjs` for the exact regex/retry implementation — reuse it verbatim,
+don't re-derive it. **This one only works against `next dev`**: the `$$RSC_SERVER_ACTION` symbols are
+a dev-build artefact, so a script relying on it must not be pointed at a `next start` build.
+
+**Actions must be file-level to be drivable either way.** An action declared *inside* a page
+component closes over local scope and is not exposed under its own name, so neither technique can
+find it. That matches the convention above anyway — a route with more than one mutation puts them in
+a colocated `actions.ts`. If a verification script can't reach an action, the fix is usually to move
+it there, not to work around it.
 
 **Preview-pane caveat**: an embedded browser preview pane may not reliably execute Next's streaming
 HTML swap when `loading.tsx` is present — pages can appear stuck on a spinner there even though a real
