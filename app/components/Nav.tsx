@@ -16,6 +16,7 @@ const segmentLinks = (s: NavSegment) => s.groups.flatMap(g => g.links)
 const PINNED: NavLink[] = [
   { href: '/', label: 'Dashboard', icon: 'dashboard' },
   { href: '/actions', label: 'Action Inbox', icon: 'inbox' },
+  { href: '/brief', label: 'Morning Brief', icon: 'ai' },
   { href: '/ask', label: 'Ask AI', icon: 'ai' },
 ]
 

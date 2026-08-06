@@ -874,6 +874,30 @@ model AiProposal {
   @@index([createdAt])
 }
 
+// C5 · The nightly analyst brief. One row per business day, written just after
+// local midnight by /api/cron/daily-brief.
+//
+// `facts` is the computed snapshot the narration was written from, stored
+// verbatim. Without it a brief read three weeks later cannot be checked against
+// anything — the underlying rows have moved on, and "revenue was soft on the
+// 12th" becomes an unfalsifiable claim. It is also what makes the model's role
+// auditable: every figure in `observations` must appear here.
+//
+// `date` is a tenant-LOCAL day key (lib/timezone.ts), not a UTC one.
+model DailyBrief {
+  id           String   @id @default(cuid())
+  date         String   @unique // YYYY-MM-DD, tenant local
+  createdAt    DateTime @default(now())
+  facts        String // JSON — BriefFacts
+  observations String // JSON — string[]
+  actions      String // JSON — { title, why, href }[]
+  model        String
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+
+  @@index([createdAt])
+}
+
 // ─── Action Inbox log (Done/Dismissed/Snoozed decisions) ─────────────────────
 
 model ActionLog {

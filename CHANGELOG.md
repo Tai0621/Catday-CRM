@@ -33,6 +33,27 @@ The agentic and marketing cycle. Planned scope is in
   without a deploy.
   Every customer- and cat-reading tool now filters `erasedAt` at the **query** layer, so Track A's
   erasure guarantee holds inside the assistant too.
+- **C5 — nightly analyst brief.** A scheduled job writes one brief per business day, just after local
+  midnight: three observations about yesterday and three things to do today, each linking to a real
+  page. It appears at the top of the dashboard and is archived under **Morning Brief**.
+  **Every number is computed by the OS; the model only reads them.** The facts — revenue by stream,
+  visits, no-shows, occupancy, month-to-date pace, receivables, low stock, staff hours, the urgent
+  action band — come from the same read-only builders the pages use, and the whole snapshot is stored
+  alongside the narration, so a brief read three weeks later can still be checked against what it was
+  written from.
+  Revenue is compared against the **same weekday over the previous four weeks**, not against the day
+  before or a flat monthly mean — a Saturday measured against a Tuesday makes every weekend look like
+  a triumph.
+  New `lib/timezone.ts` gives the rest of the OS tenant-local calendar days. The job fires at 16:30
+  UTC, which is 00:30 in Kuala Lumpur, so UTC date arithmetic would have pushed the first eight hours
+  of each trading day into the previous one and quietly mis-stated every figure in the brief.
+  Costs about one Haiku call a day, is idempotent by date so a cron retry never pays twice, and fails
+  closed: no API key means no brief rather than a faked one, and a token budget of zero switches it
+  off with the rest of the AI. Budget *exhaustion* does not stop it — the ceiling exists to cap
+  unbounded interactive use, and losing the morning brief because someone asked the assistant twenty
+  questions would make the most valuable output the least reliable.
+  `?dryRun=1` returns the facts tonight's brief would be built from without writing or spending
+  anything, which is how a figure that looks wrong gets checked.
 - **C2 — write tools behind a confirm gate.** The assistant stops answering and starts doing, but
   never unattended. Five drafts are now possible — a WhatsApp message, a booking, a daily care log,
   a reorder threshold, an expense — and each one **writes nothing**. It parks a proposal; a human

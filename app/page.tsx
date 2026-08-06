@@ -8,6 +8,7 @@ import { whatsappUrl } from '@/lib/phone'
 import { REVENUE_CATEGORIES, FOUNDER_CIRCLE_LIMIT } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
 import { type SalesPacing } from '@/lib/plan'
+import { DailyBriefCard } from '@/app/components/DailyBriefCard'
 import Link from 'next/link'
 
 const STREAM_COLORS: Record<string, string> = {
@@ -27,6 +28,9 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold" style={{ color: '#2D1907' }}>Dashboard</h1>
         <p className="text-sm" style={{ color: '#729094' }}>{now.toLocaleDateString('en-MY', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
       </div>
+
+      {/* C5 — the first thing read in the morning; renders nothing if no brief exists. */}
+      <DailyBriefCard />
 
       <BreakevenWidget hasPlan={breakeven.hasPlan} pacing={breakeven.pacing} monthName={breakeven.monthName} hasAvgSale={breakeven.hasAvgSale} />
 
