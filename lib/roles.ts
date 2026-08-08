@@ -20,7 +20,7 @@ export const ROLE_HOME: Record<string, string> = {
 // denylist in proxy.ts, which still blocks everyone who isn't a manager).
 export const STAFF_ROLE_PATHS: Record<string, string[]> = {
   // Reception: books, coordinates check-in/out, takes payment, manages records.
-  FrontDesk: ['/actions', '/appointments', '/board', '/runsheet', '/rooms', '/pos', '/customers', '/cats', '/memberships', '/incidents'],
+  FrontDesk: ['/actions', '/appointments', '/board', '/runsheet', '/rooms', '/pos', '/customers', '/cats', '/memberships', '/incidents', '/requests'],
   // Groomer: the service board + cat records/assessments. No POS, no customers.
   Groomer: ['/board', '/cats'],
   // Boarding carer: the run sheet + rooms + cat records. No POS, no customers.

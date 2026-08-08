@@ -11,7 +11,11 @@ import { roleHome, staffCanAccess } from './lib/roles'
 //    from WhatsApp. The trailing slash keeps it from matching /revenue etc.
 //  • '/api/health' — public liveness probe for uptime monitors.
 //  • '/careers' + '/api/careers' — the public job-application form.
-const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-forms', '/api/cron', '/api/health', '/careers', '/api/careers', '/r/', '/review/', '/privacy']
+//  • '/visit' + '/api/visit' — the public presence page and its booking-request
+//    form (M6). Both 404 when the tenant has not published the page.
+//  • '/sitemap.xml' + '/robots.txt' — crawler-facing; they answer with nothing
+//    at all unless the page is published on a production deployment.
+const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-forms', '/api/cron', '/api/health', '/careers', '/api/careers', '/visit', '/api/visit', '/sitemap.xml', '/robots.txt', '/r/', '/review/', '/privacy']
 
 // Paths only managers (owner password or Manager-role staff) may open.
 // Staff hitting these are sent to their service board.

@@ -949,6 +949,45 @@ model OnboardingPlan {
   @@index([createdAt])
 }
 
+// M6 · An enquiry from the public page.
+//
+// Deliberately NOT an Appointment. An unauthenticated stranger must never be
+// able to write into the diary — the slot engine, room capacity and pricing all
+// assume the caller is staff. This is a lead that a human turns into a booking,
+// and `appointmentId` records that moment, which is also what makes the funnel
+// (view → request → booked → showed) joinable at all.
+model BookingRequest {
+  id            String    @id @default(cuid())
+  createdAt     DateTime  @default(now())
+  name          String
+  phone         String
+  email         String?
+  catName       String?
+  serviceName   String? // free text — what they asked for, not a Service FK
+  preferredDate String? // YYYY-MM-DD
+  notes         String?
+  status        String    @default("New") // New | Contacted | Booked | Declined
+  appointmentId String? // set when this became a real booking
+  handledBy     String?
+  handledAt     DateTime?
+
+  @@index([status, createdAt])
+  @@index([createdAt])
+}
+
+// M6 · Daily public-page view counter.
+//
+// One row per day rather than one per hit: the page is public, so a per-hit
+// table would be an unbounded write target for anyone with curl. Bots are
+// filtered by user agent before counting, which reduces the noise without
+// pretending to eliminate it.
+model PublicPageView {
+  date      String   @id // YYYY-MM-DD, tenant local
+  views     Int      @default(0)
+  requests  Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
 // ─── Action Inbox log (Done/Dismissed/Snoozed decisions) ─────────────────────
 
 model ActionLog {

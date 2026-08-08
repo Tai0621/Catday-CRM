@@ -70,14 +70,23 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               {group.fields.map(f => (
                 <div key={f.key} className={f.key === 'business.address' ? 'sm:col-span-2' : ''}>
                   <label className="cd-label">{f.label}{f.hint && <span className="cd-muted font-normal"> · {f.hint}</span>}</label>
-                  <input
-                    name={f.key}
-                    type={f.kind === 'number' ? 'number' : 'text'}
-                    step={f.kind === 'number' ? 'any' : undefined}
-                    defaultValue={current.get(f.key) ?? ''}
-                    placeholder={defaultFor(f.key) || '—'}
-                    className="cd-input"
-                  />
+                  {f.kind === 'bool' ? (
+                    // Stored as the words 'yes'/'no' so a Setting row read by eye
+                    // still says what it means.
+                    <select name={f.key} defaultValue={current.get(f.key) ?? defaultFor(f.key)} className="cd-input">
+                      <option value="no">No</option>
+                      <option value="yes">Yes</option>
+                    </select>
+                  ) : (
+                    <input
+                      name={f.key}
+                      type={f.kind === 'number' ? 'number' : 'text'}
+                      step={f.kind === 'number' ? 'any' : undefined}
+                      defaultValue={current.get(f.key) ?? ''}
+                      placeholder={defaultFor(f.key) || '—'}
+                      className="cd-input"
+                    />
+                  )}
                 </div>
               ))}
             </div>

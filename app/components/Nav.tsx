@@ -45,6 +45,7 @@ const SEGMENTS: NavSegment[] = [
         sub: 'Sales', subColor: '#ECDBB6',
         links: [
           { href: '/appointments', label: 'Appointments', icon: 'clock' },
+          { href: '/requests', label: 'Booking Requests', icon: 'chat' },
           { href: '/pos', label: 'POS Checkout', icon: 'pos' },
           { href: '/products', label: 'Products', icon: 'box' },
           { href: '/cashup', label: 'Cash-up', icon: 'wallet' },
@@ -136,6 +137,7 @@ const FRONTDESK_LINKS: NavLink[] = [
   { href: '/board', label: 'Service Board', icon: 'board' },
   { href: '/runsheet', label: 'Run Sheet', icon: 'runsheet' },
   { href: '/appointments', label: 'Appointments', icon: 'clock' },
+  { href: '/requests', label: 'Booking Requests', icon: 'chat' },
   { href: '/rooms', label: 'Rooms', icon: 'rooms' },
   { href: '/pos', label: 'POS Checkout', icon: 'pos' },
   { href: '/customers', label: 'Customers', icon: 'customers' },

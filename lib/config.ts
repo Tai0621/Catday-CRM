@@ -73,6 +73,15 @@ export interface AppConfig {
     // deploy. Enforced before each call in lib/ai/budget.ts.
     dailyTokenBudget: number
   }
+  // M6 · the public presence page at /visit. Off by default: a tenant should
+  // opt into having a public face, not discover one has been published for them.
+  publicPage: {
+    enabled: boolean
+    headline: string     // the one line above the fold
+    about: string        // a short paragraph
+    closedDays: string   // comma-separated weekday names, e.g. "Monday"
+    mapUrl: string       // Google Maps / Waze link, blank hides the button
+  }
   portalLabel: string  // small footer on the login screen
 }
 
@@ -106,12 +115,15 @@ export const DEFAULT_CONFIG: AppConfig = {
   },
   marketing: { messageCostRM: 0.35, reviewUrl: '', referrerCreditRM: 20, referredCreditRM: 20 },
   ai: { dailyTokenBudget: 300000 },
+  publicPage: { enabled: false, headline: '', about: '', closedDays: '', mapUrl: '' },
   portalLabel: 'Staff Portal',
 }
 
 // Flat "section.key" → where it maps in AppConfig, with parse/serialize.
 // This is the single list the Settings form and the accessor both use.
-type Field = { key: string; label: string; kind: 'text' | 'number'; group: string; hint?: string }
+// 'bool' is stored as the string 'yes' or 'no' rather than 0/1 so a Setting row
+// read by eye says what it means.
+type Field = { key: string; label: string; kind: 'text' | 'number' | 'bool'; group: string; hint?: string }
 export const SETTING_FIELDS: Field[] = [
   { group: 'Business Identity', key: 'business.name', label: 'Business name', kind: 'text' },
   { group: 'Business Identity', key: 'business.tagline', label: 'Tagline', kind: 'text' },
@@ -144,6 +156,11 @@ export const SETTING_FIELDS: Field[] = [
   { group: 'Marketing', key: 'marketing.referrerCreditRM', label: 'Referral credit — referrer', kind: 'number', hint: 'wallet credit for the customer who referred' },
   { group: 'Marketing', key: 'marketing.referredCreditRM', label: 'Referral credit — new customer', kind: 'number', hint: 'wallet credit for the customer they brought in' },
   { group: 'AI Assistant', key: 'ai.dailyTokenBudget', label: 'Daily token budget', kind: 'number', hint: 'tokens per day across the whole business; 0 switches the assistant off entirely' },
+  { group: 'Public Page', key: 'publicPage.enabled', label: 'Publish the public page', kind: 'bool', hint: 'serves /visit to anyone, with structured data and a sitemap' },
+  { group: 'Public Page', key: 'publicPage.headline', label: 'Headline', kind: 'text', hint: 'the one line above the fold' },
+  { group: 'Public Page', key: 'publicPage.about', label: 'About', kind: 'text', hint: 'a short paragraph about the business' },
+  { group: 'Public Page', key: 'publicPage.closedDays', label: 'Closed on', kind: 'text', hint: 'comma-separated, e.g. Monday' },
+  { group: 'Public Page', key: 'publicPage.mapUrl', label: 'Map link', kind: 'text', hint: 'Google Maps or Waze URL; blank hides the button' },
   { group: 'Business Identity', key: 'portalLabel', label: 'Login portal label', kind: 'text' },
 ]
 
@@ -164,7 +181,10 @@ function setPath(obj: Record<string, unknown>, path: string, value: unknown) {
 // The default value for a field key, as a string (for the form's placeholders)
 export function defaultFor(key: string): string {
   const v = getPath(DEFAULT_CONFIG, key)
-  return v == null ? '' : String(v)
+  if (v == null) return ''
+  // Booleans round-trip as the same 'yes'/'no' the Setting row stores, so the
+  // form's placeholder and its submitted value speak one language.
+  return typeof v === 'boolean' ? (v ? 'yes' : 'no') : String(v)
 }
 
 // Request-cached: one DB read serves every getConfig() in a render.
@@ -177,7 +197,10 @@ export const getConfig = cache(async (): Promise<AppConfig> => {
     if (!field) continue
     const raw = row.value.trim()
     if (raw === '') continue // blank override → keep the default
-    setPath(config as unknown as Record<string, unknown>, row.key, field.kind === 'number' ? Number(raw) : raw)
+    const value = field.kind === 'number' ? Number(raw)
+      : field.kind === 'bool' ? raw.toLowerCase() === 'yes'
+        : raw
+    setPath(config as unknown as Record<string, unknown>, row.key, value)
   }
   return config
 })

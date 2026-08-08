@@ -33,6 +33,30 @@ The agentic and marketing cycle. Planned scope is in
   without a deploy.
   Every customer- and cat-reading tool now filters `erasedAt` at the **query** layer, so Track A's
   erasure guarantee holds inside the assistant too.
+- **M6 — public presence page and local SEO.** The OS had no public surface at all, which meant no
+  funnel to measure and nothing for a new client to point a Google Business Profile at. `/visit` is
+  now a white-label public page built entirely from the tenant's own configuration and catalogue —
+  services and prices, opening hours, address, an honest review summary, and a booking-request form —
+  with `LocalBusiness` structured data, a sitemap and a robots policy generated from the same config.
+  A second client's page is their name, their colours and their prices with no code change.
+  **Off by default.** A public page nobody asked for is worse than none: it would put a
+  half-configured business on the open web under its real name. Unpublished, the page, its form
+  endpoint, the sitemap and robots all go dark together.
+  **A stranger creates a request, never an appointment.** The slot engine, room capacity and pricing
+  all assume the caller is staff, so the public form writes a `BookingRequest` that a human turns
+  into a booking on the normal screen. Honeypot, required name and phone, and a per-number daily cap.
+  New **Booking Requests** page for triage, carrying the first real top-of-funnel the OS has had:
+  view → request → booked → showed. Views filter declared crawlers *and* bare runtime user agents —
+  Node's own `fetch` identifies as `node`, so without that every server-to-server request in the
+  estate would have counted as a visitor. The page says plainly that the number is a trend, not a
+  headcount.
+  **No `aggregateRating` is emitted**, and that is deliberate. It is the most valuable rich snippet
+  on the page and M4 knows how many customers said their visit went well — but that is a thumbs-up,
+  not a star rating, and publishing it as one would be inventing a metric customers never gave. The
+  page shows the sentiment honestly and links to the real reviews.
+  Non-production deployments stay `noindex` with an empty sitemap and a disallow-all robots file
+  whatever the tenant has published, so the demo can never compete with the client it imitates.
+  The config seam gained a `bool` field kind, stored as the words `yes`/`no`.
 - **C6 — generative onboarding.** The resale lever. A new client describes their business in a
   paragraph — *"cat grooming and boarding in Penang, 6 rooms, 2 groomers, grooms RM80–200, we also
   sell food and litter"* — and **Administrative → Set Up Business** proposes a complete starting
