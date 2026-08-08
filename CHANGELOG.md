@@ -33,6 +33,25 @@ The agentic and marketing cycle. Planned scope is in
   without a deploy.
   Every customer- and cat-reading tool now filters `erasedAt` at the **query** layer, so Track A's
   erasure guarantee holds inside the assistant too.
+- **C7 — brand autopilot.** Track B wired `brand.*` through the CSS variables; this is the generator
+  that fills them in. **Administrative → Brand Colours** reads the palette out of the client's own
+  logo, proposes an accent and a text colour, shows a live preview built from the real utility
+  classes, and lets the owner accept or override.
+  The substantive part is the contrast check, and it knows **where these colours actually land** —
+  body text on the page, text on a card, links on cream, the button label sitting on the accent, and
+  accent borders (held to the 3:1 non-text threshold rather than 4.5:1, because a card's left border
+  is a cue, not something anyone reads). A failing colour is corrected to the nearest shade of
+  *itself*: hue and saturation are held fixed and only lightness moves, so the result is still
+  recognisably the brand.
+  Extraction runs in the browser, where the logo is already decoded — which handles PNG, JPEG, WebP
+  and SVG for free rather than shipping an image-decoding dependency to solve a problem the client
+  does not have. Nothing it proposes is trusted: the server re-parses the hex and re-runs the same
+  check before saving, refuses a palette below the readable threshold unless a manager explicitly
+  ticks the override, and records that override in the audit log.
+  **It found something on its first real subject.** Cat Day's own primary button — the cream label
+  on the rust accent — measures **4.01:1**, below the 4.5:1 needed for normal text. The nearest
+  accessible shade is `#A44317`, a barely perceptible darkening. Nothing has been changed: that is
+  the owner's call, and the point of the tool is that the number is now visible.
 - **M6 — public presence page and local SEO.** The OS had no public surface at all, which meant no
   funnel to measure and nothing for a new client to point a Google Business Profile at. `/visit` is
   now a white-label public page built entirely from the tenant's own configuration and catalogue —
