@@ -929,6 +929,26 @@ model MonthlyReport {
   @@index([month])
 }
 
+// C6 · A generated starting configuration for a new client.
+//
+// Kept after committing rather than discarded: it is the record of what the
+// business was set up from, and the paragraph that produced it is often the
+// clearest statement of what the client actually does that anyone ever writes
+// down. `committed` lists the groups already applied, so a half-finished
+// onboarding survives closing the tab.
+model OnboardingPlan {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  description  String // the paragraph the owner wrote
+  plan         String // JSON — lib/onboarding/plan.ts
+  committed    String   @default("[]") // JSON — PlanGroup[]
+  model        String
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+
+  @@index([createdAt])
+}
+
 // ─── Action Inbox log (Done/Dismissed/Snoozed decisions) ─────────────────────
 
 model ActionLog {

@@ -119,6 +119,7 @@ const SEGMENTS: NavSegment[] = [
         sub: 'Configuration', subColor: '#B8902B',
         links: [
           { href: '/admin/settings', label: 'Business Settings', icon: 'settings' },
+          { href: '/admin/onboarding', label: 'Set Up Business', icon: 'compass' },
         ],
       },
     ],

@@ -33,6 +33,26 @@ The agentic and marketing cycle. Planned scope is in
   without a deploy.
   Every customer- and cat-reading tool now filters `erasedAt` at the **query** layer, so Track A's
   erasure guarantee holds inside the assistant too.
+- **C6 — generative onboarding.** The resale lever. A new client describes their business in a
+  paragraph — *"cat grooming and boarding in Penang, 6 rooms, 2 groomers, grooms RM80–200, we also
+  sell food and litter"* — and **Administrative → Set Up Business** proposes a complete starting
+  configuration: a priced service menu, room inventory, membership tiers, brand colours, a written
+  voice profile and outbound message templates, plus a mapping of their costs onto the income
+  statement's fixed expense categories. Every section is editable in place and committed on its own,
+  so a perfect service menu can go in while the tiers are still being argued about.
+  Until now a second client got `seed-baseline.mjs`: four generic services and two rooms called
+  "Room 1" and "Room 2". This is what turns the OS from Cat Day's system into something another
+  business can be handed.
+  **Catalogue commits are strictly additive** — services, rooms, tiers and templates are created when
+  the name is free and skipped when it is taken, never updated and never deleted. Onboarding run by
+  accident on a live business leaves a few rows to remove, not a rewritten price list and a week of
+  appointments pointing at services that no longer say what they cost. Identity, colours and voice
+  *do* replace, so on an instance that already has customers those need an explicit tick.
+  Templates land **switched off**: a variant row is copy a customer reads, and C4's rotation would
+  start showing it the moment it existed.
+  Everything the model returns is range-checked before it is displayed — a negative price, a room
+  holding 900 cats or an invented service category never reaches a form with a Commit button under
+  it, where it would read as the system's own suggestion.
 - **C9 — monthly department reports.** Six reports, one per business segment, written on the 1st for
   the month just closed and read at **Reports**. Where the daily brief is a nudge, this is the record.
   **The model never computes a number.** Figures are built by the same read-only builders that render
