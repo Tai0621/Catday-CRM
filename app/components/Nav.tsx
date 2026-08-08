@@ -17,6 +17,7 @@ const PINNED: NavLink[] = [
   { href: '/', label: 'Dashboard', icon: 'dashboard' },
   { href: '/actions', label: 'Action Inbox', icon: 'inbox' },
   { href: '/brief', label: 'Morning Brief', icon: 'ai' },
+  { href: '/reports', label: 'Reports', icon: 'report' },
   { href: '/ask', label: 'Ask AI', icon: 'ai' },
 ]
 

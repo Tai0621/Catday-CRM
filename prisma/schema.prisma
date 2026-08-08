@@ -898,6 +898,37 @@ model DailyBrief {
   @@index([createdAt])
 }
 
+// C9 · One department's report for one closed month.
+//
+// `facts` is written FIRST and always, whether or not the narrative can be
+// generated: the fact tables are useful on their own and carry no AI risk, so
+// the report fails closed on the model without failing on the report.
+//
+// `status`:
+//   Facts     — figures only; no key, no budget, or narration failed
+//   Published — narrative generated and every number in it traced to the facts
+//   Flagged   — narrative generated but contains a figure the facts do not
+//               support. Kept, not deleted: the facts are still sound and the
+//               unsupported figures are named on screen. See lib/reports/grounding.ts.
+model MonthlyReport {
+  id           String   @id @default(cuid())
+  month        String // YYYY-MM
+  department   String // lib/reports/facts/index.ts
+  facts        String // JSON — the department's computed figures
+  headline     String?
+  observations String? // JSON — string[]
+  actions      String? // JSON — { title, why, href }[]
+  status       String   @default("Facts") // Facts | Published | Flagged
+  unsupported  String? // JSON — figures the grounding check could not trace
+  model        String?
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  generatedAt  DateTime @default(now())
+
+  @@unique([month, department])
+  @@index([month])
+}
+
 // ─── Action Inbox log (Done/Dismissed/Snoozed decisions) ─────────────────────
 
 model ActionLog {

@@ -33,6 +33,25 @@ The agentic and marketing cycle. Planned scope is in
   without a deploy.
   Every customer- and cat-reading tool now filters `erasedAt` at the **query** layer, so Track A's
   erasure guarantee holds inside the assistant too.
+- **C9 — monthly department reports.** Six reports, one per business segment, written on the 1st for
+  the month just closed and read at **Reports**. Where the daily brief is a nudge, this is the record.
+  **The model never computes a number.** Figures are built by the same read-only builders that render
+  the pages — Finance lifts its revenue straight out of `buildIncomeStatement` rather than summing
+  transactions again, so a report and the income statement cannot disagree even after an accountant
+  keys an override into a cell.
+  A **numeric grounding check** enforces that rather than trusting it: every figure in the generated
+  prose is traced back to the stored facts, and a report quoting anything else is marked
+  **unverified** instead of published — its figures still shown, the untraceable ones named, and a
+  one-click rewrite from the same numbers. The check is strict about arithmetic too, so every ratio
+  worth quoting (margin, no-show rate, occupancy, plan variance, repeat rate) is precomputed in the
+  fact builders.
+  **Segment migration** is the line that did not exist anywhere in the OS before: how many customers
+  were Regular on the 1st and At-risk by the 31st. It works by running the same `buildCustomerIntel`
+  twice over each customer's own history with the clock set to each end of the month — no snapshot
+  table, no backfill, and consistent with what the customer pages already show.
+  Facts and narrative are separable on purpose: the figures are written first and always, so a
+  missing key, a disabled assistant or a model failure produces a figures-only report rather than no
+  report. Six Haiku calls a month.
 - **C5 — nightly analyst brief.** A scheduled job writes one brief per business day, just after local
   midnight: three observations about yesterday and three things to do today, each linking to a real
   page. It appears at the top of the dashboard and is archived under **Morning Brief**.

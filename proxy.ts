@@ -16,7 +16,7 @@ const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-form
 // Paths only managers (owner password or Manager-role staff) may open.
 // Staff hitting these are sent to their service board.
 const MANAGER_PATHS = [
-  '/revenue', '/plan', '/academy', '/ask', '/api/ask', '/whatsapp', '/brief',
+  '/revenue', '/plan', '/academy', '/ask', '/api/ask', '/whatsapp', '/brief', '/reports',
   '/staff', '/services', '/cashup', '/memberships/tiers', '/finance', '/admin', '/hr', '/products',
   '/api/customers', '/marketing',
 ]
