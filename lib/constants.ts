@@ -121,7 +121,7 @@ export const ACTION_TYPES = [
   'OutstandingPayment', 'VipArrival', 'RebookCheckout', 'WinBack',
   'MembershipExpiry', 'VaccinationExpiry', 'GroomingDue', 'Birthday', 'GoldEligible',
   'PrivateClubEligible', 'VipCheckIn', 'LicenseRenewal', 'TreatmentDue', 'HealthConcern',
-  'LeaveApproval', 'ApplicationReview', 'LowStock',
+  'LeaveApproval', 'ApplicationReview', 'LowStock', 'AcademyFollowUp',
 ] as const
 export type ActionType = typeof ACTION_TYPES[number]
 
@@ -184,6 +184,7 @@ export const ACTION_OUTCOME_WINDOW_DAYS: Partial<Record<ActionType, number>> = {
   GoldEligible: 30,
   PrivateClubEligible: 30,
   VipCheckIn: 30,
+  AcademyFollowUp: 21,
 }
 
 // ── M10 · Customer groups & targeted marketing ──

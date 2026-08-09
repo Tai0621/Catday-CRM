@@ -33,6 +33,22 @@ The agentic and marketing cycle. Planned scope is in
   without a deploy.
   Every customer- and cat-reading tool now filters `erasedAt` at the **query** layer, so Track A's
   erasure guarantee holds inside the assistant too.
+- **M7 — the Academy as a funnel.** Marketing's only segment was one static enrolment list with no
+  connection to the CRM, so the question that decides whether workshops are worth running — *did any
+  of these people ever book a groom?* — was unanswerable. Enrolments now link to a customer, matched
+  by phone then email at enrolment and re-matchable afterwards, and the Academy page shows the whole
+  chain: enrolled → known to the CRM → booked a groom → actually came → became a member, plus what
+  attendees have spent since.
+  **Only bookings made after the enrolment count.** A regular who takes a class did not convert
+  because of it, and counting them would make workshops look more effective the more loyal the
+  attendee already was. Conversion is derived live from the diary rather than stored, so it cannot
+  drift when a booking is corrected.
+  The useful half is the list of attendees who enjoyed a class and never came back — surfaced on the
+  page and as an **Academy follow-up** card in the Action Inbox, where staff already work. It waits
+  a fortnight before chasing: the day after a workshop is pestering, two weeks later is the entire
+  reason to run one.
+  The migration backfills existing enrolments, because a funnel that reads zero on day one looks
+  broken when in fact the history was simply never joined.
 - **C7 — brand autopilot.** Track B wired `brand.*` through the CSS variables; this is the generator
   that fills them in. **Administrative → Brand Colours** reads the palette out of the client's own
   logo, proposes an accent and a text colour, shows a live preview built from the real utility

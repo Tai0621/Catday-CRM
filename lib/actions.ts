@@ -8,6 +8,7 @@ import { trailingAnnualSpend } from './loyalty'
 import { ACTION_SEGMENT, type SegmentKey } from './segments'
 import { buildActionStats, priorityShifts, effectivePriority, isSuppressed, type TypeStats } from './actions-learning'
 import { loadActiveVariants, messageFor } from './action-variants'
+import { loadAcademy, unconverted } from './academy'
 import {
   type ActionType,
   WINBACK_INACTIVE_DAYS,
@@ -89,6 +90,7 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
     futureAppts,
     licenses,
     careLogs,
+    academy,
   ] = await Promise.all([
     db.appointment.findMany({
       where: { status: 'Completed', paid: false, price: { not: null } },
@@ -140,7 +142,9 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
       where: { date: todayStr },
       include: { appointment: { select: { status: true, customerId: true, customer: { select: { name: true, phone: true } }, cat: { select: { name: true } } } } },
     }),
+    loadAcademy(now),
   ])
+  const academyAttendees = academy.attendees
 
   // C4 · copy under test. Empty for any type with no variants, in which case the
   // generators below keep their built-in template.
@@ -259,6 +263,25 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
       customerId: m.customerId, phone: m.customer.phone,
       waMessage: `Hi! Your ${m.tier.name} membership expires on ${m.expiryDate.toLocaleDateString('en-MY')}. Renew now to keep your member benefits running without a gap 🐾`,
       href: `/memberships/${m.id}`,
+    }))
+  }
+
+  // 5a · M7 · Academy attendees who never came back for a groom.
+  //
+  // A workshop is lead generation, so the follow-up IS the product. Deliberately
+  // no earlier than ACADEMY_FOLLOWUP_AFTER_DAYS — chasing the day after a class
+  // is pestering; chasing a fortnight later, while they still remember enjoying
+  // it, is the entire reason to run one.
+  for (const a of unconverted(academyAttendees)) {
+    if (!a.phone) continue
+    out.push(card({
+      key: `AcademyFollowUp:${a.id}`, type: 'AcademyFollowUp', priority: 6,
+      title: `Academy follow-up — ${a.studentName}`,
+      reason: `${a.course} ${a.daysSinceEnrolment} days ago · never booked a groom`,
+      customerId: a.customerId ?? undefined,
+      phone: a.phone,
+      waMessage: `Hi ${a.studentName}! Lovely having you at our ${a.course} session 🐾 If you'd like us to take care of the next groom ourselves, we'd be glad to — shall we find you a time?`,
+      href: '/academy',
     }))
   }
 

@@ -44,6 +44,7 @@ export const ACTION_SEGMENT: Record<ActionType, SegmentKey> = {
   LeaveApproval:       'business',
   ApplicationReview:   'business',
   LowStock:            'business',
+  AcademyFollowUp:     'community',
 }
 
 /** Which segment each appointment type belongs to. */

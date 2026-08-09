@@ -42,6 +42,7 @@ model Customer {
   walletEntries    WalletEntry[]
   groupSends       GroupSend[]
   reviewRequests   ReviewRequest[]
+  academyEnrollments AcademyEnrollment[]
 
   // M5 · Referrals. The code is this customer's to share; referredBy records who
   // sent them. Self-relation, so a household's origin is traceable without a
@@ -1054,14 +1055,35 @@ model MonthlyTarget {
 
 // ─── Academy ─────────────────────────────────────────────────────────────────
 
+// M7 · An Academy enrolment.
+//
+// `customerId` is what turns this segment from a brochure into a funnel. Until
+// it existed an attendee was a name in a list with no connection to the CRM, so
+// "did any of these people ever book a groom?" was unanswerable — which is the
+// only question that matters, because workshops are lead generation for
+// grooming, not a product line.
+//
+// Nullable on purpose: someone can attend a workshop without ever becoming a
+// customer, and that is exactly the population worth chasing. Matching is by
+// normalised phone first, then email (lib/academy.ts).
+//
+// Conversion is DERIVED, never stored — the first grooming booking after the
+// enrolment date, read live. A stored `convertedAt` would need keeping in sync
+// with every booking, deletion and correction, and would be wrong the first
+// time someone edited an appointment.
 model AcademyEnrollment {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   studentName String
   email       String
   phone       String?
   course      String
-  status      String   @default("Pending") // Pending | Active | Completed | Withdrawn
-  enrolledAt  DateTime @default(now())
+  status      String    @default("Pending") // Pending | Active | Completed | Withdrawn
+  enrolledAt  DateTime  @default(now())
   notes       String?
-  updatedAt   DateTime @updatedAt
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  updatedAt   DateTime  @updatedAt
+
+  @@index([customerId])
+  @@index([enrolledAt])
 }
