@@ -169,8 +169,11 @@ try {
 
   // ══ 3. Spending is gated on the same check ══
   const captionSrc = readFileSync('lib/content/caption.ts', 'utf8')
+  // Compares the CALLS, not the first textual occurrence — `aiConfigured`
+  // appears in the import line at the top of the file, which would make any
+  // ordering check trivially false.
   check('eligibility is re-checked before the model call, not just at render',
-    captionSrc.indexOf('candidateFor') < captionSrc.indexOf('ANTHROPIC_API_KEY'),
+    captionSrc.indexOf('candidateFor(appointmentId)') < captionSrc.indexOf('!aiConfigured()'),
     'consent is checked after deciding to spend')
   check('captions fail closed without a key', /no-key/.test(captionSrc))
   check('…and respect the AI kill switch', /budget\.limit === 0/.test(captionSrc))

@@ -1,5 +1,6 @@
 import { db } from '../db'
 import { budgetState } from '../ai/budget'
+import { aiConfigured } from '../ai/provider'
 import { buildDepartmentFacts, DEPARTMENTS, DEPARTMENT_KEYS, departmentByKey, type DepartmentKey } from './facts'
 import { narrateReport, narrationText } from './narrate'
 import { checkGrounding } from './grounding'
@@ -86,7 +87,7 @@ export async function generateReport(
 
   let payload = base
   const budget = await budgetState()
-  const canNarrate = !!process.env.ANTHROPIC_API_KEY && budget.limit > 0
+  const canNarrate = aiConfigured() && budget.limit > 0
 
   if (canNarrate) {
     try {

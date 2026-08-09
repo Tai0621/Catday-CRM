@@ -318,6 +318,41 @@ preview pane alone; verify with an authenticated `fetch`/`curl` first.
 - Env vars required in Vercel (mirror `.env` locally): `DATABASE_URL`, `DATABASE_AUTH_TOKEN`,
   `APP_PASSWORD`, `ANTHROPIC_API_KEY`, `AI_ASSISTANT_MODEL`, `WHATSAPP_ANALYSIS_MODEL`, `CRON_SECRET`,
   `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`, `GOOGLE_FORMS_SECRET`.
+
+## The model provider seam
+
+Every AI call goes through `createMessage()` in `lib/ai/provider.ts` — **never construct an SDK
+client or read an AI key at a call site.** `scripts/verify-ai-provider.mjs` asserts that no file
+outside the provider does either, so a bypass fails verification rather than working quietly until
+someone switches provider.
+
+Production runs on **Anthropic**; the demo runs on **Groq**, which is fast and cheap enough to leave
+switched on for prospects. Selection is `AI_PROVIDER` (`anthropic` | `groq`), falling back to
+whichever key is present — Anthropic wins when both are, so a deployment can never drift onto the
+cheaper one by accident.
+
+Groq is **OpenAI-compatible and does not speak Anthropic's Messages API**, so this is a translation
+layer, not a base-URL swap: pointing the Anthropic SDK at Groq fails on the first request. The seam
+presents the Anthropic shape (`tool_use` blocks, `tool_choice: { type: 'tool' }`) because that is
+what the call sites and production already use. Reached with plain `fetch` — no second SDK.
+
+The subtle part is the tool round trip: Anthropic carries a tool result as a `tool_result` block
+inside a *user* message, OpenAI wants a separate `role: 'tool'` message with a matching
+`tool_call_id`. Getting that wrong does **not** error — the model simply loses the result and answers
+as though the tool returned nothing. That translation is exercised offline in the verify script.
+
+`AI_ASSISTANT_MODEL` is honoured only when it plausibly belongs to the active provider; a leftover
+`claude-…` id on a Groq deployment is ignored rather than sent as a guaranteed 404.
+
+Locally the two configs are separate files, both gitignored:
+
+```bash
+source .env.demo.sh && source .env.groq.sh && npx next start -p 3100   # demo, AI on
+source .env.demo.sh && npx next start -p 3100                          # verification, AI off
+```
+
+That split is deliberate — most `verify-*.mjs` scripts need a server with **no** AI key to reach the
+fail-closed paths, and folding the Groq key into `.env.demo.sh` would silently break them.
 - `vercel.json` also defines a Vercel Cron (`/api/cron/eod-analysis`, daily 16:00 UTC) — if you add
   another scheduled job, add it there, protected by checking `CRON_SECRET`.
 

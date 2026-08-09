@@ -1,4 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
+import { createMessage, aiModel, aiConfigured } from '../ai/provider'
 import { getConfig } from '../config'
 import { customerVoicePrompt } from '../brand-voice'
 import { budgetState, recordUsage } from '../ai/budget'
@@ -89,14 +90,13 @@ export async function generateOffers(
 ): Promise<GenerateResult> {
   const trimmed = intent.trim()
   if (trimmed.length < 10) return { ok: false, reason: 'empty' }
-  if (!process.env.ANTHROPIC_API_KEY) return { ok: false, reason: 'no-key' }
+  if (!aiConfigured()) return { ok: false, reason: 'no-key' }
   const budget = await budgetState()
   if (budget.limit === 0) return { ok: false, reason: 'ai-disabled' }
 
   const facts = await campaignFacts(fromISO, toISO, audiences)
   const config = await getConfig()
-  const client = new Anthropic()
-  const model = process.env.AI_ASSISTANT_MODEL ?? 'claude-haiku-4-5-20251001'
+  const model = aiModel()
 
   const system = `You design promotions for ${config.business.name}, a premium cat grooming and boarding business.
 
@@ -116,7 +116,7 @@ FACTS (the only numbers you may use):
 ${JSON.stringify(facts, null, 1)}`
 
   try {
-    const response = await client.messages.create({
+    const response = await createMessage({
       model, max_tokens: 2000, system,
       tools: [offersTool],
       tool_choice: { type: 'tool', name: 'offer_structures' },

@@ -1,4 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
+import { createMessage, aiModel, aiConfigured } from './provider'
 import { db } from '../db'
 import { buildCustomerIntel } from '../intelligence'
 import { getConfig } from '../config'
@@ -226,15 +227,14 @@ export interface AskResult {
 }
 
 export async function askCatday(question: string, context: AskContext = {}): Promise<AskResult> {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error('no-key')
+  if (!aiConfigured()) throw new Error('no-key')
 
   // Checked before the call, not after — the point is to prevent the spend, not
   // to notice it afterwards.
   const budget = await budgetState()
   if (!budget.enabled) throw new Error(budget.limit === 0 ? 'ai-disabled' : 'budget-exhausted')
 
-  const client = new Anthropic()
-  const model = process.env.AI_ASSISTANT_MODEL ?? 'claude-haiku-4-5-20251001'
+  const model = aiModel()
 
   const config = await getConfig()
   const { business, currency } = config
@@ -268,7 +268,7 @@ ${voice ? `\nWhen you draft anything a customer will read, follow this profile. 
   const proposalIds: string[] = []
 
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
-    const response = await client.messages.create({
+    const response = await createMessage({
       model,
       max_tokens: 1000,
       system,

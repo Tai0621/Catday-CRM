@@ -1,5 +1,6 @@
 import { db } from '../db'
 import { getConfig } from '../config'
+import { aiConfigured } from './provider'
 
 // ── C1 · AI spend control ────────────────────────────────────────────────────
 // The copilot is reachable from every page, so a stuck loop or a busy afternoon
@@ -25,7 +26,7 @@ export interface BudgetState {
 }
 
 export async function budgetState(now: Date = new Date()): Promise<BudgetState> {
-  const configured = !!process.env.ANTHROPIC_API_KEY
+  const configured = aiConfigured()
   const { ai } = await getConfig()
   const limit = Math.max(0, Math.floor(ai.dailyTokenBudget))
 

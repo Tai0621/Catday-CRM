@@ -1,4 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
+import { createMessage, aiModel, aiConfigured } from '../ai/provider'
 import { db } from '../db'
 import { getConfig } from '../config'
 import { customerVoicePrompt } from '../brand-voice'
@@ -55,13 +56,12 @@ export async function draftCaption(appointmentId: string): Promise<CaptionResult
   const candidate = await candidateFor(appointmentId)
   if (!candidate) return { ok: false, reason: 'not-eligible' }
 
-  if (!process.env.ANTHROPIC_API_KEY) return { ok: false, reason: 'no-key' }
+  if (!aiConfigured()) return { ok: false, reason: 'no-key' }
   const budget = await budgetState()
   if (budget.limit === 0) return { ok: false, reason: 'ai-disabled' }
 
   const config = await getConfig()
-  const client = new Anthropic()
-  const model = process.env.AI_ASSISTANT_MODEL ?? 'claude-haiku-4-5-20251001'
+  const model = aiModel()
 
   const system = `You write the caption for a before/after grooming photograph posted by ${config.business.name}.
 
@@ -78,7 +78,7 @@ This sits under a picture, so it does not need to describe what is visible. Say 
   }
 
   try {
-    const response = await client.messages.create({
+    const response = await createMessage({
       model,
       max_tokens: 600,
       system,

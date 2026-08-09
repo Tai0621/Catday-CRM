@@ -1,4 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
+import { createMessage, aiModel, aiConfigured } from '../ai/provider'
 import { getConfig } from '../config'
 import { voicePrompt } from '../brand-voice'
 import { recordUsage } from '../ai/budget'
@@ -54,8 +55,7 @@ export async function narrateReport(
   const dept = departmentByKey(department)
   if (!dept) throw new Error(`Unknown department ${department}`)
 
-  const client = new Anthropic()
-  const model = process.env.AI_ASSISTANT_MODEL ?? 'claude-haiku-4-5-20251001'
+  const model = aiModel()
   const config = await getConfig()
   const { business, currency } = config
 
@@ -87,7 +87,7 @@ ${JSON.stringify(facts, null, 1)}
 Pages you may link an action to:
 ${links}`
 
-  const response = await client.messages.create({
+  const response = await createMessage({
     model,
     max_tokens: 1500,
     system,

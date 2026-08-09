@@ -1,6 +1,7 @@
 import { db } from '../db'
 import { getConfig } from '../config'
 import { budgetState } from '../ai/budget'
+import { aiConfigured } from '../ai/provider'
 import { buildBriefFacts, briefDayKey, type BriefFacts } from './facts'
 import { narrateBrief } from './narrate'
 
@@ -45,7 +46,7 @@ export async function generateBrief(dayKey: string): Promise<BriefOutcome> {
   // Fails closed, and is not faked: without a key there is no brief, rather
   // than a template with the numbers dropped in. The value of this feature is
   // the reading of the data, not the reprinting of it.
-  if (!process.env.ANTHROPIC_API_KEY) return { ok: false, reason: 'no-key' }
+  if (!aiConfigured()) return { ok: false, reason: 'no-key' }
 
   // A budget of zero means the tenant has switched AI off, and that covers the
   // brief too. Exhaustion does NOT: the ceiling exists to cap unbounded

@@ -1,7 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { getConfig } from '../config'
+import { createMessage, aiModel } from '../ai/provider'
 
-const client = new Anthropic()
+// The client used to be constructed at module scope, which made merely
+// importing this file throw on a deployment with no key. It is created per call
+// inside the provider now.
 
 export interface LeadExtraction {
   type: 'BookingRequest' | 'Inquiry' | 'Complaint' | 'Reschedule' | 'Cancellation' | 'Other'
@@ -11,10 +13,13 @@ export interface LeadExtraction {
 }
 
 export async function analyzeWhatsAppMessage(content: string, senderPhone: string): Promise<LeadExtraction> {
-  const model = process.env.WHATSAPP_ANALYSIS_MODEL ?? 'claude-haiku-4-5-20251001'
+  // The override is only meaningful on Anthropic; on any other provider the
+  // active model is used, or every inbound message would fail on a bad id.
+  const override = process.env.WHATSAPP_ANALYSIS_MODEL?.trim()
+  const model = override?.startsWith('claude-') ? override : aiModel()
   const { business } = await getConfig()
 
-  const response = await client.messages.create({
+  const response = await createMessage({
     model,
     max_tokens: 300,
     messages: [
@@ -38,7 +43,8 @@ Respond with ONLY valid JSON in this exact format:
     ],
   })
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : '{}'
+  const first = response.content[0]
+  const text = first && first.type === 'text' ? first.text : '{}'
 
   try {
     const jsonMatch = text.match(/\{[\s\S]*\}/)

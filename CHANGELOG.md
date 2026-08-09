@@ -33,6 +33,22 @@ The agentic and marketing cycle. Planned scope is in
   without a deploy.
   Every customer- and cat-reading tool now filters `erasedAt` at the **query** layer, so Track A's
   erasure guarantee holds inside the assistant too.
+- **Model provider seam.** Every AI call now goes through `createMessage()` in `lib/ai/provider.ts`,
+  so the OS is no longer welded to one vendor. Production stays on **Anthropic**; the demo runs on
+  **Groq**, which is fast and cheap enough to leave switched on for prospects to poke at.
+  Groq is OpenAI-compatible and **does not speak Anthropic's Messages API**, so this is a translation
+  layer rather than a base-URL swap — pointing the Anthropic SDK at it fails on the first request.
+  The seam presents the Anthropic shape because that is what the eight call sites and production
+  already use, and it is reached with plain `fetch`: no second SDK.
+  Selection is `AI_PROVIDER`, falling back to whichever key is present, with **Anthropic winning when
+  both are** so a deployment cannot drift onto the cheaper one by accident. A leftover `claude-…`
+  model id on a Groq deployment is ignored rather than sent as a guaranteed 404.
+  Also fixes a latent bug: `lib/whatsapp/analyze.ts` constructed its client at *module scope*, so
+  importing that file threw on a deployment with no key.
+  Verified end to end on the demo — a real nightly brief and all six monthly department reports
+  generated through Groq, with **every report Published**, meaning C9's numeric grounding check
+  traced every figure in the generated prose back to the computed facts on a smaller model. That is
+  the facts-computed-model-narrates design earning its keep.
 - **M1 — Campaign Studio.** The owner describes an intent — *"fill Tuesday and Wednesday boarding
   next month"* — and **Marketing → Campaigns** proposes two or three offer *structures*, constrained
   by two things a generic promotion builder has no concept of: **open capacity** and **true margin**.

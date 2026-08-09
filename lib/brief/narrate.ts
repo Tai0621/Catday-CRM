@@ -1,4 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
+import { createMessage, aiModel } from '../ai/provider'
 import { getConfig } from '../config'
 import { recordUsage } from '../ai/budget'
 import type { BriefFacts } from './facts'
@@ -73,8 +74,7 @@ const briefTool: Anthropic.Tool = {
 }
 
 export async function narrateBrief(facts: BriefFacts): Promise<BriefNarration> {
-  const client = new Anthropic()
-  const model = process.env.AI_ASSISTANT_MODEL ?? 'claude-haiku-4-5-20251001'
+  const model = aiModel()
   const { business, currency } = await getConfig()
 
   const system = `You write the morning brief for ${business.name}, a premium cat grooming and boarding business. The reader is the owner, opening the OS with a coffee. Currency is ${currency.symbol}.
@@ -88,7 +88,7 @@ Actions must be things the reader can do today, drawn from the data. Do not reco
   const links = Object.entries(BRIEF_LINKS).map(([href, what]) => `${href} — ${what}`).join('\n')
   const prompt = `Yesterday (${facts.weekday} ${facts.date}):\n\n${JSON.stringify(facts, null, 1)}\n\nPages you may link to:\n${links}`
 
-  const response = await client.messages.create({
+  const response = await createMessage({
     model,
     max_tokens: 1200,
     system,

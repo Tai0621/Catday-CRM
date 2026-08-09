@@ -1,4 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
+import { createMessage, aiModel, aiConfigured } from '../ai/provider'
 import { recordUsage, budgetState } from '../ai/budget'
 import { SERVICE_CATEGORIES, ROOM_TYPES, TIER_QUALIFICATIONS } from '../constants'
 import { normalisePlan, type OnboardingPlan } from './plan'
@@ -130,12 +131,11 @@ const planTool: Anthropic.Tool = {
 }
 
 export async function generatePlan(description: string, expenseCategories: readonly string[]): Promise<GeneratedPlan> {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error('no-key')
+  if (!aiConfigured()) throw new Error('no-key')
   const budget = await budgetState()
   if (budget.limit === 0) throw new Error('ai-disabled')
 
-  const client = new Anthropic()
-  const model = process.env.AI_ASSISTANT_MODEL ?? 'claude-haiku-4-5-20251001'
+  const model = aiModel()
 
   const system = `You configure a business operating system for a new client from a short description of their business.
 
@@ -148,7 +148,7 @@ You produce a STARTING POINT, which the owner reviews line by line and edits bef
 - Expense guidance must map their costs onto these fixed categories, which cannot be changed: ${expenseCategories.join(', ')}.
 - Message templates are read by their customers. Write them in the language the description implies, in the voice you propose, using the {customer} {cat} {brand} {days} placeholders.`
 
-  const response = await client.messages.create({
+  const response = await createMessage({
     model,
     max_tokens: 4000,
     system,

@@ -288,7 +288,7 @@ try {
     /DESTRUCTIVE_GROUPS[^=]*=\s*\[[^\]]*'business'[^\]]*'brand'[^\]]*'voice'/.test(commitSrc),
     'the destructive list does not cover identity, colours and voice')
   const genSrc = readFileSync('lib/onboarding/generate.ts', 'utf8')
-  check('generation fails closed without a key', /no-key/.test(genSrc) && /ANTHROPIC_API_KEY/.test(genSrc))
+  check('generation fails closed without a key', /no-key/.test(genSrc) && /aiConfigured()/.test(genSrc))
   check('generation respects the AI kill switch', /budget\.limit === 0/.test(genSrc))
   check('usage is recorded against the budget', /recordUsage/.test(genSrc))
   const planSrc = readFileSync('lib/onboarding/plan.ts', 'utf8')
