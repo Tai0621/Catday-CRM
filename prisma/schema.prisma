@@ -134,6 +134,13 @@ model Cat {
   feedingNotes     String?   // special feeding instructions
   medication       String?   // meds / supplements given with food
   groomingInterval Int?      // days between sessions; null = use coat/breed default
+  // M3 · Withdrawn from the content pool. Deliberately SEPARATE from
+  // Customer.marketingConsent: agreeing to be messaged and agreeing to have
+  // your cat's photograph published are different asks, and an owner who is
+  // happy to hear about a grooming offer may still not want their cat on
+  // Instagram. Collapsing the two would force them to give up both to decline
+  // one.
+  contentOptOut    Boolean   @default(false)
   // NOTE: cat photos live in MediaAsset (private Blob, ownerType 'cat'), not on
   // this row. The legacy base64 `photos` column was dropped in the A1
   // data-protection round (migrate-drop-cat-photos.mjs) — do not reintroduce it.
@@ -993,6 +1000,30 @@ model PublicPageView {
   views     Int      @default(0)
   requests  Int      @default(0)
   updatedAt DateTime @updatedAt
+}
+
+// M3 · A drafted social post for one completed groom.
+//
+// The images are not stored again — they already live in MediaAsset, and the
+// crops are produced in the browser at export time. This row is the CAPTION and
+// its provenance, which is the part that costs a model call.
+//
+// Never auto-published. The output is a draft the owner posts themselves; the
+// bottleneck this removes is writing the caption and cropping the pair, not the
+// upload click.
+model ContentDraft {
+  id            String   @id @default(cuid())
+  appointmentId String   @unique // one draft per groom; regenerating replaces it
+  caption       String
+  hashtags      String // JSON — string[]
+  status        String   @default("Draft") // Draft | Used | Discarded
+  model         String
+  inputTokens   Int      @default(0)
+  outputTokens  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status, createdAt])
 }
 
 // ─── Action Inbox log (Done/Dismissed/Snoozed decisions) ─────────────────────

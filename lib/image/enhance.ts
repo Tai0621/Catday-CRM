@@ -91,8 +91,32 @@ export function applyLevels(data: Uint8ClampedArray, levels: Levels): void {
   }
 }
 
+export interface CropRect { sx: number; sy: number; sw: number; sh: number }
+
+/**
+ * The largest centred rectangle of a given aspect ratio inside a w×h image.
+ *
+ * Centred rather than smart-cropped: finding the cat would need a model, and a
+ * subject-detection guess that clips an ear is worse than a plain centre crop
+ * the owner can see is a centre crop. M3 shows the result before anything is
+ * published, so a bad framing is caught by eye rather than by algorithm.
+ */
+export function aspectCrop(width: number, height: number, ratio: number): CropRect {
+  const current = width / height
+  const sw = current > ratio ? Math.round(height * ratio) : width
+  const sh = current > ratio ? height : Math.round(width / ratio)
+  return { sx: Math.round((width - sw) / 2), sy: Math.round((height - sh) / 2), sw, sh }
+}
+
 /** The largest centred square inside a w×h image. */
 export function squareCrop(width: number, height: number): { sx: number; sy: number; size: number } {
   const size = Math.min(width, height)
   return { sx: Math.round((width - size) / 2), sy: Math.round((height - size) / 2), size }
 }
+
+/** Social aspect ratios M3 exports a pair at. */
+export const SOCIAL_RATIOS = {
+  square: { label: '1:1 · feed', ratio: 1, width: 1080, height: 1080 },
+  story: { label: '9:16 · story', ratio: 9 / 16, width: 1080, height: 1920 },
+} as const
+export type SocialRatio = keyof typeof SOCIAL_RATIOS

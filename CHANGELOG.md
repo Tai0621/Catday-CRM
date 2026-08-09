@@ -33,6 +33,23 @@ The agentic and marketing cycle. Planned scope is in
   without a deploy.
   Every customer- and cat-reading tool now filters `erasedAt` at the **query** layer, so Track A's
   erasure guarantee holds inside the assistant too.
+- **M3 — Content Studio.** The before/after grooming photographs were sitting in `MediaAsset` doing
+  nothing. **Marketing → Content Studio** pairs them for every completed groom, composes a
+  post-ready image at 1:1 and 9:16 with BEFORE/AFTER labels, and drafts a caption in the brand voice
+  from the cat's own record. Output is a **draft the owner posts** — nothing is published from here,
+  and no social API is called.
+  **The consent gate is the feature, and it is two gates.** `Customer.marketingConsent` is
+  permission to be *contacted*; the new `Cat.contentOptOut` is permission to *publish that cat's
+  photograph*. They are separate because they are different asks — an owner glad to hear about a
+  grooming offer may still not want their cat on Instagram, and collapsing the two would force them
+  to give up both to decline one. Withdrawing a cat is one click from the studio, deletes any draft
+  written under that permission, is audited, and **leaves the household contactable**.
+  Both gates live in the pool query rather than in a template, so a draft for anyone else cannot be
+  produced by forgetting a check downstream — and eligibility is re-checked immediately before the
+  model call, because consent can be withdrawn between the page rendering and the button being
+  pressed. The number of grooms excluded, and why, is shown rather than left silent.
+  The caption is written in the business's own voice and language, deliberately **not** the
+  customer's (M9): a post is addressed to the followers, not to the household in the photograph.
 - **C8 — photo tidy-up.** The before/after grooming shots are the business's best marketing asset
   and they are phone snaps under a shop light. A **Tidy up** toggle on the before/after capture
   squares the crop so a pair is the same shape, and evens out the exposure with a percentile-clipped
