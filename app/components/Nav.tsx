@@ -99,6 +99,7 @@ const SEGMENTS: NavSegment[] = [
     key: 'marketing', header: 'Marketing', color: '#E7CE7A',
     groups: [{ links: [
       { href: '/academy', label: 'Academy', icon: 'cap' },
+      { href: '/marketing/campaigns', label: 'Campaigns', icon: 'trend' },
       { href: '/marketing/groups', label: 'Customer Groups', icon: 'customers' },
       { href: '/marketing/content', label: 'Content Studio', icon: 'cat' },
       { href: '/marketing/reviews', label: 'Reviews', icon: 'star' },

@@ -33,6 +33,28 @@ The agentic and marketing cycle. Planned scope is in
   without a deploy.
   Every customer- and cat-reading tool now filters `erasedAt` at the **query** layer, so Track A's
   erasure guarantee holds inside the assistant too.
+- **M1 — Campaign Studio.** The owner describes an intent — *"fill Tuesday and Wednesday boarding
+  next month"* — and **Marketing → Campaigns** proposes two or three offer *structures*, constrained
+  by two things a generic promotion builder has no concept of: **open capacity** and **true margin**.
+  Load is computed forward per weekday across the window, so the offer targets days that are actually
+  slack; an offer aimed at days already running at 70%+ is **flagged**, because discounting those
+  mostly displaces bookings that would have arrived at full price.
+  **No revenue forecast is produced, and that is deliberate.** A projection needs a conversion rate
+  nobody has measured, and an invented one becomes a confident number the owner plans against.
+  Instead each offer reports contribution per booking after commission, what the messages cost, and
+  **how many bookings it takes to break even** — arithmetic on facts, and enough to decide.
+  Commission is costed on the full service price, not the discounted one: the groomer's cut does not
+  shrink because marketing ran a promotion.
+  The model chooses shape, wording and audience; **every number on screen is recomputed** from the
+  same facts, and an offer naming a service or audience that does not exist is dropped rather than
+  shown with a blank.
+  **The send is an assisted worklist, not a blast** — the same honest scope as M10, for the same
+  reason: this WhatsApp integration is inbound-only, and bulk sending needs pre-approved templates,
+  per-conversation billing and throttling, with a banned business number unrecoverable. Nothing sends
+  until the owner approves, and then each send passes the **same consent floor and global frequency
+  cap** M10 enforces, re-checked per customer at send time rather than at approval. Each confirmed
+  send writes both a `CampaignRecipient` and a `GroupSend`, so a campaign cannot become a way around
+  the cap and M2's attribution can join it later.
 - **M3 — Content Studio.** The before/after grooming photographs were sitting in `MediaAsset` doing
   nothing. **Marketing → Content Studio** pairs them for every completed groom, composes a
   post-ready image at 1:1 and 9:16 with BEFORE/AFTER labels, and drafts a caption in the brand voice

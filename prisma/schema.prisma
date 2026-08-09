@@ -1026,6 +1026,54 @@ model ContentDraft {
   @@index([status, createdAt])
 }
 
+// M1 · A promotion, from intent to send.
+//
+// `facts` stores the capacity and margin snapshot the offer was proposed
+// against — the same discipline as C9's reports. An offer that looked sensible
+// in September because Tuesdays were empty needs that context attached, or
+// nobody can tell later whether it was a good call or a lucky one.
+//
+// Never automatic: Draft → the owner edits → Approved → sent one customer at a
+// time through the same worklist and the same consent floor as M10.
+model Campaign {
+  id              String    @id @default(cuid())
+  name            String
+  intent          String // what the owner asked for, verbatim
+  offerType       String // Discount | FreeAddOn | Bundle | Credit
+  serviceId       String? // the service the offer applies to
+  discountPct     Float     @default(0)
+  validFrom       DateTime
+  validTo         DateTime
+  targetGroupKey  String? // M10 audience
+  message         String // the copy that goes out
+  rationale       String? // why the studio proposed it
+  facts           String // JSON — the economics it was judged on
+  status          String    @default("Draft") // Draft | Approved | Running | Ended
+  ownerApprovedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  recipients CampaignRecipient[]
+
+  @@index([status, createdAt])
+}
+
+// One customer's place in one campaign. Written when the send is confirmed, so
+// M2's attribution join has something to credit and the frequency cap sees it.
+model CampaignRecipient {
+  id                     String    @id @default(cuid())
+  campaignId             String
+  campaign               Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  customerId             String
+  variant                String?
+  sentAt                 DateTime?
+  respondedAt            DateTime?
+  convertedTransactionId String?
+
+  @@unique([campaignId, customerId])
+  @@index([customerId])
+}
+
 // ─── Action Inbox log (Done/Dismissed/Snoozed decisions) ─────────────────────
 
 model ActionLog {
