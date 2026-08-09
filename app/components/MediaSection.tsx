@@ -6,10 +6,12 @@ import { DeleteMediaButton } from './DeleteMediaButton'
 // media, then hands off to the client upload/delete controls. Degrades to a
 // friendly notice while Blob storage isn't configured, so pages never break.
 export async function MediaSection({
-  ownerType, ownerId, tag, accept = 'image', label = 'photo', title, readOnly = false,
+  ownerType, ownerId, tag, accept = 'image', label = 'photo', title, readOnly = false, enhance = false,
 }: {
   ownerType: string; ownerId: string; tag?: string
   accept?: 'image' | 'video' | 'both'; label?: string; title?: string; readOnly?: boolean
+  /** C8 · offer the square-crop + levelling toggle. Before/after pairs only. */
+  enhance?: boolean
 }) {
   const [media, configured] = [await listMediaFor(ownerType, ownerId, tag), isMediaConfigured()]
 
@@ -36,7 +38,7 @@ export async function MediaSection({
         )}
       </div>
       {!readOnly && (configured
-        ? <MediaUpload ownerType={ownerType} ownerId={ownerId} tag={tag} accept={accept} label={label} />
+        ? <MediaUpload ownerType={ownerType} ownerId={ownerId} tag={tag} accept={accept} label={label} enhance={enhance} />
         : <p className="text-xs cd-muted">Photo/video storage isn’t set up yet — add the Vercel Blob token to enable uploads.</p>)}
     </div>
   )

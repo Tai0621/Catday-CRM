@@ -33,6 +33,21 @@ The agentic and marketing cycle. Planned scope is in
   without a deploy.
   Every customer- and cat-reading tool now filters `erasedAt` at the **query** layer, so Track A's
   erasure guarantee holds inside the assistant too.
+- **C8 — photo tidy-up.** The before/after grooming shots are the business's best marketing asset
+  and they are phone snaps under a shop light. A **Tidy up** toggle on the before/after capture
+  squares the crop so a pair is the same shape, and evens out the exposure with a percentile-clipped
+  histogram stretch — so one stray highlight cannot defeat it, and a photo that is already
+  well-exposed is left alone rather than having its noise amplified. All three channels share one
+  map, so a cat's coat does not come out a different shade than it is in the room.
+  **Opt-in per photo, and offered only on before/after pairs.** Cropping a picture of a customer's
+  belongings, a condition shot or a clock-in selfie destroys the record it exists to be, so those
+  are untouched — asserted in the verification, not just by convention.
+  **Not straightening**, and not background removal. Straightening needs to know which way is up in
+  the picture; guessing would tilt photos that were fine.
+  Also fixes a latent bug on *every* upload: `createImageBitmap` now decodes with
+  `imageOrientation: 'from-image'`, so a portrait phone photo no longer uploads sideways — the
+  camera's rotation lives in EXIF metadata, not in the pixels, and browsers do not agree on the
+  default.
 - **M9 — multilingual.** This market is genuinely trilingual, and a message composed in the
   customer's own language reads better than one translated into it. `Customer.language` records what
   a household actually writes in, editable on the customer and usable as a targeting rule.

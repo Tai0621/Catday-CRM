@@ -115,8 +115,8 @@ export default async function AssessCatPage({
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <MediaSection ownerType="appointment" ownerId={visitAppt.id} tag={GROOM_MEDIA_TAGS.before} accept="both" label="before shot" title="Before" />
-            <MediaSection ownerType="appointment" ownerId={visitAppt.id} tag={GROOM_MEDIA_TAGS.after} accept="both" label="after shot" title="After" />
+            <MediaSection ownerType="appointment" ownerId={visitAppt.id} tag={GROOM_MEDIA_TAGS.before} accept="both" label="before shot" title="Before" enhance />
+            <MediaSection ownerType="appointment" ownerId={visitAppt.id} tag={GROOM_MEDIA_TAGS.after} accept="both" label="after shot" title="After" enhance />
           </div>
         </div>
       ) : (
