@@ -1,7 +1,7 @@
 import { requireManager } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
-import { VARIANT_TESTABLE_TYPES, type ActionType } from '@/lib/constants'
+import { VARIANT_TESTABLE_TYPES, CUSTOMER_LANGUAGES, type ActionType } from '@/lib/constants'
 import { buildVariantStats, recommendedWinner, type VariantStats } from '@/lib/actions-learning'
 import { buildAttribution, type VariantRevenue } from '@/lib/attribution'
 import { getConfig, fmtMoney, type AppConfig } from '@/lib/config'
@@ -37,10 +37,13 @@ export default async function VariantsPage() {
     const label = String(data.get('label') ?? '').trim().slice(0, 40)
     const body = String(data.get('body') ?? '').trim().slice(0, 600)
     if (!(VARIANT_TESTABLE_TYPES as readonly string[]).includes(type) || !label || !body) return
+    // M9 · blank stays null, meaning language-neutral and eligible for anyone.
+    const raw = String(data.get('language') ?? '')
+    const language = (CUSTOMER_LANGUAGES as readonly string[]).includes(raw) ? raw : null
     await db.actionVariant.upsert({
       where: { type_label: { type, label } },
-      create: { type, label, body },
-      update: { body, isActive: true },
+      create: { type, label, body, language },
+      update: { body, language, isActive: true },
     })
     revalidatePath('/admin/variants')
   }
@@ -163,6 +166,19 @@ export default async function VariantsPage() {
                     Message <span className="cd-muted font-normal">· {'{cat}'} {'{brand}'} {'{customer}'} {'{days}'} are filled in per customer</span>
                   </label>
                   <input name="body" className="cd-input" placeholder="Hi! {cat} is due for a groom…" required maxLength={600} />
+                </div>
+                <div>
+                  <label className="cd-label">
+                    Language <span className="cd-muted font-normal">· who this wording is for</span>
+                  </label>
+                  <select name="language" className="cd-input" defaultValue="">
+                    <option value="">Any language</option>
+                    {CUSTOMER_LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                  <p className="text-xs cd-muted mt-1">
+                    A customer recorded as speaking this language sees only versions written in it, and those
+                    versions still compete with each other — so copy testing and localisation do not fight.
+                  </p>
                 </div>
                 <button type="submit" className="cd-btn text-sm">Add version</button>
               </form>

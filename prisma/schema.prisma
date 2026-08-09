@@ -22,6 +22,12 @@ model Customer {
   marketingConsentAt     DateTime?
   marketingConsentSource String?   // Staff | GoogleForm | WhatsApp | WalkIn | Import
   needsDetails     Boolean        @default(false)
+  // M9 · The language this household actually writes in — CUSTOMER_LANGUAGES.
+  // Null means unknown, which is a real answer: the OS then uses the business
+  // default rather than guessing, because guessing wrong is worse than being
+  // neutral. Detected from inbound WhatsApp text as a HINT only; a value set by
+  // a human is never overwritten (lib/language.ts).
+  language         String?
   notes            String?
   pointsBalance    Int            @default(0) // loyalty / royalty engine balance
   walletBalance    Float          @default(0) // Cat Day Wallet stored value (RM)
@@ -1023,6 +1029,15 @@ model ActionVariant {
   body      String   // message template — {cat} {brand} {customer} {days} placeholders
   isActive  Boolean  @default(true)  // in rotation
   isDefault Boolean  @default(false) // the promoted winner; used when rotation is off
+  // M9 · Which language this wording is written in (CUSTOMER_LANGUAGES).
+  // Null = language-neutral, and eligible for anyone.
+  //
+  // Localisation rides on the A/B machinery deliberately: a business writes its
+  // win-back message once per language and each household gets theirs, with no
+  // translation step at send time and no per-message model call. The arms
+  // within a language still compete normally, so copy testing and localisation
+  // do not fight each other.
+  language  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

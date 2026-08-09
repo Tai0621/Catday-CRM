@@ -37,6 +37,13 @@ export interface GroupRules {
   coatType?: string[]
   lifeStage?: string[]
   source?: string[]
+  /**
+   * M9 · CUSTOMER_LANGUAGES. Matches only households whose language is KNOWN to
+   * be one of these — an unrecorded language never matches, because a group
+   * targeting Mandarin speakers must not quietly include everyone nobody has
+   * asked.
+   */
+  language?: string[]
   /** 'boarding' = has boarded but never groomed, and vice versa. */
   serviceMix?: 'boarding-only' | 'grooming-only'
 }
@@ -121,6 +128,7 @@ interface Candidate extends Member {
   coatTypes: string[]
   lifeStages: string[]
   source: string
+  language: string | null
   tiers: string[]
   hasBoarded: boolean
   hasGroomed: boolean
@@ -136,6 +144,7 @@ async function loadCandidates(now: Date): Promise<Candidate[]> {
       where: { erasedAt: null },
       select: {
         id: true, name: true, phone: true, source: true, marketingConsent: true, createdAt: true,
+        language: true,
         // Deliberately NOT selecting healthNotes or medication: see the note at
         // the top of this file.
         cats: { select: { name: true, coatType: true, lifeStage: true } },
@@ -172,6 +181,7 @@ async function loadCandidates(now: Date): Promise<Candidate[]> {
     coatTypes: c.cats.map(x => x.coatType).filter((v): v is string => !!v),
     lifeStages: c.cats.map(x => x.lifeStage).filter((v): v is string => !!v),
     source: c.source,
+    language: c.language,
     tiers: c.memberships.map(m => m.tier.name),
     hasBoarded: c.appointments.some(a => a.type === 'Boarding' && a.status !== 'Cancelled'),
     hasGroomed: c.appointments.some(a => a.type === 'Grooming' && a.status !== 'Cancelled'),
@@ -199,6 +209,9 @@ function matches(c: Candidate, r: GroupRules): boolean {
   if (r.coatType && !r.coatType.some(t => c.coatTypes.includes(t))) return false
   if (r.lifeStage && !r.lifeStage.some(t => c.lifeStages.includes(t))) return false
   if (r.source && !r.source.includes(c.source)) return false
+  // An unknown language never matches: a Mandarin audience must not silently
+  // include every household nobody has asked.
+  if (r.language && !(c.language && r.language.includes(c.language))) return false
 
   if (r.serviceMix === 'boarding-only' && !(c.hasBoarded && !c.hasGroomed)) return false
   if (r.serviceMix === 'grooming-only' && !(c.hasGroomed && !c.hasBoarded)) return false

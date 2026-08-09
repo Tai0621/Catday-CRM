@@ -1,4 +1,5 @@
 import type { AppConfig } from './config'
+import { languagePrompt, isLanguage } from './language'
 
 // ── M8 · Brand voice ─────────────────────────────────────────────────────────
 // One profile, rendered into every prompt that produces text a human will read.
@@ -33,8 +34,14 @@ export function voicePrompt(config: AppConfig): string {
  * will read. Adds the one rule that matters more than any stylistic preference:
  * never invent a fact about someone's cat.
  */
-export function customerVoicePrompt(config: AppConfig): string {
+export function customerVoicePrompt(config: AppConfig, language?: string | null): string {
   const base = voicePrompt(config)
   const rule = 'Every detail about a cat, a booking or an amount must come from the record you were given — if you do not have it, leave it out rather than guessing.'
-  return base ? `${base}\n- Accuracy: ${rule}` : `Accuracy: ${rule}`
+  const withAccuracy = base ? `${base}\n- Accuracy: ${rule}` : `Accuracy: ${rule}`
+
+  // M9 · When the household's language is known it OVERRIDES the profile's own
+  // language guidance, which is a business-wide default rather than a statement
+  // about this customer.
+  const lang = languagePrompt(isLanguage(language) ? language : null)
+  return lang ? `${withAccuracy}\n- Language: ${lang}` : withAccuracy
 }

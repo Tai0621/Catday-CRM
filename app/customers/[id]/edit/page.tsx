@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { normalisePhone } from '@/lib/phone'
-import { CUSTOMER_SOURCES } from '@/lib/constants'
+import { CUSTOMER_SOURCES, CUSTOMER_LANGUAGES } from '@/lib/constants'
 import { consentUpdate } from '@/lib/consent'
 
 export default async function EditCustomerPage({
@@ -31,6 +31,9 @@ export default async function EditCustomerPage({
           email: ((data.get('email') as string) || '').trim() || null,
           address: ((data.get('address') as string) || '').trim() || null,
           source: (data.get('source') as string) || 'WalkIn',
+          // M9 · blank means unknown, which the OS treats as the business default
+          // rather than assuming English.
+          language: ((data.get('language') as string) || '').trim() || null,
           ...consentUpdate(data.get('marketingConsent') === 'on', 'Staff', customer),
           notes: ((data.get('notes') as string) || '').trim() || null,
         },
@@ -75,6 +78,15 @@ export default async function EditCustomerPage({
               {CUSTOMER_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
+        </div>
+        <div>
+          <label className="cd-label">
+            Language <span className="cd-muted font-normal">· what we write to them in</span>
+          </label>
+          <select name="language" defaultValue={customer.language ?? ''} className="cd-input">
+            <option value="">Not known — use the business default</option>
+            {CUSTOMER_LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
         </div>
         <div>
           <label className="cd-label">Address</label>

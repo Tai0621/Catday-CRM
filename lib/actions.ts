@@ -157,6 +157,11 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
   // Households with a Founding Cat get the same white-glove treatment as Private Club
   const foundingCustomerIds = new Set(cats.filter(c => c.foundingNumber != null).map(c => c.customerId))
 
+  // M9 · Which language to write to each household in. Absent means unknown, and
+  // messageFor falls back to language-neutral copy rather than assuming English.
+  const languageBy = new Map<string, string>()
+  for (const c of customers) if (c.language) languageBy.set(c.id, c.language)
+
   // Hidden keys: Done/Dismissed within window, or snoozed into the future
   const hidden = new Set<string>()
   const dismissCutoff = new Date(now.getTime() - ACTION_DISMISS_WINDOW_DAYS * DAY)
@@ -221,7 +226,8 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
   for (const a of checkoutsToday) {
     if (futureByCustomer.has(a.customerId)) continue
     const msg = messageFor(variants, 'RebookCheckout', a.customerId, { cat: a.cat.name, brand, customer: a.customer.name ?? '' },
-      `Hi! ${a.cat.name} checks out today — we'd love to see you again soon. Shall we lock in the next grooming or boarding date before you head off? 🐾`)
+      `Hi! ${a.cat.name} checks out today — we'd love to see you again soon. Shall we lock in the next grooming or boarding date before you head off? 🐾`,
+      languageBy.get(a.customerId))
     out.push(card({
       key: `RebookCheckout:${a.id}`, type: 'RebookCheckout', priority: 3,
       title: `Rebook before checkout — ${a.cat.name}`,
@@ -244,7 +250,8 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
     const catName = c.cats[0]?.name ?? 'your cat'
     const days = Math.floor((now.getTime() - last.getTime()) / DAY)
     const msg = messageFor(variants, 'WinBack', c.id, { cat: catName, brand, customer: c.name ?? '', days },
-      `Hi! It's been a while — ${catName} misses us at ${brand} 🐾 We'd love to welcome you back. Book this week and we'll add a complimentary add-on for ${catName}!`)
+      `Hi! It's been a while — ${catName} misses us at ${brand} 🐾 We'd love to welcome you back. Book this week and we'll add a complimentary add-on for ${catName}!`,
+      c.language)
     out.push(card({
       key: `WinBack:${c.id}`, type: 'WinBack', priority: 4,
       title: `Win back ${c.name ?? c.phone}`,
@@ -391,7 +398,8 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
   // 7 · Grooming due / overdue
   for (const r of buildGroomingPredictions(cats)) {
     const msg = messageFor(variants, 'GroomingDue', r.customerId, { cat: r.catName, brand, days: Math.abs(r.daysUntilDue) },
-      `Hi! ${r.catName} is due for grooming — shall we book a session this week? 🐾`)
+      `Hi! ${r.catName} is due for grooming — shall we book a session this week? 🐾`,
+      languageBy.get(r.customerId))
     out.push(card({
       key: `GroomingDue:${r.catId}`, type: 'GroomingDue', priority: 7,
       title: `${r.isOverdue ? 'Overdue grooming' : 'Grooming due'} — ${r.catName}`,

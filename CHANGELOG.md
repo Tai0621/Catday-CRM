@@ -33,6 +33,25 @@ The agentic and marketing cycle. Planned scope is in
   without a deploy.
   Every customer- and cat-reading tool now filters `erasedAt` at the **query** layer, so Track A's
   erasure guarantee holds inside the assistant too.
+- **M9 — multilingual.** This market is genuinely trilingual, and a message composed in the
+  customer's own language reads better than one translated into it. `Customer.language` records what
+  a household actually writes in, editable on the customer and usable as a targeting rule.
+  **Unknown is a real answer.** Null never quietly becomes English — not in the data, not in an
+  audience rule, not in a prompt. Nothing was backfilled, because assigning every existing customer
+  a language nobody recorded would manufacture a fact that every generator then acts on with
+  confidence. A language-targeted audience matches only households whose language is *known*, so a
+  Mandarin campaign cannot sweep in everyone nobody has asked.
+  **Localisation rides on the A/B machinery.** A message variant can declare a language, and a
+  household sees only copy written in theirs — with the arms *within* that language still competing
+  on the same conversion join, so a Malay win-back is measured against another Malay win-back rather
+  than one it was never comparable to. No translation step at send time and no per-message model
+  call: the business writes its copy once per language.
+  The assistant is told the language before it drafts, and a drafted message that reads as the wrong
+  language is **flagged on the confirm card rather than refused** — detection is a heuristic and the
+  drafter is a model, so blocking on disagreement between the two would stop good messages.
+  Detection itself is deliberately quiet: Mandarin from the script, Malay from function words, and
+  **nothing at all** from "ok thanks" or from plain English, which is the absence of a signal rather
+  than evidence of English.
 - **M7 — the Academy as a funnel.** Marketing's only segment was one static enrolment list with no
   connection to the CRM, so the question that decides whether workshops are worth running — *did any
   of these people ever book a groom?* — was unanswerable. Enrolments now link to a customer, matched

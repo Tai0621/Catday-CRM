@@ -1,6 +1,7 @@
 import { db } from '../db'
 import { recordAudit } from '../audit'
 import { canMessage } from '../customer-groups'
+import { languageOf, detect } from '../language'
 import { whatsappUrl } from '../phone'
 import { EXPENSE_CATEGORIES } from '../finance-categories'
 import { LOG_PERIODS, AD_HOC_GROUP_KEY } from '../constants'
@@ -55,7 +56,7 @@ export const PROPOSAL_TTL_MIN = 30
 export const MAX_PROPOSED_EXPENSE_RM = 50000
 
 export type Proposal =
-  | { kind: 'whatsapp'; customerId: string; customerName: string; phone: string; body: string }
+  | { kind: 'whatsapp'; customerId: string; customerName: string; phone: string; body: string; languageWarning?: string | null }
   | { kind: 'appointment'; customerId: string; catId: string; serviceId: string; startISO: string; endISO?: string; roomId?: string; notes?: string }
   | { kind: 'careNote'; appointmentId: string; date: string; period: string; fields: CareLogFields }
   | { kind: 'reorder'; productId: string; reorderLevel: number | null }
@@ -92,7 +93,7 @@ async function resolveCustomer(name: string) {
   if (!q) return { error: 'Which customer?' }
   const customers = await db.customer.findMany({
     where: { erasedAt: null, OR: [{ name: { contains: q } }, { phone: { contains: q } }] },
-    select: { id: true, name: true, phone: true },
+    select: { id: true, name: true, phone: true, language: true },
     take: 5,
   })
   if (customers.length === 0) return { error: `No customer matching "${q}".` }
@@ -118,9 +119,23 @@ async function buildWhatsapp(a: Args): Promise<Built> {
   const gate = await canMessage(customer.id)
   if (!gate.ok) return { ok: false, error: gate.reason }
 
+  // M9 · Flagged rather than refused. Detection is a heuristic and the drafter
+  // is a model, so blocking on disagreement between the two would stop good
+  // messages; surfacing it on the card puts the judgement where every other C2
+  // judgement lives — in front of the person about to press Confirm.
+  const want = languageOf(customer)
+  const wrote = detect(body)
+  const languageWarning = want && wrote && wrote !== want
+    ? `${customer.name ?? customer.phone} is recorded as ${want}, but this reads as ${wrote}.`
+    : null
+
   return {
     ok: true,
-    proposal: { kind: 'whatsapp', customerId: customer.id, customerName: customer.name ?? customer.phone, phone: customer.phone, body },
+    proposal: {
+      kind: 'whatsapp', customerId: customer.id,
+      customerName: customer.name ?? customer.phone, phone: customer.phone, body,
+      languageWarning,
+    },
     summary: `WhatsApp to ${customer.name ?? customer.phone}`,
   }
 }
@@ -311,7 +326,7 @@ export async function loadProposals(ids: string[]): Promise<PendingProposal[]> {
 
 function detailLines(p: Proposal): string[] {
   switch (p.kind) {
-    case 'whatsapp': return [p.body]
+    case 'whatsapp': return [p.body, ...(p.languageWarning ? [`⚠ ${p.languageWarning}`] : [])]
     case 'appointment': return [p.notes ?? ''].filter(Boolean)
     case 'careNote': {
       const f = p.fields

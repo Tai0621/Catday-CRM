@@ -1,6 +1,13 @@
 export const CUSTOMER_SOURCES = ['GoogleForm', 'WhatsApp', 'WalkIn', 'Referral', 'Other'] as const
 export type CustomerSource = typeof CUSTOMER_SOURCES[number]
 
+// ── M9 · Language ──
+// This market is genuinely trilingual, and a message written in the customer's
+// own language reads better than one translated into it. Null means "we don't
+// know yet" and is treated as the business default, never guessed at send time.
+export const CUSTOMER_LANGUAGES = ['English', 'Bahasa Malaysia', 'Mandarin'] as const
+export type CustomerLanguage = typeof CUSTOMER_LANGUAGES[number]
+
 export const LIFE_STAGES = ['Kitten', 'Adult', 'Senior'] as const
 export type LifeStage = typeof LIFE_STAGES[number]
 
