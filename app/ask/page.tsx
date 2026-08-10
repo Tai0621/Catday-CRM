@@ -1,11 +1,15 @@
 import { requireAuth } from '@/lib/auth'
 import { getConfig } from '@/lib/config'
+import { aiConfigured } from '@/lib/ai/provider'
 import { AskClient } from './AskClient'
 
 export default async function AskPage() {
   await requireAuth()
   const { business } = await getConfig()
-  const hasKey = !!process.env.ANTHROPIC_API_KEY
+  // Asks the provider seam, not one provider's env var: the demo runs on Groq
+  // and would otherwise render the "not configured" state over a working
+  // assistant.
+  const hasKey = aiConfigured()
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">

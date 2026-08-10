@@ -21,8 +21,23 @@ import Anthropic from '@anthropic-ai/sdk'
 export type AiProvider = 'anthropic' | 'groq'
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+
+/**
+ * Prefix on the error thrown when the provider is rate limited rather than
+ * broken. Callers test with `isBusy` and say "try again in a moment".
+ */
+const BUSY = 'provider-busy'
+export const isBusy = (e: unknown): boolean =>
+  e instanceof Error && e.message.startsWith(BUSY)
+
 const ANTHROPIC_DEFAULT_MODEL = 'claude-haiku-4-5-20251001'
-const GROQ_DEFAULT_MODEL = 'llama-3.3-70b-versatile'
+// gpt-oss-120b rather than llama-3.3-70b: the copilot offers thirteen tools at
+// once, and llama repeatedly emitted malformed calls under that load — packing
+// the arguments into the function NAME, which Groq rejects server-side. It also
+// inverted the meaning of empty results ("no customers have visited in 90 days"
+// for "no customers are overdue"). gpt-oss answers the same questions with
+// figures that match the database exactly.
+const GROQ_DEFAULT_MODEL = 'openai/gpt-oss-120b'
 
 /**
  * Which provider this deployment uses.
@@ -55,12 +70,24 @@ export function aiConfigured(): boolean {
  */
 export function aiModel(): string {
   const provider = aiProvider()
-  const override = process.env.AI_ASSISTANT_MODEL?.trim()
-  if (override) {
-    const looksAnthropic = override.startsWith('claude-')
-    if ((provider === 'anthropic') === looksAnthropic) return override
-  }
-  return provider === 'groq' ? GROQ_DEFAULT_MODEL : ANTHROPIC_DEFAULT_MODEL
+  return providerModelOverride(process.env.AI_ASSISTANT_MODEL)
+    ?? (provider === 'groq' ? GROQ_DEFAULT_MODEL : ANTHROPIC_DEFAULT_MODEL)
+}
+
+/**
+ * A model id from the environment, or null when it does not belong to the
+ * active provider.
+ *
+ * Every per-feature override goes through this. The rule looks small enough to
+ * reimplement at the call site, and doing so is how `WHATSAPP_ANALYSIS_MODEL`
+ * came to test the SHAPE of the id instead of the active provider — honouring a
+ * `claude-…` id on a Groq deployment, which 404s on every call.
+ */
+export function providerModelOverride(raw: string | undefined): string | null {
+  const override = raw?.trim()
+  if (!override) return null
+  const looksAnthropic = override.startsWith('claude-')
+  return (aiProvider() === 'anthropic') === looksAnthropic ? override : null
 }
 
 export interface CreateMessageParams {
@@ -94,6 +121,14 @@ async function viaAnthropic(params: CreateMessageParams): Promise<AiResponse> {
     ...(params.tools ? { tools: params.tools } : {}),
     ...(params.tool_choice ? { tool_choice: params.tool_choice } : {}),
     messages: params.messages,
+  }).catch((e: unknown) => {
+    // Both providers report a rate limit the same way to callers, so the UI
+    // says "busy" rather than "failed" whichever one is behind the seam.
+    const status = (e as { status?: number })?.status
+    if (status === 429 || status === 529) {
+      throw new Error(`${BUSY}: ${e instanceof Error ? e.message : String(e)}`)
+    }
+    throw e
   })
   return {
     content: response.content.filter(
@@ -203,10 +238,16 @@ async function viaGroq(params: CreateMessageParams): Promise<AiResponse> {
 
   const json = await res.json().catch(() => null)
   if (!res.ok || json?.error) {
-    // Surfaced verbatim: a wrong model id or a tool-less model is the most
-    // likely failure here, and "Bad Request" alone would send someone hunting
-    // through the wrong layer.
-    throw new Error(`groq: ${json?.error?.message ?? `HTTP ${res.status}`}`)
+    const detail = json?.error?.message ?? `HTTP ${res.status}`
+    // A rate limit is "come back in a moment", not a broken feature, and on a
+    // small free tier it is the FIRST thing a visitor hits: one copilot
+    // question carries a dozen tool schemas. 403 is here too because the edge
+    // blocks a burst before the API ever sees it.
+    if (res.status === 429 || res.status === 403) throw new Error(`${BUSY}: ${detail}`)
+    // Otherwise verbatim: a wrong model id or a tool-less model is the likely
+    // failure, and "Bad Request" alone would send someone hunting in the wrong
+    // layer.
+    throw new Error(`groq: ${detail}`)
   }
 
   const choice = json.choices?.[0]

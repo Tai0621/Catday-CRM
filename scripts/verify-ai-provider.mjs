@@ -80,6 +80,23 @@ await withEnv({ AI_PROVIDER: 'anthropic', AI_ASSISTANT_MODEL: 'llama-3.3-70b-ver
   check('…and a Groq id is ignored on Anthropic', P.aiModel().startsWith('claude-'), P.aiModel())
 })
 
+// The rule every per-feature override shares. `WHATSAPP_ANALYSIS_MODEL` used to
+// reimplement it and got it backwards — honouring a `claude-…` id on Groq, so
+// every inbound message 404'd and the caller swallowed it.
+await withEnv({ AI_PROVIDER: 'groq' }, () => {
+  check('a Claude override is REFUSED on Groq',
+    P.providerModelOverride('claude-haiku-4-5-20251001') === null, 'a Claude id survived onto Groq')
+  check('…while a Groq override is honoured',
+    P.providerModelOverride('openai/gpt-oss-120b') === 'openai/gpt-oss-120b')
+})
+await withEnv({ AI_PROVIDER: 'anthropic' }, () => {
+  check('a Claude override is honoured on Anthropic',
+    P.providerModelOverride('claude-haiku-4-5-20251001') === 'claude-haiku-4-5-20251001')
+  check('…while a Groq override is refused', P.providerModelOverride('llama-3.3-70b-versatile') === null)
+})
+check('an unset override is simply absent', P.providerModelOverride(undefined) === null)
+check('…and so is a blank one', P.providerModelOverride('   ') === null)
+
 // ══ 3. Message translation — the part that fails silently ══
 // Reached by pointing the Groq branch at a local stub and reading what it sends.
 const captured = []
@@ -179,15 +196,60 @@ globalThis.fetch = realFetch
 check('an API error surfaces the provider\'s own message', /does not exist/.test(message), message)
 
 // ══ 5. Nothing bypasses the seam ══
-const bypass = execSync(
-  'git grep -n "new Anthropic()\\|messages\\.create(" -- "lib/**/*.ts" "app/**/*.ts" || true',
-  { encoding: 'utf8' }).split('\n').filter(l => l && !l.startsWith('lib/ai/provider.ts'))
+//
+// These globs cover .tsx as well as .ts. They did not, once, and six PAGE
+// components were quietly deciding whether AI exists by reading
+// ANTHROPIC_API_KEY themselves — so on the Groq demo every one of them rendered
+// "not configured" over a working feature. The backend was fine; the screens
+// were empty. A check that inspects only the files you expected to be wrong
+// tells you nothing.
+const SOURCE_GLOBS = '"lib/**/*.ts" "lib/**/*.tsx" "app/**/*.ts" "app/**/*.tsx"'
+const grep = pattern => execSync(`git grep -n "${pattern}" -- ${SOURCE_GLOBS} || true`, { encoding: 'utf8' })
+  .split('\n').filter(l => l && !l.startsWith('lib/ai/provider.ts'))
+
+const bypass = grep('new Anthropic()\\|messages\\.create(')
 check('every AI call goes through the provider', bypass.length === 0, bypass.join(' | '))
 
-const envReads = execSync(
-  'git grep -n "process.env.ANTHROPIC_API_KEY" -- "lib/**/*.ts" "app/**/*.ts" || true',
-  { encoding: 'utf8' }).split('\n').filter(l => l && !l.startsWith('lib/ai/provider.ts'))
-check('nothing reads the Anthropic key directly any more', envReads.length === 0, envReads.join(' | '))
+const envReads = grep('process.env.ANTHROPIC_API_KEY')
+check('nothing reads the Anthropic key directly — including .tsx pages',
+  envReads.length === 0, envReads.join(' | '))
+
+const groqReads = grep('process.env.GROQ_API_KEY')
+check('…and nothing reads the Groq key directly either', groqReads.length === 0, groqReads.join(' | '))
+
+// A per-feature model override must ask the seam whether the id belongs to the
+// active provider. Testing the id's SHAPE at the call site is how the WhatsApp
+// analyser came to send a `claude-…` model to Groq on every inbound message.
+const shapeTests = grep("startsWith('claude-')")
+check('no call site decides a model by the shape of its id',
+  shapeTests.length === 0, shapeTests.join(' | '))
+
+// The user-facing empty states must not name one vendor: they render on the
+// deployment that does NOT have that vendor's key.
+const copy = execSync(`git grep -n "No <code>ANTHROPIC_API_KEY</code>" -- ${SOURCE_GLOBS} || true`, { encoding: 'utf8' })
+  .split('\n').filter(Boolean)
+check('the "not configured" copy is provider-neutral', copy.length === 0, copy.join(' | '))
+
+// ══ 5b. Rate limits are distinguishable from failures ══
+const providerSrc = readFileSync('lib/ai/provider.ts', 'utf8')
+check('a Groq rate limit is classified as busy, not as a broken feature',
+  /res\.status === 429 \|\| res\.status === 403/.test(providerSrc), 'no rate-limit branch')
+check('…and an Anthropic 429 lands in the same bucket',
+  /status === 429 \|\| status === 529/.test(providerSrc), 'anthropic rate limits not classified')
+
+for (const [label, err, expected] of [
+  ['a rate-limit error is recognised', new Error('provider-busy: TPM exceeded'), true],
+  ['a model-not-found error is NOT', new Error('groq: model does not exist'), false],
+  ['a non-Error is NOT', 'provider-busy', false],
+]) check(label, P.isBusy(err) === expected)
+
+const askRoute = readFileSync('app/api/ask/route.ts', 'utf8')
+check('the copilot answers a rate limit with 429 busy, not 500 failed',
+  /isBusy\(e\)[\s\S]{0,80}'busy'/.test(askRoute), 'busy not mapped')
+
+const askClient = readFileSync('app/ask/AskClient.tsx', 'utf8')
+check('…and does not tell the user to rephrase a question that was fine',
+  /busy:/.test(askClient), 'no busy message for the reader')
 
 // ══ 6. Live round trip, when a key is present ══
 if (process.env.GROQ_API_KEY) {

@@ -2,6 +2,7 @@ import { requireManager } from '@/lib/auth'
 import { recentBriefs, pendingBriefDay } from '@/lib/brief'
 import { db } from '@/lib/db'
 import { SEGMENTS } from '@/lib/segments'
+import { aiConfigured } from '@/lib/ai/provider'
 import { generateBriefNow } from './actions'
 import Link from 'next/link'
 
@@ -17,7 +18,10 @@ export default async function BriefPage() {
   await requireManager()
   const [briefs, pending] = await Promise.all([recentBriefs(), pendingBriefDay()])
   const missing = !briefs.some(b => b.date === pending)
-  const configured = !!process.env.ANTHROPIC_API_KEY
+  // Asks the provider seam, not one provider's env var: the demo runs on
+  // Groq and would otherwise hide a working feature behind the
+  // "not configured" state.
+  const configured = aiConfigured()
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
@@ -43,7 +47,7 @@ export default async function BriefPage() {
       {!configured && (
         <div className="cd-card p-4">
           <p className="text-sm cd-muted">
-            No <code>ANTHROPIC_API_KEY</code> is set on this deployment, so no brief is written. The
+            No AI provider key is set on this deployment, so no brief is written. The
             figures are still on the dashboard — what is missing is the reading of them.
           </p>
         </div>

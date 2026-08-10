@@ -1,5 +1,5 @@
 import { getConfig } from '../config'
-import { createMessage, aiModel } from '../ai/provider'
+import { createMessage, aiModel, providerModelOverride } from '../ai/provider'
 
 // The client used to be constructed at module scope, which made merely
 // importing this file throw on a deployment with no key. It is created per call
@@ -13,10 +13,12 @@ export interface LeadExtraction {
 }
 
 export async function analyzeWhatsAppMessage(content: string, senderPhone: string): Promise<LeadExtraction> {
-  // The override is only meaningful on Anthropic; on any other provider the
-  // active model is used, or every inbound message would fail on a bad id.
-  const override = process.env.WHATSAPP_ANALYSIS_MODEL?.trim()
-  const model = override?.startsWith('claude-') ? override : aiModel()
+  // The override is only meaningful on the provider it names. The test is which
+  // provider is ACTIVE, not what the id looks like: a `claude-…` id left over
+  // from before a switch used to be honoured on Groq, which 404s on every
+  // inbound message — and the caller swallows that, so the endpoint reported
+  // success while creating no leads at all.
+  const model = providerModelOverride(process.env.WHATSAPP_ANALYSIS_MODEL) ?? aiModel()
   const { business } = await getConfig()
 
   const response = await createMessage({

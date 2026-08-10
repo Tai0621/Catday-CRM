@@ -3,6 +3,7 @@ import { getConfig, fmtMoney } from '@/lib/config'
 import { listCampaigns, campaignAudiences, MAX_PROPOSED_DISCOUNT_PCT } from '@/lib/campaigns'
 import { groupByKey } from '@/lib/customer-groups'
 import { SEGMENTS } from '@/lib/segments'
+import { aiConfigured } from '@/lib/ai/provider'
 import { propose, approve, discard, end } from './actions'
 import Link from 'next/link'
 
@@ -17,7 +18,10 @@ export default async function CampaignsPage() {
   await requireManager()
   const [campaigns, audiences, config] = await Promise.all([listCampaigns(), campaignAudiences(), getConfig()])
   const seg = SEGMENTS.community
-  const configured = !!process.env.ANTHROPIC_API_KEY
+  // Asks the provider seam, not one provider's env var: the demo runs on
+  // Groq and would otherwise hide a working feature behind the
+  // "not configured" state.
+  const configured = aiConfigured()
 
   const today = new Date()
   const inFourWeeks = new Date(today.getTime() + 28 * 86400000)
@@ -64,7 +68,7 @@ export default async function CampaignsPage() {
       ) : (
         <div className="cd-card p-4">
           <p className="text-sm cd-muted">
-            No <code>ANTHROPIC_API_KEY</code> on this deployment, so offers cannot be proposed here.
+            No AI provider key on this deployment, so offers cannot be proposed here.
           </p>
         </div>
       )}

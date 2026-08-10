@@ -3,6 +3,7 @@ import { latestPlan, hasLiveData, DESTRUCTIVE_GROUPS, TEMPLATE_TYPES, type PlanG
 import { SERVICE_CATEGORIES, ROOM_TYPES, TIER_QUALIFICATIONS } from '@/lib/constants'
 import { EXPENSE_CATEGORIES } from '@/lib/finance-categories'
 import { SEGMENTS } from '@/lib/segments'
+import { aiConfigured } from '@/lib/ai/provider'
 import { generate, commit } from './actions'
 
 // C6 · Generative onboarding.
@@ -13,7 +14,10 @@ import { generate, commit } from './actions'
 export default async function OnboardingPage() {
   await requireManager()
   const [stored, live] = await Promise.all([latestPlan(), hasLiveData()])
-  const configured = !!process.env.ANTHROPIC_API_KEY
+  // Asks the provider seam, not one provider's env var: the demo runs on
+  // Groq and would otherwise hide a working feature behind the
+  // "not configured" state.
+  const configured = aiConfigured()
   const seg = SEGMENTS.business
 
   return (
@@ -44,7 +48,7 @@ export default async function OnboardingPage() {
       {!configured ? (
         <div className="cd-card p-4">
           <p className="text-sm cd-muted">
-            No <code>ANTHROPIC_API_KEY</code> on this deployment, so a plan cannot be generated here.
+            No AI provider key on this deployment, so a plan cannot be generated here.
             Configure the business by hand in <strong>Business Settings</strong>, or run onboarding on a
             deployment that has a key.
           </p>

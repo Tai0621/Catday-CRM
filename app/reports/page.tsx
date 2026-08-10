@@ -1,6 +1,7 @@
 import { requireManager } from '@/lib/auth'
 import { reportsForMonth, reportedMonths, previousMonth, monthLabel, departmentByKey, isMonthKey } from '@/lib/reports'
 import { SEGMENTS } from '@/lib/segments'
+import { aiConfigured } from '@/lib/ai/provider'
 import { generateMonthNow, renarrateDepartment } from './actions'
 import Link from 'next/link'
 
@@ -19,7 +20,10 @@ export default async function ReportsPage({
   const months = await reportedMonths()
   const month = requested && isMonthKey(requested) ? requested : (months[0] ?? previousMonth())
   const reports = await reportsForMonth(month)
-  const configured = !!process.env.ANTHROPIC_API_KEY
+  // Asks the provider seam, not one provider's env var: the demo runs on
+  // Groq and would otherwise hide a working feature behind the
+  // "not configured" state.
+  const configured = aiConfigured()
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">

@@ -4,6 +4,7 @@ import { askCatday } from '@/lib/ai/ask'
 import { budgetState } from '@/lib/ai/budget'
 import { scopeForPath } from '@/lib/ai/scope'
 import { loadProposals } from '@/lib/ai/proposals'
+import { isBusy } from '@/lib/ai/provider'
 
 /**
  * GET — what the copilot needs to render itself: whether it is usable at all,
@@ -48,6 +49,10 @@ export async function POST(req: Request) {
     if (msg === 'no-key') return NextResponse.json({ error: 'no-key' }, { status: 503 })
     if (msg === 'ai-disabled') return NextResponse.json({ error: 'disabled' }, { status: 503 })
     if (msg === 'budget-exhausted') return NextResponse.json({ error: 'budget' }, { status: 429 })
+    // A rate limit is not a failure of the question. On a small provider tier
+    // one copilot question can exhaust the per-minute allowance on its own, so
+    // this is the common case there, not an edge case.
+    if (isBusy(e)) return NextResponse.json({ error: 'busy' }, { status: 429 })
     console.error('ask error:', msg)
     return NextResponse.json({ error: 'failed' }, { status: 500 })
   }
