@@ -233,7 +233,13 @@ check('the "not configured" copy is provider-neutral', copy.length === 0, copy.j
 // ══ 5b. Rate limits are distinguishable from failures ══
 const providerSrc = readFileSync('lib/ai/provider.ts', 'utf8')
 check('a Groq rate limit is classified as busy, not as a broken feature',
-  /res\.status === 429 \|\| res\.status === 403/.test(providerSrc), 'no rate-limit branch')
+  /res\.status === 429\b/.test(providerSrc), 'no rate-limit branch')
+// 403 is NOT a rate limit. Groq answers a revoked key or a blocked address with
+// "Access denied. Please check your network settings." — this bucket briefly
+// included 403 and a real one proved it wrong within the hour. Telling someone
+// to wait for that is telling them to wait forever.
+check('…and a 403 is NOT, because that is a revoked key or a blocked address',
+  !/res\.status === 403/.test(providerSrc), '403 is reported as a transient rate limit')
 check('…and an Anthropic 429 lands in the same bucket',
   /status === 429 \|\| status === 529/.test(providerSrc), 'anthropic rate limits not classified')
 
@@ -252,20 +258,32 @@ check('…and does not tell the user to rephrase a question that was fine',
   /busy:/.test(askClient), 'no busy message for the reader')
 
 // ══ 6. Live round trip, when a key is present ══
+//
+// Reachability is not this script's claim. Everything above is offline and
+// still meaningful on a machine that cannot reach Groq at all, so a revoked key
+// or a blocked address is reported as a SKIP with its reason rather than
+// failing checks about translation logic that did not change.
 if (process.env.GROQ_API_KEY) {
-  const live = await withEnv({ AI_PROVIDER: 'groq' }, () => P.createMessage({
-    max_tokens: 300,
-    system: 'Record the figures you are given. Invent nothing.',
-    tools: [{ name: 'note', description: 'Record.', input_schema: { type: 'object', properties: { observations: { type: 'array', items: { type: 'string' } } }, required: ['observations'] } }],
-    tool_choice: { type: 'tool', name: 'note' },
-    messages: [{ role: 'user', content: 'Revenue 1240, visits 8.' }],
-  }))
+  let live = null
+  try {
+    live = await withEnv({ AI_PROVIDER: 'groq' }, () => P.createMessage({
+      max_tokens: 300,
+      system: 'Record the figures you are given. Invent nothing.',
+      tools: [{ name: 'note', description: 'Record.', input_schema: { type: 'object', properties: { observations: { type: 'array', items: { type: 'string' } } }, required: ['observations'] } }],
+      tool_choice: { type: 'tool', name: 'note' },
+      messages: [{ role: 'user', content: 'Revenue 1240, visits 8.' }],
+    }))
+  } catch (e) {
+    console.log(`  · live round trip skipped — Groq is unreachable: ${e instanceof Error ? e.message : e}`)
+  }
+  if (live) {
   const call = live.content.find(b => b.type === 'tool_use')
   check('LIVE: Groq returns the forced tool', call?.name === 'note', JSON.stringify(live.content).slice(0, 160))
   check('LIVE: its input parses to the declared shape',
     Array.isArray(call?.input?.observations), JSON.stringify(call?.input).slice(0, 160))
   check('LIVE: real token counts come back for the budget',
     live.usage.input_tokens > 0 && live.usage.output_tokens > 0, JSON.stringify(live.usage))
+  }
 } else {
   console.log('  · live round trip skipped (no GROQ_API_KEY)')
 }

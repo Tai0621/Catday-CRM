@@ -241,9 +241,14 @@ async function viaGroq(params: CreateMessageParams): Promise<AiResponse> {
     const detail = json?.error?.message ?? `HTTP ${res.status}`
     // A rate limit is "come back in a moment", not a broken feature, and on a
     // small free tier it is the FIRST thing a visitor hits: one copilot
-    // question carries a dozen tool schemas. 403 is here too because the edge
-    // blocks a burst before the API ever sees it.
-    if (res.status === 429 || res.status === 403) throw new Error(`${BUSY}: ${detail}`)
+    // question carries a dozen tool schemas.
+    //
+    // ONLY 429. This bucket briefly included 403 on the theory that the edge
+    // rate-limits bursts, and a real 403 immediately proved that wrong —
+    // "Access denied. Please check your network settings." is a revoked key or
+    // a blocked address, and answering it with "we are busy, try again shortly"
+    // sends someone away waiting for a wait that will never end.
+    if (res.status === 429) throw new Error(`${BUSY}: ${detail}`)
     // Otherwise verbatim: a wrong model id or a tool-less model is the likely
     // failure, and "Bad Request" alone would send someone hunting in the wrong
     // layer.
