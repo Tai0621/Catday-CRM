@@ -14,6 +14,33 @@ The agentic and marketing cycle. Planned scope is in
 [docs/AGENTIC-ROADMAP.md](docs/AGENTIC-ROADMAP.md) (Track C — Agentic OS, Track M — Marketing).
 
 ### Added
+- **The diary stopped needing to be hunted through.** Appointments opened on a single day and made
+  the owner page date by date to find anything, which is the wrong default for the question actually
+  being asked — *what is coming up?* It now opens on everything still to come, grouped under its own
+  date with **Today** and **Tomorrow** named, counts per day, and boarding stays showing their
+  check-out. The single-day view is still there; it is now something you choose rather than something
+  you escape. Days are grouped in the **business's own timezone**, not the server's: Vercel runs on
+  UTC, so a 07:30 check-out would otherwise be filed under yesterday and the owner would go looking
+  for a cat standing in front of them.
+- **A first-time customer can be registered without leaving the booking.** A walk-in used to mean
+  abandoning a half-filled form, creating the customer, creating the cat, and starting again — which
+  is how everyone ends up booked under one shared "walk-in" account. **+ New customer** on the
+  booking screen takes a phone number, a name and the first cat, then selects both in place. A phone
+  number already on file is **not an error**: that is a returning customer nobody recognised, so the
+  existing household is selected instead, which also removes the incentive to invent a second number
+  to get past a failure. Re-registering never revokes marketing consent already given.
+- **Cancelling and moving, from the row.** The diary is where the phone call happens, so **Move** and
+  **Cancel** are one click from the list as well as the detail screen. Cancelling **asks why** from a
+  fixed list and stores the reason on the appointment rather than only in the audit log, because
+  "why do people cancel, and is it getting worse?" is a question the business asks of its own data
+  and prose cannot be grouped. Moving a **boarding** stay **reprices it** — nights change, so the
+  bill changes — and re-checks room capacity for the new window while excluding the booking being
+  moved, or every roomed stay would clash with itself. The first original date is kept, since that is
+  what a customer disputes. Completed, cancelled and no-show bookings refuse both, with a reason.
+  A **deposit is never silently reversed**: it is money already received, and whether it is refunded,
+  held as credit or kept is a commercial decision, so staff are told it needs settling instead.
+  The detail page's one-click **Cancelled** status button is gone — it set the status with no reason,
+  a second cancel path that skipped everything above.
 - **C3 — the Action Inbox learns from its own record.** `ActionLog` has been collecting every
   Done/Snoozed/Dismissed outcome since the inbox shipped and nothing read it back. The queue now
   ranks on that evidence: time-decayed acceptance, plus a real conversion join (did a booking or

@@ -670,6 +670,15 @@ model Appointment {
   notes       String?
   staffNotes  String?
   usedCredit  Boolean  @default(false)
+  // Cancellation is recorded on the row, not only in the audit log: "why do
+  // people cancel" is a question the business asks of its own data, and an
+  // append-only log of prose cannot be grouped.
+  cancelledAt  DateTime?
+  cancelReason String?  // see CANCEL_REASONS in lib/appointments/schedule.ts
+  cancelNote   String?
+  // Set when a booking is moved, so a diary full of changes can be read back.
+  rescheduledAt   DateTime?
+  rescheduledFrom DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

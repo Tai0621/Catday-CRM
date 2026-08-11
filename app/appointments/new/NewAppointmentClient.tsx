@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { boardingNights, roomTypeForBoardingService } from '@/lib/appointment-charge'
 import { createAppointment, fetchSlots, fetchFreeRooms } from './actions'
+import { NewCustomerPanel } from './NewCustomerPanel'
 
 type Lane = 'grooming' | 'boarding'
 interface CustomerOpt { id: string; name: string | null; phone: string }
@@ -22,7 +23,7 @@ const dateKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
 const localISO = (d: Date) => `${dateKey(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 
 export function NewAppointmentClient({
-  customers, cats, services, staff, preselectCustomerId, preselectCatId,
+  customers: initialCustomers, cats: initialCats, services, staff, preselectCustomerId, preselectCatId,
 }: {
   customers: CustomerOpt[]; cats: CatOpt[]; services: ServiceOpt[]; staff: StaffOpt[]
   preselectCustomerId: string | null; preselectCatId: string | null
@@ -31,6 +32,14 @@ export function NewAppointmentClient({
   const [lane, setLane] = useState<Lane>('grooming')
   const [customerId, setCustomerId] = useState(preselectCustomerId ?? '')
   const [catId, setCatId] = useState(preselectCatId ?? '')
+
+  // A customer registered mid-booking is appended in place rather than being
+  // fetched again: re-running the page's server query would throw away every
+  // choice already made on this form.
+  const [customers, setCustomers] = useState(initialCustomers)
+  const [cats, setCats] = useState(initialCats)
+  const [registering, setRegistering] = useState(false)
+  const [registered, setRegistered] = useState<string | null>(null)
   const [serviceId, setServiceId] = useState('')
   const [staffId, setStaffId] = useState('')
   const [notes, setNotes] = useState('')
@@ -154,12 +163,35 @@ export function NewAppointmentClient({
       <div className="cd-card p-5 space-y-4">
         {/* ── Who ── */}
         <div>
-          <label className="cd-label">Customer *</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="cd-label" style={{ marginBottom: 0 }}>Customer *</label>
+            <button type="button" onClick={() => { setRegistering(v => !v); setRegistered(null) }}
+              className="text-xs cd-link">
+              {registering ? 'Cancel' : '+ New customer'}
+            </button>
+          </div>
           <select value={customerId} onChange={e => setCustomerId(e.target.value)} className="cd-input">
             <option value="">Select customer…</option>
             {customers.map(c => <option key={c.id} value={c.id}>{c.name ?? c.phone}</option>)}
           </select>
+          {registered && <p className="text-xs mt-1" style={{ color: BOARD.color }}>{registered}</p>}
         </div>
+
+        {registering && (
+          <NewCustomerPanel
+            onCancel={() => setRegistering(false)}
+            onCreated={(customer, cat, existing) => {
+              setCustomers(prev => prev.some(c => c.id === customer.id) ? prev : [...prev, customer])
+              setCats(prev => prev.some(c => c.id === cat.id) ? prev : [...prev, cat])
+              setCustomerId(customer.id)
+              setCatId(cat.id)
+              setRegistering(false)
+              setRegistered(existing
+                ? `That number was already on file — ${customer.name ?? customer.phone} selected.`
+                : `${customer.name ?? customer.phone} added and selected.`)
+            }}
+          />
+        )}
         <div>
           <label className="cd-label">Cat *</label>
           <select value={catId} onChange={e => setCatId(e.target.value)} className="cd-input" disabled={!customerId}>

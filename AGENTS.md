@@ -44,6 +44,17 @@ everywhere money is computed).
 Before writing any Next.js code, skim `node_modules/next/dist/docs/` for the actual current API —
 do not assume App Router conventions from older training data hold here.
 
+## `.env` points at the LIVE database
+
+`DATABASE_URL` in `.env` is Cat Day **production**. A plain `next dev` therefore puts you one click
+away from cancelling a real customer's booking, and a migration script run without thinking applies
+to the live database.
+
+Use `node scripts/dev-turso-demo.mjs` to develop and to drive a browser — it loads `.env.demo.sh` over the
+top and **refuses to start** if `DATABASE_URL` still resolves to `catday-crm`. The `catday-demo`
+preview configuration runs it. Source `.env.demo.sh` before any verification script for the same
+reason.
+
 ## The single most important gotcha: Prisma 7 + Turso migrations
 
 **`prisma migrate dev` and `prisma db push` DO NOT WORK** against a `libsql://` URL in Prisma 7. Don't
