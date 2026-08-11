@@ -338,6 +338,22 @@ The agentic and marketing cycle. Planned scope is in
   the same conversion join the live app runs rather than hardcoded.
 
 ### Fixed
+- **Every AI screen was blank on the Groq demo.** Six page components decided whether AI exists by
+  reading `ANTHROPIC_API_KEY` themselves instead of asking the provider seam, so the demo rendered
+  "not configured" over a working backend on onboarding, the copilot, the brief, campaigns and the
+  content studio. The seam's own bypass check had missed them because its globs matched `.ts` but not
+  `.tsx` — the check inspected only the files it expected to be wrong. Globs widened, and the
+  vendor-specific empty-state copy replaced with provider-neutral wording, since that copy renders
+  precisely on the deployment that lacks the named vendor's key.
+- **WhatsApp lead extraction did nothing on the demo, and reported success while doing it.**
+  `WHATSAPP_ANALYSIS_MODEL` was honoured whenever the id *looked* Anthropic rather than when
+  Anthropic was the active provider, so a leftover `claude-haiku-…` was sent to Groq and 404'd on
+  every inbound message. The per-message `catch` swallowed it: the endpoint returned
+  `200 {processed: 0}` with no leads created. The rule now lives once, in `providerModelOverride()`.
+- **Rate limits presented as broken features.** A 429 surfaced as a generic 500 that told the user to
+  rephrase a question that was fine. Both providers now classify rate limiting as `provider-busy`;
+  the copilot returns 429 `busy` and says to wait. This is the common case on a small provider tier,
+  not an edge case — one copilot question carries thirteen tool schemas.
 - **White-label leak**: `lib/version.ts` hardcoded `'Cat Day OS'`, so a second client would have been
   told they were running the first client's system. Product identity (`Bizkit`) and tenant identity
   (`config.business.name`) are now separate.

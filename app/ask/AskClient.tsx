@@ -31,9 +31,16 @@ export function AskClient({ hasKey }: { hasKey: boolean }) {
       })
       const json = await res.json()
       if (!res.ok) {
-        setError(json.error === 'no-key'
-          ? 'AI assistant is not configured yet — add ANTHROPIC_API_KEY to the environment.'
-          : 'Something went wrong answering that. Try rephrasing.')
+        // "Busy" is not "broken": rephrasing will not help, waiting will, and
+        // telling someone to rephrase a question that was fine is worse than
+        // saying nothing.
+        const messages: Record<string, string> = {
+          'no-key': 'AI assistant is not configured yet — no AI provider key is set on this deployment.',
+          busy: 'The AI provider is rate limiting us right now. Wait a moment and ask again — the question was fine.',
+          budget: 'The AI budget for this month is used up.',
+          disabled: 'The AI assistant is switched off for this business.',
+        }
+        setError(messages[json.error as string] ?? 'Something went wrong answering that. Try rephrasing.')
       } else {
         setAnswer(json.answer)
       }
@@ -50,7 +57,9 @@ export function AskClient({ hasKey }: { hasKey: boolean }) {
         <div className="text-3xl">🤖</div>
         <h2 className="font-semibold" style={{ color: '#2D1907' }}>Almost ready</h2>
         <p className="text-sm cd-muted max-w-md mx-auto">
-          The AI assistant needs an Anthropic API key. Add <code style={{ background: 'rgba(45,25,7,0.08)', padding: '0.1rem 0.35rem', borderRadius: '0.25rem' }}>ANTHROPIC_API_KEY</code> to
+          The AI assistant needs a model provider key. Add either{' '}
+          <code style={{ background: 'rgba(45,25,7,0.08)', padding: '0.1rem 0.35rem', borderRadius: '0.25rem' }}>ANTHROPIC_API_KEY</code> or{' '}
+          <code style={{ background: 'rgba(45,25,7,0.08)', padding: '0.1rem 0.35rem', borderRadius: '0.25rem' }}>GROQ_API_KEY</code> to
           the local <code>.env</code> and the Vercel environment variables, then redeploy.
         </p>
       </div>

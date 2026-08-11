@@ -3,6 +3,7 @@ import { getConfig } from '@/lib/config'
 import { contentPool, poolExclusions } from '@/lib/content/studio'
 import { SEGMENTS } from '@/lib/segments'
 import { PairExport } from './PairExport'
+import { aiConfigured } from '@/lib/ai/provider'
 import { generateCaption, setDraftStatus, withdrawFromPool } from './actions'
 import Link from 'next/link'
 
@@ -15,7 +16,10 @@ export default async function ContentStudioPage() {
   await requireManager()
   const [pool, excluded, config] = await Promise.all([contentPool(), poolExclusions(), getConfig()])
   const seg = SEGMENTS.community
-  const configured = !!process.env.ANTHROPIC_API_KEY
+  // Asks the provider seam, not one provider's env var: the demo runs on
+  // Groq and would otherwise hide a working feature behind the
+  // "not configured" state.
+  const configured = aiConfigured()
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
@@ -46,7 +50,7 @@ export default async function ContentStudioPage() {
       {!configured && (
         <div className="cd-card p-4">
           <p className="text-sm cd-muted">
-            No <code>ANTHROPIC_API_KEY</code> on this deployment, so captions cannot be drafted. The
+            No AI provider key on this deployment, so captions cannot be drafted. The
             image composer below still works.
           </p>
         </div>

@@ -342,7 +342,28 @@ inside a *user* message, OpenAI wants a separate `role: 'tool'` message with a m
 as though the tool returned nothing. That translation is exercised offline in the verify script.
 
 `AI_ASSISTANT_MODEL` is honoured only when it plausibly belongs to the active provider; a leftover
-`claude-…` id on a Groq deployment is ignored rather than sent as a guaranteed 404.
+`claude-…` id on a Groq deployment is ignored rather than sent as a guaranteed 404. Every per-feature
+override must go through **`providerModelOverride()`** rather than re-testing the id at the call
+site — `WHATSAPP_ANALYSIS_MODEL` reimplemented that rule, checked the *shape* of the id instead of
+the active provider, and so sent `claude-haiku-…` to Groq on every inbound message. The caller
+swallowed the 404 per message, so the endpoint returned `200 {processed: 0}` and created no leads at
+all.
+
+**Deciding whether AI exists is part of the seam.** Ask `aiConfigured()`; never read a vendor's key
+in a page. Six `.tsx` pages once did, so on the Groq demo every AI screen rendered its "not
+configured" empty state over a working backend. The bypass checks now cover `.tsx` — the original
+globs matched only `.ts`, which is exactly why the pages were missed. User-facing empty states must
+not name one vendor either: they render on the deployment that lacks that vendor's key.
+
+A rate limit is not a failure. Both branches classify 429 (and Anthropic 529, Groq 403) as
+`provider-busy`, testable with `isBusy(e)`; the copilot answers 429 `busy` and tells the reader to
+wait rather than to rephrase a question that was fine.
+
+Groq model choice matters more than it looks. `openai/gpt-oss-120b` is the default because
+`llama-3.3-70b-versatile` emitted malformed tool calls under the copilot's thirteen-tool load —
+packing arguments into the function *name*, which Groq rejects server-side — and inverted the sense
+of empty results. The trade-off is a lower rate limit (8k TPM vs 12k), which the six-call monthly
+report batch can exhaust; the job is idempotent and re-runnable, so a second run fills the gaps.
 
 Locally the two configs are separate files, both gitignored:
 
