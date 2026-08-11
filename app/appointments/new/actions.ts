@@ -4,6 +4,9 @@ import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { openSlots } from '@/lib/slots'
 import { boardingNights, roomTypeForBoardingService } from '@/lib/appointment-charge'
+import { normalisePhone } from '@/lib/phone'
+import { consentUpdate } from '@/lib/consent'
+import { recordAudit } from '@/lib/audit'
 
 // Service category → appointment type (the board and dashboard group by type)
 const CATEGORY_TYPE: Record<string, string> = {
@@ -44,6 +47,92 @@ export async function fetchFreeRooms(startISO: string, endISO: string) {
     rooms: rooms
       .map(r => ({ id: r.id, name: r.name, type: r.type, capacity: r.capacity, remaining: r.capacity - (used.get(r.id) ?? 0) }))
       .filter(r => r.remaining > 0),
+  }
+}
+
+export type NewCustomerPayload = {
+  phone: string
+  name: string
+  email?: string
+  source?: string
+  marketingConsent: boolean
+  catName: string
+  breed?: string
+}
+export type NewCustomerResult =
+  | { ok: true; customer: { id: string; name: string | null; phone: string }
+      cat: { id: string; name: string; customerId: string }; existing: boolean }
+  | { ok: false; error: string }
+
+/**
+ * Register a walk-in without leaving the booking.
+ *
+ * A first-time customer is a customer standing at the counter, so this creates
+ * the household AND its first cat in one step: a booking needs both, and
+ * sending staff to two other screens loses the half-filled form they were on.
+ *
+ * A phone number already on file is NOT an error. Phone is the unique key here,
+ * and the realistic case is a returning customer nobody recognised — so the
+ * existing household is returned and selected rather than refused, which also
+ * stops staff from working around a failure by inventing a second number.
+ */
+export async function createCustomerWithCat(payloadJson: string): Promise<NewCustomerResult> {
+  await requireAuth()
+  let p: NewCustomerPayload
+  try { p = JSON.parse(payloadJson) } catch { return { ok: false, error: 'Bad request.' } }
+
+  const rawPhone = (p.phone ?? '').trim()
+  if (!rawPhone) return { ok: false, error: 'A phone number is required — it is how the customer is identified.' }
+  const phone = normalisePhone(rawPhone)
+  if (phone.replace(/\D/g, '').length < 9) return { ok: false, error: 'That phone number looks too short.' }
+
+  const catName = (p.catName ?? '').trim()
+  if (!catName) return { ok: false, error: "The cat's name is required — a booking is for a cat, not just a household." }
+
+  const existing = await db.customer.findUnique({
+    where: { phone },
+    select: { id: true, name: true, phone: true, erasedAt: true },
+  })
+  if (existing?.erasedAt) {
+    return { ok: false, error: 'That number belongs to an erased record and cannot be reused.' }
+  }
+
+  const customer = existing ?? await db.customer.create({
+    data: {
+      phone,
+      name: (p.name ?? '').trim() || null,
+      email: (p.email ?? '').trim() || null,
+      source: p.source || 'WalkIn',
+      ...consentUpdate(!!p.marketingConsent, 'Staff'),
+      needsDetails: false,
+    },
+    select: { id: true, name: true, phone: true },
+  })
+
+  // Reuse a cat of the same name rather than creating a duplicate: on a
+  // returning household, staff typing the name they were told is the norm.
+  const cat = await db.cat.findFirst({
+    where: { customerId: customer.id, name: catName },
+    select: { id: true, name: true, customerId: true },
+  }) ?? await db.cat.create({
+    data: { customerId: customer.id, name: catName, breed: (p.breed ?? '').trim() || null },
+    select: { id: true, name: true, customerId: true },
+  })
+
+  if (!existing) {
+    await recordAudit({
+      action: 'customer.create',
+      entityType: 'Customer',
+      entityId: customer.id,
+      summary: `${customer.name ?? phone} registered at booking, with cat ${cat.name}`,
+    })
+  }
+
+  return {
+    ok: true,
+    customer: { id: customer.id, name: customer.name, phone: customer.phone },
+    cat,
+    existing: !!existing,
   }
 }
 

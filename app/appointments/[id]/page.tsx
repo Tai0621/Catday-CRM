@@ -3,6 +3,8 @@ import { db } from '@/lib/db'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { APPOINTMENT_STATUSES } from '@/lib/constants'
+import { isChangeable } from '@/lib/appointments/schedule'
+import { AppointmentActions } from '../AppointmentActions'
 
 export default async function AppointmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAuth()
@@ -10,7 +12,7 @@ export default async function AppointmentDetailPage({ params }: { params: Promis
 
   const appt = await db.appointment.findUnique({
     where: { id },
-    include: { customer: true, cat: true, room: true },
+    include: { customer: true, cat: true, room: true, service: true },
   })
   if (!appt) notFound()
 
@@ -80,11 +82,55 @@ export default async function AppointmentDetailPage({ params }: { params: Promis
         </form>
       </section>
 
+      {/* Change or cancel — the same controls as the diary, so a cancellation
+          always captures a reason no matter which screen it starts from. */}
+      {isChangeable(appt.status) && (
+        <section className="cd-card p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold" style={{ color: '#2D1907' }}>Change this booking</h2>
+              <p className="text-sm cd-muted">Move it to another time, or cancel it with a reason.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <AppointmentActions
+                appointment={{
+                  id: appt.id,
+                  type: appt.type,
+                  catName: appt.cat.name,
+                  status: appt.status,
+                  scheduledAt: appt.scheduledAt.toISOString(),
+                  endsAt: appt.endsAt?.toISOString() ?? null,
+                  price: appt.price,
+                  roomId: appt.roomId,
+                  depositRM: appt.depositRM,
+                  serviceName: appt.service?.name ?? null,
+                  durationMin: appt.service?.durationMin ?? null,
+                  unitPrice: appt.service?.price ?? null,
+                }}
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {appt.status === 'Cancelled' && appt.cancelReason && (
+        <section className="cd-card p-5">
+          <h2 className="font-semibold" style={{ color: '#2D1907' }}>Cancelled</h2>
+          <p className="text-sm cd-muted">
+            {appt.cancelReason}
+            {appt.cancelNote ? ` — ${appt.cancelNote}` : ''}
+            {appt.cancelledAt ? ` · ${appt.cancelledAt.toLocaleDateString('en-MY', { dateStyle: 'medium' })}` : ''}
+          </p>
+        </section>
+      )}
+
       {/* Status update */}
       <section className="cd-card p-5 space-y-3">
         <h2 className="font-semibold" style={{ color: '#2D1907' }}>Update Status</h2>
+        {/* Cancelled is deliberately NOT here: cancelling has to record why, and
+            a one-click status button cannot ask. It lives above instead. */}
         <form action={updateStatus} className="flex gap-2 flex-wrap">
-          {APPOINTMENT_STATUSES.map(s => (
+          {APPOINTMENT_STATUSES.filter(s => s !== 'Cancelled').map(s => (
             <button key={s} name="status" value={s} type="submit"
               className="text-sm px-3 py-1.5 rounded-lg transition-colors"
               style={appt.status === s
