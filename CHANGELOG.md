@@ -14,6 +14,21 @@ The agentic and marketing cycle. Planned scope is in
 [docs/AGENTIC-ROADMAP.md](docs/AGENTIC-ROADMAP.md) (Track C — Agentic OS, Track M — Marketing).
 
 ### Added
+- **One AI space instead of AI everywhere.** The OS grew AI feature by feature and each one landed
+  wherever its business domain already was — the brief and reports pinned at the top level, offers
+  under Marketing, captions under Content, triage under WhatsApp. Individually each was the right
+  home; together it read as AI scattered through the building with no front door. **AI** is now a
+  single nav section — Overview, Assistant, Morning Brief, Monthly Reports — and `/ai` is the front
+  door: what provider and model are running, how much of today's token budget is left, and live state
+  for each surface (the latest brief's date, this month's published-versus-flagged report count,
+  drafts waiting to be confirmed).
+  **The workflow assists were deliberately NOT relocated.** The Content Studio's two consent gates
+  are enforced in the query that selects the photographs; moving that button into an AI tab away from
+  the data is exactly how such a check quietly stops being applied. Those features are listed on the
+  hub with what they do and *why they live where they live*, and launched from there — so nothing the
+  model does is hidden, without divorcing any of it from its guardrails.
+  URLs did not change. A nav that reads as one AI space was what was missing; relocating live routes
+  would have broken bookmarks and links already written into past briefs for the sake of tidiness.
 - **The diary stopped needing to be hunted through.** Appointments opened on a single day and made
   the owner page date by date to find anything, which is the wrong default for the question actually
   being asked — *what is coming up?* It now opens on everything still to come, grouped under its own

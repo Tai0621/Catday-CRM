@@ -16,9 +16,17 @@ const segmentLinks = (s: NavSegment) => s.groups.flatMap(g => g.links)
 const PINNED: NavLink[] = [
   { href: '/', label: 'Dashboard', icon: 'dashboard' },
   { href: '/actions', label: 'Action Inbox', icon: 'inbox' },
+]
+
+// AI is one place, not three pinned items and four more scattered through the
+// segments. The pages themselves have NOT moved — a nav that reads as one AI
+// space is what was missing, and relocating live URLs would break bookmarks and
+// every link already written into a brief for the sake of tidiness.
+const AI_LINKS: NavLink[] = [
+  { href: '/ai', label: 'Overview', icon: 'ai' },
+  { href: '/ask', label: 'Assistant', icon: 'ai' },
   { href: '/brief', label: 'Morning Brief', icon: 'ai' },
-  { href: '/reports', label: 'Reports', icon: 'report' },
-  { href: '/ask', label: 'Ask AI', icon: 'ai' },
+  { href: '/reports', label: 'Monthly Reports', icon: 'report' },
 ]
 
 // The six business segments — the OS map. Colours match lib/segments.ts.
@@ -250,6 +258,8 @@ export function Nav({ role, userName, logoUrl, brandName }: { role: string; user
           // ── Manager, collapsed rail: pinned + everything as icons ──
           <div className="space-y-0.5">
             {PINNED.map(l => linkRow(l))}
+            <div className="mx-3 my-2" style={{ borderTop: '1px solid rgba(236,219,182,0.12)' }} />
+            {AI_LINKS.map(l => linkRow(l))}
             {SEGMENTS.filter(s => segmentLinks(s).length > 0).map(s => (
               <div key={s.key}>
                 <div className="mx-3 my-2" style={{ borderTop: '1px solid rgba(236,219,182,0.12)' }} />
@@ -261,6 +271,17 @@ export function Nav({ role, userName, logoUrl, brandName }: { role: string; user
           // ── Manager: pinned essentials + six segment dropdowns ──
           <>
             <div className="space-y-0.5 mb-2">{PINNED.map(l => linkRow(l))}</div>
+            <div className="mx-3 mb-1" style={{ borderTop: '1px solid rgba(236,219,182,0.12)' }} />
+            <div
+              className="px-3 pt-2.5 pb-1.5 text-[11px] font-semibold uppercase"
+              style={{
+                color: AI_LINKS.some(l => isActive(l.href, pathname)) ? '#ECDBB6' : 'rgba(236,219,182,0.5)',
+                letterSpacing: '0.1em',
+              }}
+            >
+              AI
+            </div>
+            <div className="space-y-0.5 mb-2">{AI_LINKS.map(l => linkRow(l))}</div>
             <div className="mx-3 mb-1" style={{ borderTop: '1px solid rgba(236,219,182,0.12)' }} />
             {SEGMENTS.map(s => {
               const isOpen = open.includes(s.key)
