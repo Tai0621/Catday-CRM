@@ -244,6 +244,10 @@ model StaffRoleDef {
   label     String   // what the owner calls it
   homePath  String   // where login lands, and where a blocked page bounces to
   paths     String   // JSON array of allowed tab hrefs — see lib/nav-catalogue.ts
+  // How the sidebar is ARRANGED for this role: pinned tabs plus named
+  // drop-downs. Presentation only — `paths` above decides access, and the two
+  // are never merged, or rearranging the nav would change permissions.
+  layout    String?  // JSON NavLayout — see lib/nav-layout.ts
   // Manager is seeded as a system role and cannot be edited or deleted: it is
   // the owner's own unrestricted access, and letting it be narrowed is how
   // someone locks themselves out of their own business.

@@ -5,7 +5,7 @@ import { Nav } from './components/Nav'
 import { getSession } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { canAccess, homeFor, visiblePaths } from '@/lib/roles-store'
+import { canAccess, homeFor, visiblePaths, navFor } from '@/lib/roles-store'
 import { getConfig } from '@/lib/config'
 import { EnvBanner } from './components/EnvBanner'
 import { Copilot } from './components/Copilot'
@@ -38,12 +38,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // the way a per-page guard can.
   const staffRole = session && session.kind !== 'manager' ? session.role : null
   let visible: string[] | null = null
+  let staffNav: Awaited<ReturnType<typeof navFor>> | null = null
   if (staffRole) {
     const pathname = (await headers()).get('x-pathname') ?? ''
     if (pathname && !(await canAccess(staffRole, pathname))) {
       redirect(await homeFor(staffRole))
     }
     visible = await visiblePaths(staffRole)
+    staffNav = await navFor(staffRole)
   }
 
   return (
@@ -58,7 +60,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div className="flex-1 min-h-0">
           {session ? (
             <div className="flex h-full overflow-hidden">
-              <Nav role={session.kind === 'manager' ? 'Manager' : session.role} userName={session.name} visiblePaths={visible}
+              <Nav role={session.kind === 'manager' ? 'Manager' : session.role} userName={session.name} visiblePaths={visible} staffNav={staffNav}
                 logoUrl={config.brand.logoDarkUrl} brandName={config.business.name} />
               <main className="flex-1 overflow-y-auto p-6">{children}</main>
               {/* Signed-in only — the copilot reads business data. */}

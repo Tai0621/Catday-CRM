@@ -5,6 +5,7 @@ import { requireManager } from '@/lib/auth'
 import { recordAudit } from '@/lib/audit'
 import { ALL_TABS, ALWAYS_ALLOWED_PATHS, pathAllowed } from '@/lib/nav-catalogue'
 import { UNRESTRICTED } from '@/lib/roles-store'
+import { parseLayout, sanitizeLayout } from '@/lib/nav-layout'
 import { revalidatePath } from 'next/cache'
 
 // Owner-defined roles.
@@ -52,7 +53,10 @@ export async function createRole(data: FormData): Promise<RoleResult> {
 
   const count = await db.staffRoleDef.count()
   const role = await db.staffRoleDef.create({
-    data: { key, label, homePath, paths: JSON.stringify(paths), isSystem: false, sortOrder: count, active: true },
+    data: {
+      key, label, homePath, paths: JSON.stringify(paths), isSystem: false, sortOrder: count, active: true,
+      layout: JSON.stringify(sanitizeLayout(parseLayout(String(data.get('layout') ?? '')), paths)),
+    },
   })
 
   await recordAudit({
@@ -83,8 +87,16 @@ export async function updateRole(data: FormData): Promise<RoleResult> {
     return fail('The landing page must be one of the tabs this role can open, or they would be bounced away from it on every login.')
   }
 
+  // The sidebar arrangement rides along with the same save, but into its own
+  // column. Sanitised against what the role may open, so a group cannot hold a
+  // link to a tab that was just un-ticked.
+  const layout = sanitizeLayout(parseLayout(String(data.get('layout') ?? '')), paths)
+
   const before = JSON.parse(role.paths) as string[]
-  await db.staffRoleDef.update({ where: { id }, data: { label, homePath, paths: JSON.stringify(paths) } })
+  await db.staffRoleDef.update({
+    where: { id },
+    data: { label, homePath, paths: JSON.stringify(paths), layout: JSON.stringify(layout) },
+  })
 
   // Named both ways: "what did we take away" is the question asked when someone
   // reports they can no longer do their job.

@@ -79,6 +79,14 @@ Enforcement is split on purpose:
 deployment on new code without the migration behaves exactly as before — deny would lock staff out of
 their own shift, allow would hand over the finances, and neither announces itself.
 
+**`StaffRoleDef.layout` is presentation; `StaffRoleDef.paths` is access.** They are two columns and
+are never merged. If arranging the sidebar also decided permissions, moving a tab into a drop-down
+would silently grant or revoke it, and the owner would have no reason to think they had changed
+anything but the order. `resolveNav()` (lib/nav-layout.ts) intersects the two: a layout entry for a
+revoked tab renders nothing, and — the direction that bites — a tab that is GRANTED but filed
+nowhere still appears, in an `Other` drawer. Without that, ticking a tab would grant access to a page
+with no way to reach it, which reads as the tick not having worked.
+
 ## The single most important gotcha: Prisma 7 + Turso migrations
 
 **`prisma migrate dev` and `prisma db push` DO NOT WORK** against a `libsql://` URL in Prisma 7. Don't

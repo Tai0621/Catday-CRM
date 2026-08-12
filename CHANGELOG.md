@@ -14,6 +14,16 @@ The agentic and marketing cycle. Planned scope is in
 [docs/AGENTIC-ROADMAP.md](docs/AGENTIC-ROADMAP.md) (Track C — Agentic OS, Track M — Marketing).
 
 ### Added
+- **The owner arranges the staff sidebar too.** Staff saw a flat list of every tab their role held,
+  which stops being readable somewhere around eight. A role now carries a **layout**: a few tabs
+  pinned at the top, then drop-downs the owner names — *Boarding jobs*, *End of day*, whatever the
+  shop actually calls them. The drawer holding the current page opens itself, so nobody lands on a
+  screen whose own menu is shut.
+  **Arranging is not permitting.** The layout is a separate column from the access list and the two
+  are never merged — otherwise dragging a tab into a group would quietly grant or revoke it, and
+  nothing on screen would say so. The sidebar is the intersection: a layout entry for a tab that was
+  since revoked renders nothing, and a tab that is granted but filed nowhere still appears under
+  **Other**, because a tab someone can open should never be one they cannot find.
 - **Roles are the owner's to define.** Staff roles were a union type in the source, so "can a groomer
   see the finances?" was a question only a developer could answer. **Human Resource → Roles & Access**
   now lets the owner add a role, tick the tabs it may open, and choose where it lands after login. The

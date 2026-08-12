@@ -2,6 +2,7 @@ import { cache } from 'react'
 import { db } from './db'
 import { ALWAYS_ALLOWED_PATHS, pathAllowed } from './nav-catalogue'
 import { ROLE_HOME, STAFF_ROLE_PATHS, isManagerOnly } from './roles'
+import { parseLayout, resolveNav, emptyLayout, type NavLayout, type ResolvedNav } from './nav-layout'
 
 // Owner-defined roles, read live.
 //
@@ -21,6 +22,7 @@ export interface RoleDef {
   isSystem: boolean
   sortOrder: number
   active: boolean
+  layout: NavLayout
 }
 
 function parsePaths(raw: string): string[] {
@@ -46,16 +48,17 @@ export const listRoles = cache(async (): Promise<RoleDef[]> => {
       return rows.map(r => ({
         key: r.key, label: r.label, homePath: r.homePath, paths: parsePaths(r.paths),
         isSystem: r.isSystem, sortOrder: r.sortOrder, active: r.active,
+        layout: parseLayout(r.layout),
       }))
     }
   } catch {
     // Table absent (migration not run) — fall through to the built-in defaults.
   }
   return [
-    { key: 'Manager', label: 'Store Manager', homePath: '/', paths: [UNRESTRICTED], isSystem: true, sortOrder: 0, active: true },
+    { key: 'Manager', label: 'Store Manager', homePath: '/', paths: [UNRESTRICTED], isSystem: true, sortOrder: 0, active: true, layout: emptyLayout() },
     ...Object.entries(STAFF_ROLE_PATHS).map(([key, paths], n) => ({
       key, label: key, homePath: ROLE_HOME[key] ?? '/board',
-      paths, isSystem: false, sortOrder: n + 1, active: true,
+      paths, isSystem: false, sortOrder: n + 1, active: true, layout: emptyLayout(),
     })),
   ]
 })
@@ -99,4 +102,18 @@ export async function visiblePaths(key: string): Promise<string[] | null> {
   if (!role || !role.active) return []
   if (role.paths.includes(UNRESTRICTED)) return null
   return role.paths
+}
+
+/**
+ * The staff sidebar: pinned tabs, then named drop-downs.
+ *
+ * Resolved server-side from the role's own arrangement, filtered by what it may
+ * open. A tab granted but never filed anywhere still appears — see resolveNav —
+ * because a tick that grants access to something with no way to reach it looks
+ * like the tick did not work.
+ */
+export async function navFor(key: string): Promise<ResolvedNav> {
+  const role = await roleByKey(key)
+  if (!role || !role.active) return { pinned: [], groups: [] }
+  return resolveNav(role.paths, role.layout, role.paths.includes(UNRESTRICTED))
 }

@@ -121,6 +121,58 @@ try {
     api.status === 403, `status ${api.status}`)
   await setPaths(['/runsheet', '/rooms', '/cats'], '/runsheet')
 
+  // ══ 7b. The owner arranges the staff sidebar ══
+  const setLayout = layout => pipe([exec(
+    `UPDATE "StaffRoleDef" SET paths = ?, homePath = '/runsheet', layout = ? WHERE key = ?`,
+    [t(JSON.stringify(['/runsheet', '/rooms', '/cats', '/pos'])), t(JSON.stringify(layout)), t(`${MARK}-role`)])])
+
+  const sidebar = async () => {
+    const html = await (await visit('/runsheet', cookie)).text()
+    // The nav is the dark <aside>; the RSC script payload repeats page text, so
+    // read the rendered element rather than searching the whole document.
+    const aside = html.match(/<aside[\s\S]*?<\/aside>/)?.[0] ?? ''
+    return aside.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+  }
+
+  await setLayout({ pinned: ['/runsheet'], groups: [{ label: 'Boarding jobs', paths: ['/rooms', '/cats'] }] })
+  let nav = await sidebar()
+  check('the owner-named drop-down appears in the staff sidebar',
+    nav.includes('Boarding jobs'), nav.slice(0, 200))
+  check('a pinned tab is shown', nav.includes('Run Sheet'), nav.slice(0, 200))
+  check('the clock stays pinned without being placed', nav.includes('Clock In'), nav.slice(0, 200))
+  // The overflow drawer is closed until opened, so its links are not in the
+  // document — the claim is that the drawer EXISTS and its tab is reachable,
+  // not that every link renders while collapsed.
+  check('a granted but UNPLACED tab gets an overflow drawer rather than vanishing',
+    nav.includes('Other'), nav.slice(0, 300))
+  check('…and that tab really does open', (await visit('/pos', cookie)).status === 200)
+
+  // A group holding the current page opens itself, so nobody lands on a screen
+  // whose own menu is shut.
+  const openHere = (await (await visit('/rooms', cookie)).text()).match(/<aside[\s\S]*?<\/aside>/)?.[0] ?? ''
+  check('the drop-down holding the current page is open',
+    openHere.includes('Rooms'), openHere.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 200))
+
+  // Renaming is presentation only — it must not change what opens.
+  await setLayout({ pinned: ['/runsheet'], groups: [{ label: 'Night shift', paths: ['/rooms', '/cats', '/pos'] }] })
+  nav = await sidebar()
+  check('renaming a drop-down takes effect immediately', nav.includes('Night shift'), nav.slice(0, 200))
+  check('…and the old name is gone', !nav.includes('Boarding jobs'))
+  check('rearranging does NOT change access — the tabs still open',
+    (await visit('/pos', cookie)).status === 200 && (await visit('/rooms', cookie)).status === 200)
+  check('…and still does not grant anything unticked',
+    (await visit('/finance/income-statement', cookie)).status !== 200)
+
+  // A layout naming a revoked tab must not render a link that would bounce.
+  await pipe([exec(
+    `UPDATE "StaffRoleDef" SET paths = ?, layout = ? WHERE key = ?`,
+    [t(JSON.stringify(['/runsheet'])), t(JSON.stringify({ pinned: ['/runsheet'], groups: [{ label: 'Stale', paths: ['/pos'] }] })), t(`${MARK}-role`)])])
+  nav = await sidebar()
+  check('a stale layout entry for a revoked tab is not rendered',
+    !nav.includes('POS Checkout'), nav.slice(0, 300))
+
+  await setLayout({ pinned: ['/runsheet'], groups: [] })
+
   // ══ 8. The manager role cannot be narrowed or deleted ══
   const manager = await one(`SELECT isSystem FROM "StaffRoleDef" WHERE key = 'Manager'`)
   check('Manager is a system role', String(manager[0][0]) === '1', String(manager[0][0]))

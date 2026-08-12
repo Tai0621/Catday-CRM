@@ -25,6 +25,7 @@ export default async function RolesPage() {
     homePath: r.homePath,
     paths: r.paths.filter(p => p !== UNRESTRICTED),
     isSystem: r.isSystem,
+    layout: r.layout,
     staffCount: counts.get(r.key) ?? 0,
   }))
 

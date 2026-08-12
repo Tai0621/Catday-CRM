@@ -23,19 +23,19 @@ function isActive(href: string, pathname: string) {
   return pathname.startsWith(href)
 }
 
-export function Nav({ role, userName, logoUrl, brandName, visiblePaths }: {
+export function Nav({ role, userName, logoUrl, brandName, visiblePaths, staffNav }: {
   role: string; userName?: string; logoUrl: string; brandName: string
   /** Tabs this role may open. `null` means unrestricted (the Manager role). */
   visiblePaths?: string[] | null
+  /** Pinned tabs plus the owner-named drop-downs, resolved server-side. */
+  staffNav?: { pinned: NavLink[]; groups: { label: string; links: NavLink[] }[] } | null
 }) {
   const isManager = role === 'Manager'
 
-  // The staff lane is DERIVED from the role's allowed tabs, in catalogue order,
-  // rather than being a second hand-maintained list. The old version kept a
-  // separate ROLE_LINKS map that had to "mirror lib/roles.ts" by convention —
-  // which is exactly the kind of mirror that drifts the first time someone
-  // edits one side.
-  const staffLane: NavLink[] = [
+  // The staff sidebar is arranged by the OWNER — pinned tabs, then named
+  // drop-downs — and resolved on the server from the role's layout. Falls back
+  // to a flat lane only when a role predates the layout column.
+  const lane: NavLink[] = [
     ...ALWAYS_ALLOWED,
     ...[...PINNED, ...AI_LINKS, ...SEGMENTS.flatMap(segmentLinks)]
       .filter(l => visiblePaths != null && pathAllowed(l.href, visiblePaths)),
@@ -115,7 +115,30 @@ export function Nav({ role, userName, logoUrl, brandName, visiblePaths }: {
       <nav className="flex-1 py-2 overflow-y-auto">
         {!isManager ? (
           // ── Staff: a stripped, big-tap-target lane for just their job ──
-          <div className="space-y-1">{staffLane.map(l => linkRow(l, false, true))}</div>
+          <div className="space-y-1">
+            {(staffNav?.pinned ?? lane).map(l => linkRow(l, false, true))}
+            {staffNav?.groups.map(g => {
+              const isOpen = open.includes(`staff:${g.label}`)
+              const hasActive = g.links.some(l => isActive(l.href, pathname))
+              return (
+                <div key={g.label}>
+                  <button
+                    onClick={() => toggle(`staff:${g.label}`)}
+                    className="w-full flex items-center gap-2 px-3 pt-3 pb-1.5 text-[11px] font-semibold uppercase transition-colors"
+                    style={{ color: hasActive ? '#ECDBB6' : 'rgba(236,219,182,0.5)', letterSpacing: '0.1em' }}
+                  >
+                    <span className="flex-1 text-left truncate">{g.label}</span>
+                    <span style={{ fontSize: 10 }}>{isOpen ? '▾' : '▸'}</span>
+                  </button>
+                  {/* Held open while it contains the current page, so a staff
+                      member is never looking at a screen whose own menu is shut. */}
+                  {(isOpen || hasActive) && (
+                    <div className="space-y-1">{g.links.map(l => linkRow(l, false, true))}</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         ) : collapsed ? (
           // ── Manager, collapsed rail: pinned + everything as icons ──
           <div className="space-y-0.5">
