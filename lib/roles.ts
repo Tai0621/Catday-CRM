@@ -8,6 +8,26 @@
 
 export const STAFF_ROLES = ['FrontDesk', 'Groomer', 'Boarding'] as const
 
+/**
+ * Manager-only, whatever a role says.
+ *
+ * A code-level floor, deliberately NOT owner-editable: these carry pricing,
+ * payroll, the books and the marketing spend. It is also a real trap for the
+ * allow-list — `/memberships` is a reasonable tab for reception, but tier
+ * PRICING sits underneath it at `/memberships/tiers`, so prefix-matching an
+ * allowed tab would hand it over. Enforced for pages in app/layout.tsx and for
+ * API routes in proxy.ts.
+ */
+export const MANAGER_ONLY_PATHS = [
+  '/revenue', '/plan', '/academy', '/ask', '/api/ask', '/whatsapp', '/brief', '/reports',
+  '/staff', '/services', '/cashup', '/memberships/tiers', '/finance', '/admin', '/hr', '/products',
+  '/api/customers', '/marketing',
+]
+
+export function isManagerOnly(pathname: string): boolean {
+  return MANAGER_ONLY_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
+}
+
 // Where each role lands after login, and where a disallowed page bounces them.
 export const ROLE_HOME: Record<string, string> = {
   Manager: '/',

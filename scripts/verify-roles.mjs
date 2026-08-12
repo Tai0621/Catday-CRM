@@ -78,7 +78,11 @@ try {
   check('Groomer blocked from /finance → /board', (await visit(g.cookie, '/finance/income-statement')).to === '/board')
   check('Groomer root / → /board', (await visit(g.cookie, '/')).to === '/board')
   const gNav = await navHtml(g.cookie, '/board')
-  check('Groomer nav shows My Board + Cats & Assess', gNav.includes('My Board') && gNav.includes('Assess'))
+  // Labels now come from the tab catalogue rather than a per-role label map.
+  // That second map was the thing that had to 'mirror lib/roles.ts' by hand, and
+  // it is what drifted; one canonical name per tab is the point of removing it.
+  check('Groomer nav shows the board and cats', gNav.includes('Service Board') && gNav.includes('Cats'))
+  check('…and nothing it was not granted', !gNav.includes('POS Checkout') && !gNav.includes('Expenses'))
   check('Groomer nav hides POS & Customers & Inbox', !gNav.includes('POS Checkout') && !gNav.includes('Customers') && !gNav.includes('Action Inbox'))
 
   // ── Boarding ──

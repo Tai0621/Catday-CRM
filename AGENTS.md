@@ -55,6 +55,30 @@ top and **refuses to start** if `DATABASE_URL` still resolves to `catday-crm`. T
 preview configuration runs it. Source `.env.demo.sh` before any verification script for the same
 reason.
 
+## Roles are data, and access is checked in two places
+
+Staff roles are rows in `StaffRoleDef`, edited by the owner at **/hr/roles**. `lib/nav-catalogue.ts`
+is the single list of tabs — the Nav renders from it, the role editor ticks it, and access control
+checks against it. Do not add a nav link anywhere else; three readers disagreeing is a tab that is
+hidden but still opens.
+
+Enforcement is split on purpose:
+
+- **Pages** — `app/layout.tsx`, via `canAccess()`, read LIVE from the database. Session tokens last
+  30 days, so permissions baked into one would keep a revoked tab open for a month. Being in the root
+  layout, it cannot be forgotten on a new page.
+- **API routes** — `proxy.ts`, which never renders a layout. The edge runtime cannot read the
+  database, so this stays a static list.
+- **`MANAGER_ONLY_PATHS` (lib/roles.ts)** is a code-level floor both sides apply, deliberately NOT
+  owner-editable. It is checked BEFORE a role's own list because that list is prefix-matched:
+  granting `/memberships` to reception would otherwise also grant tier PRICING at
+  `/memberships/tiers`. Moving page enforcement out of the proxy without this check did exactly
+  that, and `verify-roles` caught it.
+
+`listRoles()` falls back to the pre-existing hardcoded rules when the table is absent, so a
+deployment on new code without the migration behaves exactly as before — deny would lock staff out of
+their own shift, allow would hand over the finances, and neither announces itself.
+
 ## The single most important gotcha: Prisma 7 + Turso migrations
 
 **`prisma migrate dev` and `prisma db push` DO NOT WORK** against a `libsql://` URL in Prisma 7. Don't

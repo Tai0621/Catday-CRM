@@ -2,13 +2,22 @@ import { requireManager, hashPassword } from '@/lib/auth'
 import { recordAudit } from '@/lib/audit'
 import { db } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
-import { STAFF_ROLES, STAFF_ROLE_LABELS } from '@/lib/constants'
+import { STAFF_ROLE_LABELS } from '@/lib/constants'
+import { listRoles } from '@/lib/roles-store'
 import { SEGMENTS } from '@/lib/segments'
 
 export default async function StaffPage({ searchParams }: { searchParams: Promise<{ err?: string }> }) {
   await requireManager()
   const { err } = await searchParams
-  const staff = await db.staff.findMany({ orderBy: [{ active: 'desc' }, { name: 'asc' }] })
+  const [staff, allRoles] = await Promise.all([
+    db.staff.findMany({ orderBy: [{ active: 'desc' }, { name: 'asc' }] }),
+    listRoles(),
+  ])
+  // Assignable roles come from what the owner defined. Manager is offered too —
+  // it is a real role someone can hold — but an inactive role is not, or a new
+  // hire could be put straight onto access that has been switched off.
+  const roleOptions = allRoles.filter(r => r.active)
+  const labelFor = new Map(allRoles.map(r => [r.key, r.label]))
 
   async function addStaff(data: FormData) {
     'use server'
@@ -78,7 +87,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
         <div>
           <label className="cd-label">Role</label>
           <select name="role" className="cd-input" style={{ width: '10rem' }}>
-            {STAFF_ROLES.map(r => <option key={r} value={r}>{STAFF_ROLE_LABELS[r]}</option>)}
+            {roleOptions.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
           </select>
         </div>
         <div>
@@ -109,7 +118,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
                       : s.role === 'Boarding'
                       ? { background: SEGMENTS.boarding.bg, color: SEGMENTS.boarding.text }
                       : { background: SEGMENTS.community.bg, color: SEGMENTS.community.text }}>
-                      {STAFF_ROLE_LABELS[s.role] ?? s.role}
+                      {labelFor.get(s.role) ?? STAFF_ROLE_LABELS[s.role] ?? s.role}
                     </span>
                   </td>
                   <td className="px-4 py-2.5 cd-muted">{s.active ? 'Active' : 'Disabled'}</td>

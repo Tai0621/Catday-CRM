@@ -236,10 +236,28 @@ model LoyaltyEntry {
 
 // ─── Staff (individual PIN logins, roles drive staff vs management views) ────
 
+// A role the owner can define: which tabs it may open, and where it lands.
+// `key` is what Staff.role stores, so an existing staff row keeps working.
+model StaffRoleDef {
+  id        String   @id @default(cuid())
+  key       String   @unique // stored on Staff.role
+  label     String   // what the owner calls it
+  homePath  String   // where login lands, and where a blocked page bounces to
+  paths     String   // JSON array of allowed tab hrefs — see lib/nav-catalogue.ts
+  // Manager is seeded as a system role and cannot be edited or deleted: it is
+  // the owner's own unrestricted access, and letting it be narrowed is how
+  // someone locks themselves out of their own business.
+  isSystem  Boolean  @default(false)
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Staff {
   id        String   @id @default(cuid())
   name      String
-  role      String   // Manager | FrontDesk | Groomer | Boarding
+  role      String   // StaffRoleDef.key — see lib/roles-store.ts
   pinHash   String   @unique // salted scrypt of the personal PIN (legacy sha256 upgraded on login)
   active    Boolean  @default(true)
   commissionRatePct Float? // per-groomer commission override (see lib/commission.ts)

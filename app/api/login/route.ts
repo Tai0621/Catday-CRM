@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { verifyPassword, hashPassword, needsRehash, makeSessionToken } from '@/lib/auth'
 import { safeEqual } from '@/lib/http-security'
 import { isLoginBlocked, recordLoginFailure, clearLoginFailures } from '@/lib/rate-limit'
-import { roleHome } from '@/lib/roles'
+import { homeFor } from '@/lib/roles-store'
 import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
 
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
         await db.staff.update({ where: { id: staff.id }, data: { pinHash: hashPassword(provided) } }).catch(() => {})
       }
       token = makeSessionToken({ kind: 'staff', staffId: staff.id, name: staff.name, role: staff.role })
-      landing = roleHome(staff.role)
+      landing = await homeFor(staff.role)
     }
   }
 

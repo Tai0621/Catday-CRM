@@ -14,6 +14,26 @@ The agentic and marketing cycle. Planned scope is in
 [docs/AGENTIC-ROADMAP.md](docs/AGENTIC-ROADMAP.md) (Track C — Agentic OS, Track M — Marketing).
 
 ### Added
+- **Roles are the owner's to define.** Staff roles were a union type in the source, so "can a groomer
+  see the finances?" was a question only a developer could answer. **Human Resource → Roles & Access**
+  now lets the owner add a role, tick the tabs it may open, and choose where it lands after login. The
+  four existing roles are seeded with exactly the access they already had, so nobody's permissions
+  moved on the way in.
+  **Hiding a link is decoration; the page has to stop opening.** Permissions are read live on every
+  request rather than from the session token — a token lasts 30 days, so a tab revoked at 9am would
+  otherwise keep working until September. Verified by editing a role underneath a signed-in staff
+  member and re-requesting the page on the same session.
+  Guardrails: **Manager cannot be narrowed or deleted** (that is how an owner locks themselves out of
+  their own business); a role still holding staff cannot be deleted; **Clock In/Out and My Leave are
+  always available**, because a role that cannot start a shift looks like a broken app rather than a
+  choice; a landing page outside the role's own tabs is refused, or login would bounce forever; and
+  the tab list is re-validated server-side against the catalogue, so a crafted form cannot grant a
+  path the UI never offered.
+  The manager-only surface — pricing, payroll, the books, marketing spend — stays a **code-level
+  floor** that no amount of ticking can open. It is checked before the role's own list because that
+  list is prefix-matched, and `/memberships` sits directly above tier pricing at
+  `/memberships/tiers` — moving page enforcement without that check handed exactly that page over,
+  and the existing role verification caught it.
 - **One AI space instead of AI everywhere.** The OS grew AI feature by feature and each one landed
   wherever its business domain already was — the brief and reports pinned at the top level, offers
   under Marketing, captions under Content, triage under WhatsApp. Individually each was the right

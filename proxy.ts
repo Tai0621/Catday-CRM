@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { roleHome, staffCanAccess } from './lib/roles'
+import { roleHome, staffCanAccess, isManagerOnly } from './lib/roles'
 
 // Paths the cookie gate skips because they authenticate themselves:
 //  • '/api/cron' — Vercel Cron (Bearer CRON_SECRET) has no cookie; the route
@@ -88,15 +88,26 @@ export async function proxy(req: NextRequest) {
   }
 
   if (info.role !== 'Manager') {
-    // Two gates for staff: the manager-only denylist (blocks everyone who isn't
-    // a manager), then the per-role allow-list (default-deny). Anything the role
-    // may not open — including '/' — bounces to that role's home screen.
-    const home = roleHome(info.role)
-    const managerOnly = MANAGER_PATHS.some(p => pathname.startsWith(p))
-    const blocked = pathname === '/' || managerOnly || !staffCanAccess(info.role, pathname)
-    if (blocked && pathname !== home) {
-      return NextResponse.redirect(new URL(home, req.url))
+    // API routes never render a layout, so their gate has to live here. This
+    // list is a CODE-level guarantee, deliberately not owner-editable: it
+    // protects endpoints, not tabs, and an owner ticking a box should never be
+    // able to expose /api/customers.
+    if (pathname.startsWith('/api/')) {
+      if (isManagerOnly(pathname) && !staffCanAccess(info.role, pathname)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+      return NextResponse.next()
     }
+
+    // PAGE access is decided in app/layout.tsx instead, because roles are now
+    // rows the owner edits and the edge runtime cannot read the database.
+    // Deciding it here from the session token would mean a tab stayed open for
+    // up to the 30-day token life after the owner revoked it.
+    //
+    // The pathname is forwarded so that check knows what was asked for.
+    const headers = new Headers(req.headers)
+    headers.set('x-pathname', pathname)
+    return NextResponse.next({ request: { headers } })
   }
 
   return NextResponse.next()
