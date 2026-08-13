@@ -393,6 +393,15 @@ The agentic and marketing cycle. Planned scope is in
   [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
 
 ### Changed
+- **The groomer lands back on the Service Board.** Saving an assessment opened from the board used to
+  drop the groomer on the cat's profile — one screen away from the queue they were clearing, every
+  time. It now returns to the board, and Cancel and the breadcrumb follow the same route. Opening the
+  assessment from the cat file still returns to the cat file: the board tags its own link, and the
+  destination is matched against that tag rather than taken from it, so the parameter can pick a known
+  origin but never name a URL.
+- **Today's care progress moved inside the run sheet's In-house section.** It summarises the checklists
+  directly below it, so sitting above the section heading read as a page-level statistic rather than
+  the header for the work it belongs to.
 - **Skeleton loading screens** replace the centred spinner. Placeholders mirror the shape of the
   page being fetched — card grid for cats, banded queues for the Action Inbox, table rows elsewhere —
   so the layout no longer jumps when content lands. Shimmer degrades to a still placeholder under

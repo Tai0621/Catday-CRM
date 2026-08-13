@@ -292,24 +292,35 @@ the simpler one.
 
 **A. `<form action={serverFn}>` actions — submit the real form (preferred).** A form rendered from a
 Server Component ships as a genuine no-JS form: `method="POST"`, `encType="multipart/form-data"`, and
-a hidden `$ACTION_ID_<hex>` input carrying the action reference. Submitting it is therefore an
-ordinary multipart POST back to the same URL — no `Next-Action` header, no chunk scraping.
+hidden inputs carrying the action reference. Submitting it is therefore an ordinary multipart POST
+back to the same URL — no `Next-Action` header, no chunk scraping.
+
+**There are two encodings, and a driver that knows only one silently fails.** A *file-level* action
+ships as a single `$ACTION_ID_<hex>` field. An action *declared inside the page component* closes
+over local scope, so Next ships `$ACTION_REF_n` plus one `$ACTION_n:m` field per bound value —
+including an encrypted blob. Don't special-case either: **replay every hidden input the form
+rendered**, which is what a browser does. Note `$ACTION_REF_n` carries **no `value` attribute at
+all**, so a parser whose regex requires `name="…" value="…"` drops exactly the field that identifies
+the action, and the POST comes back `500 Failed to find Server Action`. A missing `value` means
+empty string, not "skip this input".
 
 ```js
 // 1. Fetch the page HTML (with the auth cookie if the route needs one).
-// 2. Split out each <form ...>…</form>; from each, read:
-//      the hidden  name="$ACTION_ID_<hex>"   → the action reference
-//      every other name="…" value="…"        → the fields the page already filled in
+// 2. Split out each <form ...>…</form>; from each, read EVERY <input name="…">,
+//    treating an absent value="…" as ''. A form is an action form if any field
+//    name starts with "$ACTION_".
 // 3. Pick the form you want by a marker in its own markup (a hidden id, a distinctive
 //    value=…) rather than by position — pages render many similar forms.
-// 4. POST multipart back to the SAME page URL: append the $ACTION_ID_<hex> key (empty
-//    value), then the form's own fields, then any overrides. Use redirect: 'manual',
-//    because actions that end in redirect() return a 303.
+// 4. POST multipart back to the SAME page URL: every field you collected, then any
+//    overrides. Use redirect: 'manual', because actions that end in redirect()
+//    return a 303 — and the Location header is often the thing under test.
 // 5. Assert on the resulting DB state, not the response body.
 ```
 This is what a browser with JavaScript disabled does, which is why it is the more robust option: it
-behaves **identically against `next dev` and `next start`**. `scripts/verify-reviews-referrals.mjs`
-has the reference implementation (`formsIn` / `findForm` / `submitForm`) — reuse it verbatim.
+behaves **identically against `next dev` and `next start`**. `scripts/verify-assess-return.mjs` has
+the reference implementation (`formsIn` / `findForm` / `submitForm`) — reuse it verbatim; it handles
+both encodings. `scripts/verify-reviews-referrals.mjs` carries the older `$ACTION_ID`-only variant,
+which works only because every form it drives is a file-level action.
 
 **B. Actions called with arguments (not FormData) — resolve the id from the chunks.** Next's dev
 server (Turbopack) compiles each file-level `'use server'` action into a client-visible export named

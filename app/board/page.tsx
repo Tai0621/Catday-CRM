@@ -149,7 +149,7 @@ export default async function BoardPage() {
                         </button>
                       </form>
                       {(a.status === 'InService' || a.status === 'QualityCheck') && (
-                        <Link href={`/cats/${a.catId}/assess?appt=${a.id}`} className="text-xs px-2 py-1 rounded-lg cd-btn-sec">
+                        <Link href={`/cats/${a.catId}/assess?appt=${a.id}&from=board`} className="text-xs px-2 py-1 rounded-lg cd-btn-sec">
                           {a.status === 'InService' ? 'Photos & assess' : 'Assessment'}
                         </Link>
                       )}

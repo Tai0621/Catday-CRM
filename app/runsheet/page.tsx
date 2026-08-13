@@ -149,24 +149,6 @@ export default async function RunSheetPage() {
         </div>
       )}
 
-      {/* Today's care progress */}
-      {totalTasks > 0 && (
-        <div className="cd-card px-4 py-3">
-          <div className="flex items-baseline justify-between mb-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: seg.text }}>
-              Today&apos;s care progress
-            </span>
-            <span className="text-sm font-bold" style={{ color: donePct === 100 ? '#5c6b3c' : '#2D1907' }}>
-              {donePct === 100 ? 'All done 🐾' : `${doneTasks}/${totalTasks} · ${donePct}%`}
-            </span>
-          </div>
-          <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(45,25,7,0.08)' }}>
-            <div className="h-full rounded-full transition-all"
-              style={{ width: `${donePct}%`, background: donePct === 100 ? '#7A8A4F' : seg.color }} />
-          </div>
-        </div>
-      )}
-
       {stays.length === 0 && arrivals.length === 0 ? (
         <div className="cd-card py-16 text-center">
           <div className="text-3xl mb-2">🛏️</div>
@@ -175,6 +157,26 @@ export default async function RunSheetPage() {
       ) : ongoing.length > 0 && (
         <div className="space-y-2">
         <SectionHeader color={seg.color} label={`In house (${ongoing.length})`} />
+
+        {/* Today's care progress — it summarises the checklists directly below it,
+            so it belongs inside this section rather than floating above it. */}
+        {totalTasks > 0 && (
+          <div className="cd-card px-4 py-3">
+            <div className="flex items-baseline justify-between mb-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: seg.text }}>
+                Today&apos;s care progress
+              </span>
+              <span className="text-sm font-bold" style={{ color: donePct === 100 ? '#5c6b3c' : '#2D1907' }}>
+                {donePct === 100 ? 'All done 🐾' : `${doneTasks}/${totalTasks} · ${donePct}%`}
+              </span>
+            </div>
+            <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(45,25,7,0.08)' }}>
+              <div className="h-full rounded-full transition-all"
+                style={{ width: `${donePct}%`, background: donePct === 100 ? '#7A8A4F' : seg.color }} />
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {ongoing.map(s => {
             const list = byStay.get(s.id) ?? []

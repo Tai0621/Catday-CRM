@@ -12,11 +12,17 @@ export default async function AssessCatPage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ appt?: string }>
+  searchParams: Promise<{ appt?: string; from?: string }>
 }) {
   await requireAuth()
   const { id } = await params
-  const { appt } = await searchParams
+  const { appt, from } = await searchParams
+
+  // The groomer works the board, not the cat file: sending them to the cat page
+  // after saving strands them one back-button away from the queue they were
+  // clearing. Matched against a literal rather than redirecting to `from` — a
+  // query parameter must never be able to choose the destination.
+  const doneHref = from === 'board' ? '/board' : `/cats/${id}`
 
   const cat = await db.cat.findUnique({
     where: { id },
@@ -75,7 +81,7 @@ export default async function AssessCatPage({
         ...(rebookDays ? { groomingInterval: Math.round(rebookDays) } : {}),
       },
     })
-    redirect(`/cats/${id}`)
+    redirect(doneHref)
   }
 
   const seg = SEGMENTS.grooming
@@ -87,7 +93,9 @@ export default async function AssessCatPage({
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <div className="flex items-center gap-2 mb-0.5">
-          <Link href="/cats" className="text-xs cd-muted hover:underline">Cats</Link>
+          <Link href={from === 'board' ? '/board' : '/cats'} className="text-xs cd-muted hover:underline">
+            {from === 'board' ? 'Service Board' : 'Cats'}
+          </Link>
           <span className="text-xs cd-muted">›</span>
           <Link href={`/cats/${id}`} className="text-xs cd-link">{cat.name}</Link>
           <span className="text-xs cd-muted">›</span>
@@ -170,7 +178,7 @@ export default async function AssessCatPage({
         </div>
 
         <div className="flex items-center justify-between pt-1">
-          <Link href={`/cats/${id}`} className="cd-btn-sec text-sm">Cancel</Link>
+          <Link href={doneHref} className="cd-btn-sec text-sm">Cancel</Link>
           <button type="submit" className="cd-btn">Save assessment</button>
         </div>
       </form>

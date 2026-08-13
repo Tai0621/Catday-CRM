@@ -74,6 +74,10 @@ try {
   const h1 = clean(await (await fetch(`${BASE}/runsheet`, { headers: { Cookie: cookie } })).text())
 
   check('header progress bar renders', h1.includes('care progress'))
+  // Placement, not just presence: the bar summarises the checklists below it, so
+  // it must sit INSIDE the In house section rather than floating above it.
+  check('progress bar sits under the In house heading',
+    h1.indexOf('In house (') > -1 && h1.indexOf('In house (') < h1.indexOf('care progress'))
   const m1 = h1.match(/(\d+)\/(\d+) · (\d+)%/)
   check('shows done/total · pct', !!m1)
   check('per-room bar present (width:0%)', /width:0%/.test(h1))
