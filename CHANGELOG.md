@@ -393,6 +393,22 @@ The agentic and marketing cycle. Planned scope is in
   [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
 
 ### Changed
+- **The dashboard stops making you wait for the Action Inbox.** Every Prisma query in this app is a
+  separate serialised round trip — the libsql adapter takes a mutex per statement, so `Promise.all`
+  buys nothing and a page costs roughly *query count × round trip*. The dashboard was spending 78 of
+  them: two aggregators independently fetching the same cats, appointments, check-outs, unpaid visits
+  and expiring memberships, and the whole Action Inbox derived in order to show five rows.
+  Those shared reads now happen once (`lib/shared-reads.ts`, 78 → 61 queries) and the action queue is
+  streamed, so the revenue, panels and alerts paint without waiting for it — **5.2s → 3.2s** for the
+  body of the page, measured on a laptop whose round trip to Turso is ~95ms.
+  Method, numbers and the things that did *not* work are in [docs/PERFORMANCE.md](docs/PERFORMANCE.md);
+  `DB_TRACE=1` plus `scripts/perf-*.mjs` reproduce all of it.
+- **Buttons say they were pressed.** Every button here is a server action that writes and then
+  re-renders the whole page — ticking one care task costs 2 queries to save it and 12 to redraw around
+  it. Until that landed the screen was unchanged, so a pressed button looked exactly like an unpressed
+  one and the reflex was to press again, which on the service board advanced the appointment twice.
+  Submit buttons now show they are working and refuse the second press, and the run sheet's tick box
+  fills the moment it is clicked instead of a second later.
 - **The groomer lands back on the Service Board.** Saving an assessment opened from the board used to
   drop the groomer on the cat's profile — one screen away from the queue they were clearing, every
   time. It now returns to the board, and Cancel and the breadcrumb follow the same route. Opening the

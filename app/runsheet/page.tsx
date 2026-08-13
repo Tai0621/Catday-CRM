@@ -7,6 +7,7 @@ import { boardingHealthGate } from '@/lib/health'
 import { SEGMENTS } from '@/lib/segments'
 import { displayPhone, whatsappUrl } from '@/lib/phone'
 import { getConfig } from '@/lib/config'
+import { TaskCheck } from '@/app/components/Pending'
 
 const DAY = 24 * 60 * 60 * 1000
 const dateKey = (d: Date) =>
@@ -235,16 +236,7 @@ export default async function RunSheetPage() {
                     <li key={t.id} className="px-4 py-1.5 flex items-center justify-between" style={{ borderTop: '1px solid rgba(45,25,7,0.06)' }}>
                       <form action={toggleTask} className="flex items-center gap-2.5 flex-1">
                         <input type="hidden" name="id" value={t.id} />
-                        <button type="submit"
-                          className="rounded-md flex items-center justify-center text-xs font-bold"
-                          style={{
-                            width: 22, height: 22,
-                            background: t.done ? seg.color : 'transparent',
-                            color: t.done ? '#F2EDE0' : 'transparent',
-                            border: `1.5px solid ${t.done ? seg.color : 'rgba(45,25,7,0.25)'}`,
-                          }}>
-                          ✓
-                        </button>
+                        <TaskCheck done={t.done} color={seg.color} />
                         <span className="flex items-baseline gap-1.5 text-sm">
                           <span aria-hidden className="text-[15px] leading-none" style={{ opacity: t.done ? 0.45 : 1 }}>{taskEmoji(t.task)}</span>
                           <span style={{ color: t.done ? 'rgba(45,25,7,0.4)' : '#2D1907', textDecoration: t.done ? 'line-through' : 'none' }}>

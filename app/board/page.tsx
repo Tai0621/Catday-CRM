@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { BOARD_FLOW, BOARD_COLUMN_LABELS, BOARD_ADVANCE_LABELS, BOARD_STAGE_COLORS } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
+import { SubmitButton } from '@/app/components/Pending'
 import { displayPhone, whatsappUrl } from '@/lib/phone'
 
 const BOARD_TYPES = ['Grooming', 'Bath', 'Diagnosis']
@@ -136,17 +137,18 @@ export default async function BoardPage() {
                         <option value="">No groomer</option>
                         {groomers.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                       </select>
-                      <button type="submit" className="cd-btn-sec text-xs" style={{ padding: '0.2rem 0.5rem' }}>✓</button>
+                      <SubmitButton className="cd-btn-sec text-xs" style={{ padding: '0.2rem 0.5rem' }} busyLabel="…">✓</SubmitButton>
                     </form>
 
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <form action={advance}>
                         <input type="hidden" name="id" value={a.id} />
                         <input type="hidden" name="current" value={a.status} />
-                        <button type="submit" className="text-xs px-2.5 py-1 rounded-lg font-medium"
-                          style={{ background: sc.color, color: '#F2EDE0' }}>
+                        <SubmitButton className="text-xs px-2.5 py-1 rounded-lg font-medium"
+                          style={{ background: sc.color, color: '#F2EDE0' }}
+                          busyLabel="Working…">
                           {BOARD_ADVANCE_LABELS[a.status]} →
-                        </button>
+                        </SubmitButton>
                       </form>
                       {(a.status === 'InService' || a.status === 'QualityCheck') && (
                         <Link href={`/cats/${a.catId}/assess?appt=${a.id}&from=board`} className="text-xs px-2 py-1 rounded-lg cd-btn-sec">
@@ -170,10 +172,11 @@ export default async function BoardPage() {
                       {a.status === 'Scheduled' && (
                         <form action={markNoShow}>
                           <input type="hidden" name="id" value={a.id} />
-                          <button type="submit" className="text-xs px-2 py-1 rounded-lg"
-                            style={{ color: 'rgba(45,25,7,0.45)', border: '1px solid rgba(45,25,7,0.15)' }}>
+                          <SubmitButton className="text-xs px-2 py-1 rounded-lg"
+                            style={{ color: 'rgba(45,25,7,0.45)', border: '1px solid rgba(45,25,7,0.15)' }}
+                            busyLabel="Saving…">
                             No-show
-                          </button>
+                          </SubmitButton>
                         </form>
                       )}
                     </div>

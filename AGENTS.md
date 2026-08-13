@@ -139,6 +139,14 @@ for new fields — don't introduce a different way of representing choice fields
 
 ## Database access & performance
 
+**Every Prisma query is a serialised round trip; `Promise.all` does not overlap them.** The libsql
+adapter takes a mutex around each statement, so a page costs roughly *query count × round trip* and
+the count is the only lever. A `findMany` with three `include`s is four round trips, not one. Before
+adding queries to a hot path — and before believing any fix made something faster — read
+[docs/PERFORMANCE.md](docs/PERFORMANCE.md) and measure with `DB_TRACE=1` + `scripts/perf-probe.mjs`.
+It also records the approaches that look obvious and do nothing (`$transaction` batching, adapter-level
+batching, Prisma's own `log: ['query']`, which reports *nothing* under a driver adapter).
+
 - All queries go through the singleton in `lib/db.ts` (`PrismaClient` + `PrismaLibSql` adapter,
   cached on `global.__prisma` to survive Next's dev hot-reload).
 - **Vercel region must stay `hnd1`** (`vercel.json`) because the Turso database lives in

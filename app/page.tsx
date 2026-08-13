@@ -3,7 +3,8 @@ import { getConfig } from '@/lib/config'
 import { getDashboardData } from '@/lib/dashboard'
 import { getChartData } from '@/lib/charts'
 import { RevenueLineChart, RevenueMixDonut, BookingsBarChart, ChartLegend } from '@/app/components/DashboardCharts'
-import { buildActionQueue } from '@/lib/actions'
+import { Suspense } from 'react'
+import { TodaysActions, TodaysActionsSkeleton } from '@/app/components/TodaysActions'
 import { whatsappUrl } from '@/lib/phone'
 import { REVENUE_CATEGORIES, FOUNDER_CIRCLE_LIMIT } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
@@ -18,9 +19,8 @@ const STREAM_COLORS: Record<string, string> = {
 
 export default async function DashboardPage() {
   await requireAuth()
-  const [d, actionQueue, charts, cfg] = await Promise.all([getDashboardData(), buildActionQueue(), getChartData(), getConfig()])
+  const [d, charts, cfg] = await Promise.all([getDashboardData(), getChartData(), getConfig()])
   const { now, revenue, ops, customer, alerts, panels, breakeven, prive } = d
-  const topActions = actionQueue.slice(0, 5)
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -35,44 +35,9 @@ export default async function DashboardPage() {
       <BreakevenWidget hasPlan={breakeven.hasPlan} pacing={breakeven.pacing} monthName={breakeven.monthName} hasAvgSale={breakeven.hasAvgSale} />
 
       {/* ── Today's actions (top of the queue) ── */}
-      <section className="cd-card overflow-hidden">
-        <div className="cd-section-header">
-          <h2 className="font-semibold" style={{ color: '#2D1907' }}>
-            Today&apos;s Actions {actionQueue.length > 0 && <span className="cd-pill ml-1" style={{ background: 'rgba(177,73,25,0.15)', color: '#B14919' }}>{actionQueue.length}</span>}
-          </h2>
-          <Link href="/actions" className="text-xs hover:underline" style={{ color: '#B14919' }}>Open inbox →</Link>
-        </div>
-        {topActions.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-center cd-muted">All clear — nothing needs attention right now 🐾</p>
-        ) : (
-          <ul className="divide-y" style={{ borderColor: 'rgba(45,25,7,0.08)' }}>
-            {topActions.map(a => (
-              <li key={a.key} className="px-5 py-2.5 flex items-center justify-between gap-3">
-                <div className="min-w-0 flex items-center gap-2.5">
-                  <span className="rounded-full shrink-0" title={SEGMENTS[a.segment].label}
-                    style={{ width: 7, height: 7, background: SEGMENTS[a.segment].color }} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: '#2D1907' }}>{a.title}</p>
-                    <p className="text-xs cd-muted truncate">{a.reason}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="cd-pill" style={a.band === 'Do now'
-                    ? { background: 'rgba(177,73,25,0.15)', color: '#B14919' }
-                    : { background: 'rgba(45,25,7,0.08)', color: 'rgba(45,25,7,0.55)' }}>{a.band}</span>
-                  {a.phone && a.waMessage && (
-                    <a href={whatsappUrl(a.phone, a.waMessage)} target="_blank" rel="noopener noreferrer"
-                      className="text-xs px-2.5 py-1 rounded hover:opacity-90 transition-opacity"
-                      style={{ background: '#729094', color: '#F2EDE0' }}>
-                      WhatsApp
-                    </a>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <Suspense fallback={<TodaysActionsSkeleton />}>
+        <TodaysActions />
+      </Suspense>
 
       {/* ── Revenue by stream ── */}
       <section className="cd-card p-5">

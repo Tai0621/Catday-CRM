@@ -1,4 +1,5 @@
 import { db } from './db'
+import { allCatsWithVisits, appointmentsToday, checkoutsToday, unpaidVisits, membershipsExpiringSoon } from './shared-reads'
 import { getConfig } from './config'
 import { buildGroomingPredictions } from './grooming-reminder'
 import { lowStockProducts } from './inventory'
@@ -81,7 +82,7 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
   const [
     unpaid,
     todayAppts,
-    checkoutsToday,
+    leavingToday,
     customers,
     cats,
     expiringMemberships,
@@ -92,23 +93,9 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
     careLogs,
     academy,
   ] = await Promise.all([
-    db.appointment.findMany({
-      where: { status: 'Completed', paid: false, price: { not: null } },
-      include: { customer: true, cat: true },
-      orderBy: { scheduledAt: 'desc' },
-      take: 25,
-    }),
-    db.appointment.findMany({
-      where: { scheduledAt: { gte: todayStart, lt: todayEnd }, status: { not: 'Cancelled' } },
-      include: {
-        customer: { include: { memberships: { where: { status: 'Active' }, include: { tier: true } } } },
-        cat: true,
-      },
-    }),
-    db.appointment.findMany({
-      where: { type: 'Boarding', endsAt: { gte: todayStart, lt: todayEnd }, status: { not: 'Cancelled' } },
-      include: { customer: true, cat: true },
-    }),
+    unpaidVisits(),
+    appointmentsToday(),
+    checkoutsToday(),
     db.customer.findMany({
       include: {
         appointments: { select: { scheduledAt: true }, orderBy: { scheduledAt: 'desc' } },
@@ -117,20 +104,8 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
         cats: { select: { name: true } },
       },
     }),
-    db.cat.findMany({
-      // select keeps base64 photo blobs out of this whole-table scan
-      select: {
-        id: true, name: true, breed: true, coatType: true, groomingInterval: true,
-        dateOfBirth: true, vaccinationExpiry: true, lastDewormAt: true, lastDefleaAt: true,
-        foundingNumber: true, customerId: true,
-        customer: { select: { id: true, name: true, phone: true } },
-        appointments: { select: { scheduledAt: true, status: true, type: true } },
-      },
-    }),
-    db.membership.findMany({
-      where: { status: 'Active', expiryDate: { lte: expiryThreshold } },
-      include: { customer: true, tier: true },
-    }),
+    allCatsWithVisits(),
+    membershipsExpiringSoon(),
     db.actionLog.findMany({ where: { createdAt: { gte: logWindow } }, orderBy: { createdAt: 'desc' } }),
     db.transaction.groupBy({ by: ['customerId'], _sum: { total: true } }),
     db.appointment.findMany({
@@ -223,7 +198,7 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
 
   // 3 · Boarding checkout today with no future booking
   const futureByCustomer = new Set(futureAppts.map(a => a.customerId))
-  for (const a of checkoutsToday) {
+  for (const a of leavingToday) {
     if (futureByCustomer.has(a.customerId)) continue
     const msg = messageFor(variants, 'RebookCheckout', a.customerId, { cat: a.cat.name, brand, customer: a.customer.name ?? '' },
       `Hi! ${a.cat.name} checks out today — we'd love to see you again soon. Shall we lock in the next grooming or boarding date before you head off? 🐾`,

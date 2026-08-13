@@ -1,7 +1,8 @@
 import { db } from './db'
 import { buildGroomingPredictions } from './grooming-reminder'
 import { computePacing, monthKey, monthLabel } from './plan'
-import { REVENUE_CATEGORIES, VACCINATION_ALERT_DAYS, MEMBERSHIP_EXPIRY_ALERT_DAYS } from './constants'
+import { REVENUE_CATEGORIES, VACCINATION_ALERT_DAYS } from './constants'
+import { allCatsWithVisits, appointmentsToday, checkoutsToday, unpaidVisits, membershipsExpiringSoon } from './shared-reads'
 
 const DAY = 24 * 60 * 60 * 1000
 const VIP_TIERS = ['Gold', 'Black Circle']
@@ -22,7 +23,6 @@ export async function getDashboardData() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
   const vaxThreshold = new Date(now.getTime() + VACCINATION_ALERT_DAYS * DAY)
-  const expiryThreshold = new Date(now.getTime() + MEMBERSHIP_EXPIRY_ALERT_DAYS * DAY)
 
   const [
     todayByCat,
@@ -47,25 +47,9 @@ export async function getDashboardData() {
   ] = await Promise.all([
     db.transaction.groupBy({ by: ['category'], where: { date: { gte: todayStart, lt: todayEnd } }, _sum: { total: true } }),
     db.transaction.groupBy({ by: ['category'], where: { date: { gte: monthStart, lt: monthEnd } }, _sum: { total: true } }),
-    db.appointment.findMany({
-      where: { scheduledAt: { gte: todayStart, lt: todayEnd }, status: { not: 'Cancelled' } },
-      include: {
-        customer: { include: { memberships: { where: { status: 'Active' }, include: { tier: true } } } },
-        cat: true,
-        room: true,
-      },
-      orderBy: { scheduledAt: 'asc' },
-    }),
+    appointmentsToday(),
     db.room.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }),
-    db.cat.findMany({
-      // select keeps base64 photo blobs out of this whole-table scan
-      select: {
-        id: true, name: true, breed: true, coatType: true, groomingInterval: true,
-        dateOfBirth: true, vaccinationExpiry: true, customerId: true,
-        customer: { select: { id: true, name: true, phone: true } },
-        appointments: { select: { scheduledAt: true, status: true, type: true } },
-      },
-    }),
+    allCatsWithVisits(),
     db.customer.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } }),
     db.membership.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } }),
     db.appointment.findMany({
@@ -73,24 +57,11 @@ export async function getDashboardData() {
       select: { customerId: true, customer: { select: { createdAt: true } } },
     }),
     db.incident.groupBy({ by: ['type'], where: { resolved: false }, _count: true }),
-    db.membership.findMany({
-      where: { status: 'Active', expiryDate: { lte: expiryThreshold } },
-      include: { customer: true, tier: true },
-      orderBy: { expiryDate: 'asc' },
-    }),
+    membershipsExpiringSoon(),
     db.customer.count(),
     db.whatsAppLead.count({ where: { status: 'Pending' } }),
-    db.appointment.findMany({
-      where: { type: 'Boarding', endsAt: { gte: todayStart, lt: todayEnd }, status: { not: 'Cancelled' } },
-      include: { customer: true, cat: true, room: true },
-      orderBy: { endsAt: 'asc' },
-    }),
-    db.appointment.findMany({
-      where: { status: 'Completed', paid: false, price: { not: null } },
-      include: { customer: true, cat: true },
-      orderBy: { scheduledAt: 'desc' },
-      take: 10,
-    }),
+    checkoutsToday(),
+    unpaidVisits(),
     db.businessPlan.findUnique({ where: { id: 'default' } }),
     db.monthlyTarget.findUnique({ where: { month: monthKey(now) } }),
     db.cat.count({ where: { foundingNumber: { not: null } } }),
@@ -154,7 +125,9 @@ export async function getDashboardData() {
       totalCustomers,
       pendingLeads,
     },
-    alerts: { vipArriving, vaccinationsExpiring, checkouts, outstanding },
+    // The shared read fetches the action queue's larger limit; this panel has
+    // always shown ten.
+    alerts: { vipArriving, vaccinationsExpiring, checkouts, outstanding: outstanding.slice(0, 10) },
     prive: {
       foundingCount,
       privateClubCount,
