@@ -1,16 +1,41 @@
 import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { redirect } from 'next/navigation'
-import { normalisePhone } from '@/lib/phone'
+import { normalisePhone, displayPhone } from '@/lib/phone'
 import { CUSTOMER_SOURCES } from '@/lib/constants'
 import { consentUpdate } from '@/lib/consent'
 
-export default async function NewCustomerPage() {
+export default async function NewCustomerPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ exists?: string; erased?: string }>
+}) {
   await requireAuth()
+  const { exists, erased } = await searchParams
+
+  const duplicate = exists
+    ? await db.customer.findUnique({
+        where: { id: exists },
+        select: { id: true, name: true, phone: true },
+      })
+    : null
 
   async function create(data: FormData) {
     'use server'
     const phone = normalisePhone(data.get('phone') as string)
+
+    // Phone is @unique, so a blind create threw P2002 across the action
+    // boundary and into app/error.tsx — which told staff the app had been
+    // updated when the number was simply already on file. Every other create
+    // path (lib/customer-resolve, appointments/new) looks the phone up first;
+    // this one now matches them.
+    const existing = await db.customer.findUnique({
+      where: { phone },
+      select: { id: true, erasedAt: true },
+    })
+    if (existing?.erasedAt) redirect('/customers/new?erased=1')
+    if (existing) redirect(`/customers/new?exists=${existing.id}`)
+
     await db.customer.create({
       data: {
         phone,
@@ -29,6 +54,26 @@ export default async function NewCustomerPage() {
   return (
     <div className="max-w-xl mx-auto">
       <h1 className="text-xl font-bold text-gray-900 mb-6">New Customer</h1>
+      {duplicate && (
+        <div
+          className="rounded-xl px-4 py-2.5 text-sm mb-4"
+          style={{ background: 'rgba(177,73,25,0.12)', border: '1px solid rgba(177,73,25,0.35)', color: '#B14919' }}
+        >
+          {displayPhone(duplicate.phone)} is already on file
+          {duplicate.name ? ` for ${duplicate.name}` : ''}.{' '}
+          <a href={`/customers/${duplicate.id}`} className="underline font-medium">
+            Open their profile
+          </a>
+        </div>
+      )}
+      {erased && (
+        <div
+          className="rounded-xl px-4 py-2.5 text-sm mb-4"
+          style={{ background: 'rgba(177,73,25,0.12)', border: '1px solid rgba(177,73,25,0.35)', color: '#B14919' }}
+        >
+          That number belongs to an erased record and cannot be reused.
+        </div>
+      )}
       <form action={create} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <Field label="Phone *" name="phone" type="tel" required placeholder="012-3456789" />
         <Field label="Name" name="name" placeholder="Full name" />
