@@ -70,6 +70,7 @@ export const SEGMENTS: NavSegment[] = [
       ] },
       { sub: 'Records & Planning', subColor: '#729094', links: [
         { href: '/finance/expenses', label: 'Expenses', icon: 'receipt' },
+        { href: '/finance/records', label: 'Records', icon: 'report' },
         { href: '/finance/aging', label: 'Receivables & Payables', icon: 'wallet' },
         { href: '/revenue', label: 'Revenue', icon: 'bars' },
         { href: '/plan', label: 'Financial Plan', icon: 'compass' },

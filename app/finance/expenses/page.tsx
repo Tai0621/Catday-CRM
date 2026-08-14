@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { COGS_CATEGORIES, OPEX_CATEGORIES } from '@/lib/finance'
 import { SEGMENTS } from '@/lib/segments'
 import { addExpenseForm, togglePaid, removeExpense } from './actions'
+import { MediaUpload } from '@/app/components/MediaUpload'
+import { isMediaConfigured } from '@/lib/media'
 
 // Cost entry for the income statement: variable costs (cost of services)
 // and fixed operating expenses, per the owner's Excel model.
@@ -12,6 +14,24 @@ export default async function ExpensesPage() {
   const seg = SEGMENTS.business
 
   const expenses = await db.expense.findMany({ orderBy: { date: 'desc' }, take: 60 })
+
+  // Every document for every listed expense in ONE query. A <MediaSection> per
+  // row would have been a query per expense — sixty of them, each a serial round
+  // trip on this adapter (docs/PERFORMANCE.md).
+  const docs = expenses.length > 0
+    ? await db.mediaAsset.findMany({
+      where: { ownerType: 'expense', ownerId: { in: expenses.map(e => e.id) } },
+      select: { id: true, ownerId: true, kind: true },
+      orderBy: { createdAt: 'asc' },
+    })
+    : []
+  const docsByExpense = new Map<string, typeof docs>()
+  for (const d of docs) {
+    const list = docsByExpense.get(d.ownerId) ?? []
+    list.push(d)
+    docsByExpense.set(d.ownerId, list)
+  }
+  const uploadsReady = isMediaConfigured()
 
   // Group listing by month for scanning
   const byMonth = new Map<string, typeof expenses>()
@@ -32,7 +52,10 @@ export default async function ExpensesPage() {
           </h1>
           <p className="text-sm cd-muted">Costs recorded here flow straight into the <Link href="/finance/income-statement" className="cd-link">Income Statement</Link>.</p>
         </div>
-        <Link href="/finance/income-statement" className="cd-btn-sec text-sm">Income Statement →</Link>
+        <div className="flex gap-2">
+          <Link href="/finance/records" className="cd-btn-sec text-sm">Records →</Link>
+          <Link href="/finance/income-statement" className="cd-btn-sec text-sm">Income Statement →</Link>
+        </div>
       </div>
 
       <form action={addExpenseForm} className="cd-card p-5 space-y-4">
@@ -117,6 +140,24 @@ export default async function ExpensesPage() {
                         </td>
                         <td className="px-4 py-2 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: '#2D1907' }}>
                           RM {e.amount.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+                        </td>
+                        {/* Invoice / receipt — the paper behind the figure. It
+                            files under this expense's own month, so an invoice
+                            that arrives in April against a March cost still
+                            lands in the March folder. */}
+                        <td className="px-2 py-2 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 justify-end">
+                            {(docsByExpense.get(e.id) ?? []).map(d => (
+                              <a key={d.id} href={`/api/media/${d.id}/file`} target="_blank" rel="noopener noreferrer"
+                                className="text-xs px-1.5 py-0.5 rounded"
+                                style={{ background: 'rgba(114,144,148,0.16)', color: '#4a6265' }}>
+                                {d.kind === 'document' ? 'PDF' : 'IMG'}
+                              </a>
+                            ))}
+                            {uploadsReady
+                              ? <MediaUpload ownerType="expense" ownerId={e.id} accept="document" label="invoice" />
+                              : <span className="text-xs cd-muted">storage off</span>}
+                          </div>
                         </td>
                         <td className="px-2 py-2 text-right whitespace-nowrap">
                           <form action={togglePaid} className="inline">

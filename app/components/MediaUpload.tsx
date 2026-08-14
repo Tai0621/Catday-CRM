@@ -75,7 +75,7 @@ export function MediaUpload({
   ownerType, ownerId, tag, accept = 'image', label = 'photo', disabled, enhance = false,
 }: {
   ownerType: string; ownerId: string; tag?: string
-  accept?: 'image' | 'video' | 'both'; label?: string; disabled?: boolean
+  accept?: 'image' | 'video' | 'both' | 'document'; label?: string; disabled?: boolean
   /** C8 · square-crop and level the shot. For before/after pairs only. */
   enhance?: boolean
 }) {
@@ -88,7 +88,12 @@ export function MediaUpload({
   // discover after the fact.
   const [tidy, setTidy] = useState(false)
 
-  const acceptAttr = accept === 'video' ? 'video/*' : accept === 'both' ? 'image/*,video/*' : 'image/*'
+  // A supplier invoice is a PDF as often as it is a photograph of a paper slip,
+  // so the document mode takes both.
+  const acceptAttr = accept === 'video' ? 'video/*'
+    : accept === 'both' ? 'image/*,video/*'
+      : accept === 'document' ? 'application/pdf,image/*'
+        : 'image/*'
 
   async function onChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -123,7 +128,9 @@ export function MediaUpload({
           ref={inputRef}
           type="file"
           accept={acceptAttr}
-          capture="environment"
+          // Documents live in the phone's files, not behind the camera —
+          // forcing capture here would hide the PDF the supplier emailed.
+          {...(accept === 'document' ? {} : { capture: 'environment' as const })}
           className="hidden"
           onChange={onChange}
           disabled={disabled || busy}

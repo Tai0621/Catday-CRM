@@ -9,7 +9,7 @@ export async function MediaSection({
   ownerType, ownerId, tag, accept = 'image', label = 'photo', title, readOnly = false, enhance = false,
 }: {
   ownerType: string; ownerId: string; tag?: string
-  accept?: 'image' | 'video' | 'both'; label?: string; title?: string; readOnly?: boolean
+  accept?: 'image' | 'video' | 'both' | 'document'; label?: string; title?: string; readOnly?: boolean
   /** C8 · offer the square-crop + levelling toggle. Before/after pairs only. */
   enhance?: boolean
 }) {
@@ -25,8 +25,17 @@ export async function MediaSection({
             {/* Private store → served through the authenticated proxy, not the raw URL */}
             {m.kind === 'video'
               ? <video src={`/api/media/${m.id}/file`} className="w-full h-full object-cover" controls preload="metadata" />
-              // eslint-disable-next-line @next/next/no-img-element
-              : <img src={`/api/media/${m.id}/file`} alt={m.caption ?? ''} className="w-full h-full object-cover" />}
+              // A PDF has no thumbnail to show, so it gets a label that opens it
+              // rather than an <img> that renders as a broken tile.
+              : m.kind === 'document'
+                ? <a href={`/api/media/${m.id}/file`} target="_blank" rel="noopener noreferrer"
+                  className="w-full h-full flex flex-col items-center justify-center gap-1 text-xs font-semibold"
+                  style={{ color: '#4a6265', background: 'rgba(114,144,148,0.14)' }}>
+                  <span>PDF</span>
+                  <span className="cd-muted font-normal">{m.createdAt.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' })}</span>
+                </a>
+                // eslint-disable-next-line @next/next/no-img-element
+                : <img src={`/api/media/${m.id}/file`} alt={m.caption ?? ''} className="w-full h-full object-cover" />}
             {!readOnly && <DeleteMediaButton id={m.id} />}
           </div>
         ))}

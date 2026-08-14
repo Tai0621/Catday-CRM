@@ -276,6 +276,15 @@ re-derive from scratch.
    accountant-entered records (a custom statement row with zero postings, e.g.) get hard-deleted. When
    building a "remove this" feature on financial data, default to hide/restore, not `DELETE`.
 
+## Accounting periods are derived, never stored
+
+Anything filed against a month — a sale, an expense, an uploaded invoice — takes its period from the
+**record's own date** (`periodOf()` in `lib/media.ts`), never from when it was created or uploaded. An
+invoice routinely arrives in April against a March cost, and March is the month being closed. Storing
+a period alongside the record would be a second source of truth that drifts the moment someone
+corrects a date, which is precisely the failure Finance → Records exists to prevent. The blob pathname
+carries the period too, but only as storage layout — the app always re-derives.
+
 ## Verification philosophy — every non-trivial change ships with a script that proves it
 
 This codebase does not consider a feature done because it compiles and "looks right" in a screenshot.

@@ -14,6 +14,24 @@ The agentic and marketing cycle. Planned scope is in
 [docs/AGENTIC-ROADMAP.md](docs/AGENTIC-ROADMAP.md) (Track C — Agentic OS, Track M — Marketing).
 
 ### Added
+- **Finance → Records: the paper behind each month's figures.** There was no archive of receipts —
+  a receipt was rendered on demand from its transaction and never stored — so checking a close meant
+  trusting the total. Records shows one accounting period at a time: every sale as a receipt, and every
+  expense with whatever invoice has been filed against it.
+  **The period is a wall.** March receipts and April receipts never share a screen or a storage folder,
+  and a document's month comes from the *sale or expense's own date*, never the upload date — a
+  supplier invoice that arrives in April against a March cost files under March, which is the month
+  being closed. That month is derived, never stored beside the record: two copies of "which period is
+  this" is exactly how documents end up in the wrong close, so correcting a mis-dated expense re-files
+  its invoice immediately.
+  Two details that make it a check rather than a folder: expenses with **no** invoice are listed first
+  rather than omitted, with coverage shown **by value** (twenty small documented costs and one large
+  undocumented one is not "95% covered"); and a split payment — stored as several rows sharing a
+  reference — is shown as the single sale it was, so the receipt count is receipts issued while the
+  total is money taken, which is the figure to check against the Income Statement.
+- **Invoices and receipts upload against an expense**, from the Expenses screen. PDFs are accepted, not
+  just photographs — a supplier invoice arrives as a PDF more often than as a picture, and leaving it
+  out would have meant screenshotting one to file it.
 - **The owner arranges the staff sidebar too.** Staff saw a flat list of every tab their role held,
   which stops being readable somewhere around eight. A role now carries a **layout**: a few tabs
   pinned at the top, then drop-downs the owner names — *Boarding jobs*, *End of day*, whatever the

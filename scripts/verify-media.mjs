@@ -82,13 +82,16 @@ try {
   const fd = new FormData(); fd.set('ownerType', 'cat')
   const authed = await fetch(`${BASE}/api/media/upload`, { method: 'POST', headers: { Cookie: cookie }, body: fd })
   const body = await authed.json().catch(() => ({}))
-  // BLOB token present → a real (empty) request is a 400; absent → a graceful 503.
-  const tokenSet = !!process.env.BLOB_READ_WRITE_TOKEN
-  if (tokenSet) {
-    check('upload with no file → 400 (token present)', authed.status === 400, `${authed.status} ${JSON.stringify(body)}`)
-    console.log('  · note: BLOB token present — run the live round-trip check separately')
+  // A malformed request is now rejected BEFORE the storage check, so this is a
+  // 400 either way. The route used to answer 503 first, which meant every
+  // validation rejection was untestable on a deployment without a Blob token —
+  // a script asserting "415 for a bad file type" passed on the 503 without the
+  // type check ever running.
+  check('upload with no file → 400, whether or not storage is configured',
+    authed.status === 400, `${authed.status} ${JSON.stringify(body)}`)
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    console.log('  · BLOB token present — the "storage off" notice does not apply')
   } else {
-    check('upload degrades to 503 while storage unconfigured', authed.status === 503, `${authed.status} ${JSON.stringify(body)}`)
     check('cat page shows the "not set up" notice', cat.includes('isn’t set up yet') || cat.includes('set up yet'))
   }
 
