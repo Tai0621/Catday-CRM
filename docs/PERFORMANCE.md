@@ -89,6 +89,19 @@ relations is four round trips.
 3. **Buttons acknowledge the click** (`app/components/Pending.tsx`). This makes
    nothing faster; it removes the dead air, and stops the second press that on
    the service board really did advance an appointment twice.
+4. **The action queue stopped loading customer history to count it.** It read
+   every customer *with* every appointment they had ever had and a year of
+   transactions, then counted the rows in JavaScript. Four facts were wanted —
+   last visit, whether anything is booked ahead, how many visits, twelve-month
+   spend — and every one is an aggregate. On the demo that is **1,930 rows → 66**;
+   the point is the shape, since the old cost grew with the length of the
+   business's history and the new one grows with the number of customers.
+   Summed database time for the dashboard fell 39% (94.1s → 57.7s across its
+   queries). Query *count* is unchanged: three relation loads became three
+   aggregates. `scripts/verify-action-facts.mjs` pins the four boundaries,
+   because an aggregate that is off by one sends a real message to a real
+   customer — a win-back to someone booked in for next week, a Gold invite from
+   spend that aged out — and nothing else in the system would notice.
 
 Result on the dashboard — the body a person reads:
 
@@ -102,10 +115,6 @@ action queue         5183ms   5703ms   (arrives after, instead of blocking)
 
 In rough order of payoff, none of it done yet:
 
-- `buildActionQueue` loads **every customer** with their full appointment
-  history, a year of transactions, their memberships and their cats — five round
-  trips and a payload that grows with the business. It is the largest single
-  cost left on the dashboard.
 - The `Appointment` table is read five separate times per dashboard render in
   five different shapes. One read plus in-memory derivation would collapse most
   of them.

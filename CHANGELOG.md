@@ -393,6 +393,14 @@ The agentic and marketing cycle. Planned scope is in
   [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
 
 ### Changed
+- **The Action Inbox stops loading customer history in order to count it.** It read every customer
+  *with* every appointment they had ever had and a year of transactions, then counted the rows in
+  JavaScript. Four facts were actually wanted — when they last came, whether anything is booked ahead,
+  how many visits they have made, and what they spent in twelve months — and each is an aggregate.
+  On the demo that is **1,930 rows fetched → 66**, and the cost now grows with the number of customers
+  rather than with the length of the business's history. Summed database time for the dashboard fell
+  39%. The four boundaries are pinned by `scripts/verify-action-facts.mjs`, because an aggregate that
+  is off by one does not throw — it sends a win-back to someone who is already booked in for next week.
 - **The dashboard stops making you wait for the Action Inbox.** Every Prisma query in this app is a
   separate serialised round trip — the libsql adapter takes a mutex per statement, so `Promise.all`
   buys nothing and a page costs roughly *query count × round trip*. The dashboard was spending 78 of

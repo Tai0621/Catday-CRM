@@ -5,7 +5,6 @@ import { buildGroomingPredictions } from './grooming-reminder'
 import { lowStockProducts } from './inventory'
 import { logRedFlags } from './care-log'
 import { dewormStatus, defleaStatus } from './health'
-import { trailingAnnualSpend } from './loyalty'
 import { ACTION_SEGMENT, type SegmentKey } from './segments'
 import { buildActionStats, priorityShifts, effectivePriority, isSuppressed, type TypeStats } from './actions-learning'
 import { loadActiveVariants, messageFor } from './action-variants'
@@ -84,6 +83,9 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
     todayAppts,
     leavingToday,
     customers,
+    lastVisitGroups,
+    pastVisitGroups,
+    annualSpendGroups,
     cats,
     expiringMemberships,
     logs,
@@ -96,14 +98,27 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
     unpaidVisits(),
     appointmentsToday(),
     checkoutsToday(),
+    // One row per customer, not one per visit.
+    //
+    // This used to pull every customer WITH their entire appointment history and
+    // a year of transactions. Four facts are actually wanted from all that —
+    // when they last came, whether anything is booked ahead, how many visits
+    // they have made, and what they spent in twelve months — and each is an
+    // aggregate. Joining the rows in to count them made the heaviest read on the
+    // dashboard grow with the length of the business's history rather than with
+    // the number of customers.
     db.customer.findMany({
-      include: {
-        appointments: { select: { scheduledAt: true }, orderBy: { scheduledAt: 'desc' } },
-        transactions: { where: { date: { gte: yearAgo } }, select: { date: true, total: true } },
-        memberships: { where: { status: 'Active' }, include: { tier: true } },
-        cats: { select: { name: true } },
+      select: {
+        id: true, name: true, phone: true, language: true,
+        memberships: { where: { status: 'Active' }, select: { tier: { select: { name: true } } } },
       },
     }),
+    // `_max` answers two questions at once: the last visit, and — since a
+    // maximum above `now` can only come from a booking ahead — whether one
+    // exists. The previous code asked the second with `.some(a => a > now)`.
+    db.appointment.groupBy({ by: ['customerId'], _max: { scheduledAt: true } }),
+    db.appointment.groupBy({ by: ['customerId'], where: { scheduledAt: { lte: now } }, _count: { _all: true } }),
+    db.transaction.groupBy({ by: ['customerId'], where: { date: { gte: yearAgo } }, _sum: { total: true } }),
     allCatsWithVisits(),
     membershipsExpiringSoon(),
     db.actionLog.findMany({ where: { createdAt: { gte: logWindow } }, orderBy: { createdAt: 'desc' } }),
@@ -131,6 +146,22 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
   }
   // Households with a Founding Cat get the same white-glove treatment as Private Club
   const foundingCustomerIds = new Set(cats.filter(c => c.foundingNumber != null).map(c => c.customerId))
+
+  // The four facts the customer rows used to carry their whole history to answer.
+  const lastVisitBy = new Map<string, Date>()
+  for (const g of lastVisitGroups) {
+    if (g.customerId && g._max.scheduledAt) lastVisitBy.set(g.customerId, g._max.scheduledAt)
+  }
+  const visitsBy = new Map<string, number>()
+  for (const g of pastVisitGroups) if (g.customerId) visitsBy.set(g.customerId, g._count._all)
+  const annualSpendBy = new Map<string, number>()
+  for (const g of annualSpendGroups) if (g.customerId) annualSpendBy.set(g.customerId, g._sum.total ?? 0)
+
+  // Every cat is already loaded above, and each knows its owner — so the name to
+  // put in a message comes from that list rather than from a second join back
+  // out of the customer.
+  const catNameBy = new Map<string, string>()
+  for (const c of cats) if (!catNameBy.has(c.customerId)) catNameBy.set(c.customerId, c.name)
 
   // M9 · Which language to write to each household in. Absent means unknown, and
   // messageFor falls back to language-neutral copy rather than assuming English.
@@ -219,10 +250,10 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
     const isWhiteGlove = foundingCustomerIds.has(c.id) ||
       c.memberships.some(m => m.tier.name === PRIVATE_CLUB_TIER)
     if (isWhiteGlove) continue
-    const last = c.appointments[0]?.scheduledAt
+    const last = lastVisitBy.get(c.id)
     if (!last || last > winbackCutoff) continue
-    if (c.appointments.some(a => a.scheduledAt > now)) continue
-    const catName = c.cats[0]?.name ?? 'your cat'
+    if (last > now) continue // something is booked ahead
+    const catName = catNameBy.get(c.id) ?? 'your cat'
     const days = Math.floor((now.getTime() - last.getTime()) / DAY)
     const msg = messageFor(variants, 'WinBack', c.id, { cat: catName, brand, customer: c.name ?? '', days },
       `Hi! It's been a while — ${catName} misses us at ${brand} 🐾 We'd love to welcome you back. Book this week and we'll add a complimentary add-on for ${catName}!`,
@@ -273,7 +304,7 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
     const isWhiteGlove = foundingCustomerIds.has(c.id) ||
       c.memberships.some(m => m.tier.name === PRIVATE_CLUB_TIER)
     if (!isWhiteGlove) continue
-    const catName = c.cats[0]?.name ?? 'your cat'
+    const catName = catNameBy.get(c.id) ?? 'your cat'
     out.push(card({
       key: `VipCheckIn:${c.id}`, type: 'VipCheckIn', priority: 5,
       title: `Personal check-in — ${c.name ?? c.phone}`,
@@ -402,7 +433,7 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
   for (const c of customers) {
     const hasVip = c.memberships.some(m => VIP_TIERS.includes(m.tier.name))
     if (hasVip) continue
-    const spend = trailingAnnualSpend(c.transactions, now)
+    const spend = annualSpendBy.get(c.id) ?? 0
     if (spend < GOLD_SPEND_THRESHOLD) continue
     out.push(card({
       key: `GoldEligible:${c.id}`, type: 'GoldEligible', priority: 9,
@@ -417,7 +448,7 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
   for (const c of customers) {
     if (c.memberships.some(m => m.tier.name === PRIVATE_CLUB_TIER)) continue
     const spend = lifetimeSpend.get(c.id) ?? 0
-    const visits = c.appointments.filter(a => a.scheduledAt <= now).length
+    const visits = visitsBy.get(c.id) ?? 0
     if (spend < PRIVATE_CLUB_SPEND && visits < PRIVATE_CLUB_VISITS) continue
     out.push(card({
       key: `PrivateClubEligible:${c.id}`, type: 'PrivateClubEligible', priority: 9,
