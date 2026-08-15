@@ -35,8 +35,30 @@ const setKey = (k, v) => exec(
   `INSERT INTO Setting (key,value,updatedAt) VALUES (?,?,CURRENT_TIMESTAMP)
    ON CONFLICT(key) DO UPDATE SET value=excluded.value, updatedAt=CURRENT_TIMESTAMP`, [t(k), t(v)])
 
+// Clears the keys so the app falls back to DEFAULT_CONFIG. Used *during* the
+// run to reach the un-overridden state — never as the final word, see restore().
 async function cleanup() {
   await pipe(KEYS.map(k => exec(`DELETE FROM Setting WHERE key = ?`, [t(k)])))
+}
+
+// This script used to end on cleanup(), i.e. it DELETED the tenant's business
+// identity and left it deleted. On Cat Day that is invisible — DEFAULT_CONFIG
+// holds Cat Day's own values, so the fallback looks identical. On any other
+// tenant it silently wipes their name, tagline and portal label: the demo lost
+// exactly these three keys and rendered "Cat Day OS" under a Velvet Paw logo
+// until someone noticed. Snapshot first, put it back last.
+const prior = {}
+const rowsOf = res => (res.response?.result?.rows ?? []).map(r => r.map(c => (c.type === 'null' ? null : c.value)))
+
+async function snapshot() {
+  const res = await pipe(KEYS.map(k => exec(`SELECT value FROM Setting WHERE key = ?`, [t(k)])))
+  KEYS.forEach((k, i) => { const r = rowsOf(res[i]); prior[k] = r.length ? r[0][0] : null })
+}
+
+async function restore() {
+  await pipe(KEYS.map(k => (prior[k] == null
+    ? exec(`DELETE FROM Setting WHERE key = ?`, [t(k)])
+    : setKey(k, prior[k]))))
 }
 
 let pass = 0, total = 0
@@ -44,6 +66,7 @@ const check = (label, ok, extra = '') => { total++; if (ok) pass++; console.log(
 const strip = h => h.replace(/<!--[\s\S]*?-->/g, '')
 
 try {
+  await snapshot() // remember the tenant's real identity before touching it
   await cleanup() // start from the true default (no rows)
 
   // ── login for the authed settings-page checks ──
@@ -96,6 +119,6 @@ try {
   console.log(`\n${pass}/${total} checks passed`)
   if (pass !== total) process.exitCode = 1
 } finally {
-  await cleanup()
-  console.log('cleaned up test data (Setting rows removed → Cat Day defaults)')
+  await restore()
+  console.log("cleaned up test data (Setting rows restored to the tenant's own values)")
 }

@@ -25,14 +25,35 @@ const scalar = async sql => (await pipe([exec(sql)]))[0].response.result.rows[0]
 const custId = crypto.randomUUID(), catId = crypto.randomUUID(), apptId = crypto.randomUUID()
 const prodId = crypto.randomUUID(), txnId = crypto.randomUUID(), lineA = crypto.randomUUID(), lineP = crypto.randomUUID()
 
+// Deletes by the stable MARK/REF as well as this run's ids.
+//
+// It used to delete Cat/Customer/Product by the id generated for the current
+// run only. Product.name is @unique, so a run killed between the insert and the
+// cleanup left a "VERIFYSF Treats" row whose id no future run could guess — and
+// every subsequent run then died on `UNIQUE constraint failed: Product.name`.
+// That is not hypothetical: it is why this script was failing outright. Sweeping
+// by the marker makes an interrupted run self-heal on the next attempt.
+//
+// Order matters — children before parents, or the FKs reject the delete.
 async function cleanup() {
   await pipe([
     exec(`DELETE FROM TransactionLine WHERE transactionId = ?`, [t(txnId)]),
+    exec(`DELETE FROM TransactionLine WHERE transactionId IN (SELECT id FROM "Transaction" WHERE reference = ?)`, [t(REF)]),
     exec(`DELETE FROM "Transaction" WHERE reference = ?`, [t(REF)]),
     exec(`DELETE FROM Appointment WHERE id = ?`, [t(apptId)]),
+    exec(`DELETE FROM Appointment WHERE customerId IN (SELECT id FROM Customer WHERE name LIKE ?)`, [t(`${MARK}%`)]),
     exec(`DELETE FROM Cat WHERE id = ?`, [t(catId)]),
+    exec(`DELETE FROM Cat WHERE name LIKE ?`, [t(`${MARK}%`)]),
     exec(`DELETE FROM Customer WHERE id = ?`, [t(custId)]),
+    exec(`DELETE FROM Customer WHERE name LIKE ?`, [t(`${MARK}%`)]),
+    // StockMovement.productId is a NOT NULL FK and this test restocks, so it
+    // leaves movement rows behind. They must go before the Product or the
+    // delete is rejected — which is what made the orphan unclearable even by
+    // hand.
+    exec(`DELETE FROM StockMovement WHERE productId = ?`, [t(prodId)]),
+    exec(`DELETE FROM StockMovement WHERE productId IN (SELECT id FROM Product WHERE name LIKE ?)`, [t(`${MARK}%`)]),
     exec(`DELETE FROM Product WHERE id = ?`, [t(prodId)]),
+    exec(`DELETE FROM Product WHERE name LIKE ?`, [t(`${MARK}%`)]),
   ])
 }
 

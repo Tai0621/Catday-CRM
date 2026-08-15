@@ -35,8 +35,17 @@ async function cleanup() {
     exec(`DELETE FROM "Transaction" WHERE reference = ?`, [t(REF)]),
     exec(`DELETE FROM LoyaltyEntry WHERE note = ?`, [t(REF)]),
     exec(`DELETE FROM WalletEntry WHERE note = ?`, [t(`POS ${REF}`)]),
+    // Reversal restocks, and StockMovement.productId is a NOT NULL FK, so the
+    // movement rows must go before the Product. Without this the cleanup threw
+    // after all 12 checks had passed, stranding a "VERIFYREV …" product whose
+    // random id no later run could target — and the next run then failed
+    // outright on the unique name. Sweep by MARK so an interrupted run heals.
+    exec(`DELETE FROM StockMovement WHERE productId = ?`, [t(prodId)]),
+    exec(`DELETE FROM StockMovement WHERE productId IN (SELECT id FROM Product WHERE name LIKE ?)`, [t(`${MARK}%`)]),
     exec(`DELETE FROM Product WHERE id = ?`, [t(prodId)]),
+    exec(`DELETE FROM Product WHERE name LIKE ?`, [t(`${MARK}%`)]),
     exec(`DELETE FROM Customer WHERE id = ?`, [t(custId)]),
+    exec(`DELETE FROM Customer WHERE name LIKE ?`, [t(`${MARK}%`)]),
   ])
 }
 
