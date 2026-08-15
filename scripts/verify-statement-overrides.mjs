@@ -69,17 +69,23 @@ try {
   let actionId = null
   for (const src of srcs) {
     const js = await (await fetch(`${BASE}${src}`)).text()
-    if (!js.includes('saveStatementCell')) continue
+    // The action is saveStatementCellS — it was pluralised when single-cell
+    // saves became an Excel-style batch. The old singular name still passed the
+    // substring guard above ("saveStatementCells".includes("saveStatementCell")),
+    // so this script kept scanning every chunk, matched nothing, and reported
+    // 2/11 as though the feature were broken. verify-statement-rows.mjs was
+    // updated at the rename; this one was missed.
+    if (!js.includes('saveStatementCells')) continue
     const nameToVar = {}
-    for (const m of js.matchAll(/"saveStatementCell",\s*\(\)=>(\$\$RSC_SERVER_ACTION_\d+)/g)) nameToVar.saveStatementCell = m[1]
+    for (const m of js.matchAll(/"saveStatementCells",\s*\(\)=>(\$\$RSC_SERVER_ACTION_\d+)/g)) nameToVar.saveStatementCells = m[1]
     const varToHex = {}
     for (const m of js.matchAll(/const (\$\$RSC_SERVER_ACTION_\d+)[\s\S]{0,2000}?"([0-9a-f]{40,})"/g)) varToHex[m[1]] ??= m[2]
-    if (nameToVar.saveStatementCell && varToHex[nameToVar.saveStatementCell]) {
-      actionId = varToHex[nameToVar.saveStatementCell]
+    if (nameToVar.saveStatementCells && varToHex[nameToVar.saveStatementCells]) {
+      actionId = varToHex[nameToVar.saveStatementCells]
       break
     }
   }
-  check('found saveStatementCell action id', !!actionId)
+  check('found saveStatementCells action id', !!actionId)
 
   // Dev registers file-level actions lazily — retry while it 404s
   const call = async payload => {
@@ -96,7 +102,7 @@ try {
   }
 
   // ── hard-key Boarding Feb = 2000 (blue) ──
-  const save = await call({ year: YEAR, month: 1, rowKey: 'rev:Boarding', amount: 2000 })
+  const save = await call({ year: YEAR, cells: [{ month: 1, rowKey: 'rev:Boarding', amount: 2000 }] })
   check('save accepted', save.status === 200 && save.text.includes('"ok":true'))
 
   let page = strip(await (await fetch(pageUrl, { headers: { Cookie: cookie } })).text())
@@ -109,7 +115,7 @@ try {
   check('csv Boarding row Feb 2000', cells('Boarding Revenue')[2] === '2000.00')
 
   // ── tax override: key RM50 over the auto provision ──
-  const saveTax = await call({ year: YEAR, month: 1, rowKey: 'tax', amount: 50 })
+  const saveTax = await call({ year: YEAR, cells: [{ month: 1, rowKey: 'tax', amount: 50 }] })
   check('tax override accepted', saveTax.text.includes('"ok":true'))
   const csv2 = await (await fetch(`${BASE}/finance/income-statement/export?year=${YEAR}`, { headers: { Cookie: cookie } })).text()
   const cells2 = label => (csv2.split(/\r?\n/).find(l => l.startsWith(label)) ?? '').split(',')
@@ -118,7 +124,7 @@ try {
     Math.abs(parseFloat(cells2('Net Income')[2]) - (parseFloat(cells2('EBITDA (Operating Income)')[2]) - 50)) < 0.01)
 
   // ── clear the Boarding override → reverts to OS (0 for Boarding, total 1000) ──
-  const clear = await call({ year: YEAR, month: 1, rowKey: 'rev:Boarding', amount: null })
+  const clear = await call({ year: YEAR, cells: [{ month: 1, rowKey: 'rev:Boarding', amount: null }] })
   check('clear accepted', clear.text.includes('"ok":true'))
   const csv3 = await (await fetch(`${BASE}/finance/income-statement/export?year=${YEAR}`, { headers: { Cookie: cookie } })).text()
   const cells3 = label => (csv3.split(/\r?\n/).find(l => l.startsWith(label)) ?? '').split(',')
@@ -126,7 +132,7 @@ try {
     cells3('Boarding Revenue')[2] === '0.00' && cells3('Total Revenue')[2] === '1000.00')
 
   // ── guardrail: unknown row rejected ──
-  const bad = await call({ year: YEAR, month: 1, rowKey: 'rev:Nonsense', amount: 10 })
+  const bad = await call({ year: YEAR, cells: [{ month: 1, rowKey: 'rev:Nonsense', amount: 10 }] })
   check('unknown row key rejected', bad.text.includes('Unknown statement row'))
 
   console.log(`\n${pass}/${total} checks passed`)
