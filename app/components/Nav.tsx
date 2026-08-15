@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Icon } from './NavIcons'
 import {
-  PINNED, AI_LINKS, SEGMENTS, ALWAYS_ALLOWED, pathAllowed,
+  PINNED, AI_LINKS, AI_SECTION, SEGMENTS, ALWAYS_ALLOWED, pathAllowed,
   type NavLink, type NavSegment,
 } from '@/lib/nav-catalogue'
 
@@ -51,10 +51,20 @@ export function Nav({ role, userName, logoUrl, brandName, visiblePaths, staffNav
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
 
-  // Open segments: start with the one holding the current page, then merge the
+  // Which drop-down holds the current page. Intelligence is one of them, so it
+  // opens itself for the same reason a segment does: nobody should be looking at
+  // a screen whose own menu is shut.
+  const sectionHolding = (path: string): string | undefined =>
+    AI_LINKS.some(l => isActive(l.href, path))
+      ? AI_SECTION.key
+      : SEGMENTS.find(s => segmentLinks(s).some(l => isActive(l.href, path)))?.key
+
+  // Open sections: start with the one holding the current page, then merge the
   // user's saved preference after mount (avoids SSR hydration mismatch).
-  const activeSegment = SEGMENTS.find(s => segmentLinks(s).some(l => isActive(l.href, pathname)))?.key
-  const [open, setOpen] = useState<string[]>(activeSegment ? [activeSegment] : ['ops'])
+  const [open, setOpen] = useState<string[]>(() => {
+    const here = sectionHolding(pathname)
+    return here ? [here] : ['ops']
+  })
   useEffect(() => {
     try {
       const stored: string[] = JSON.parse(localStorage.getItem(STORE_KEY) ?? '[]')
@@ -63,8 +73,9 @@ export function Nav({ role, userName, logoUrl, brandName, visiblePaths, staffNav
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   useEffect(() => {
-    const seg = SEGMENTS.find(s => segmentLinks(s).some(l => isActive(l.href, pathname)))?.key
-    if (seg) setOpen(prev => (prev.includes(seg) ? prev : [...prev, seg]))
+    const here = sectionHolding(pathname)
+    if (here) setOpen(prev => (prev.includes(here) ? prev : [...prev, here]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 
   function toggle(key: string) {
@@ -157,16 +168,27 @@ export function Nav({ role, userName, logoUrl, brandName, visiblePaths, staffNav
           <>
             <div className="space-y-0.5 mb-2">{pinned.map(l => linkRow(l))}</div>
             <div className="mx-3 mb-1" style={{ borderTop: '1px solid rgba(236,219,182,0.12)' }} />
-            <div
-              className="px-3 pt-2.5 pb-1.5 text-[11px] font-semibold uppercase"
-              style={{
-                color: AI_LINKS.some(l => isActive(l.href, pathname)) ? '#ECDBB6' : 'rgba(236,219,182,0.5)',
-                letterSpacing: '0.1em',
-              }}
-            >
-              AI
-            </div>
-            <div className="space-y-0.5 mb-2">{aiLinks.map(l => linkRow(l))}</div>
+            {aiLinks.length > 0 && (() => {
+              const isOpen = open.includes(AI_SECTION.key)
+              const hasActive = aiLinks.some(l => isActive(l.href, pathname))
+              return (
+                <div className="mb-0.5">
+                  <button
+                    onClick={() => toggle(AI_SECTION.key)}
+                    className="w-full flex items-center gap-2 px-3 pt-2.5 pb-1.5 text-[11px] font-semibold uppercase transition-colors"
+                    style={{
+                      color: hasActive ? '#ECDBB6' : 'rgba(236,219,182,0.5)',
+                      letterSpacing: '0.1em',
+                    }}
+                  >
+                    <span className="rounded-full shrink-0" style={{ width: 7, height: 7, background: AI_SECTION.color }} />
+                    <span className="flex-1 text-left truncate">{AI_SECTION.header}</span>
+                    <span className="text-[10px]" style={{ opacity: 0.6 }}>{isOpen ? '▾' : '▸'}</span>
+                  </button>
+                  {isOpen && <div className="pb-1">{aiLinks.map(l => linkRow(l, true))}</div>}
+                </div>
+              )
+            })()}
             <div className="mx-3 mb-1" style={{ borderTop: '1px solid rgba(236,219,182,0.12)' }} />
             {segments.map(s => {
               const isOpen = open.includes(s.key)

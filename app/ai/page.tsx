@@ -50,7 +50,9 @@ export default async function AiHubPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-xl font-bold" style={{ color: INK }}>AI</h1>
+        {/* Named to match the sidebar section it sits under. The route stays
+            /ai — renaming it would break every stored role path pointing at it. */}
+        <h1 className="text-xl font-bold" style={{ color: INK }}>Intelligence</h1>
         <p className="text-sm cd-muted">
           Everything the assistant does for {config.business.name}, and what it costs to run.
         </p>

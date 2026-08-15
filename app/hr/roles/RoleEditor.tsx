@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { ALL_TABS, ALWAYS_ALLOWED, PINNED, AI_LINKS, SEGMENTS, segmentOf } from '@/lib/nav-catalogue'
+import { ALL_TABS, ALWAYS_ALLOWED, PINNED, AI_LINKS, AI_SECTION, SEGMENTS, segmentOf } from '@/lib/nav-catalogue'
 import { createRole, updateRole, deleteRole } from './actions'
 import { OVERFLOW_GROUP, MAX_GROUPS, type NavLayout } from '@/lib/nav-layout'
 
@@ -26,7 +26,7 @@ export interface EditableRole {
 // "what will this person see?"
 const GROUPS: { key: string; header: string; color: string; tabs: { href: string; label: string }[] }[] = [
   { key: 'pinned', header: 'Pinned', color: '#B14919', tabs: PINNED },
-  { key: 'ai', header: 'AI', color: '#98A86B', tabs: AI_LINKS },
+  { key: AI_SECTION.key, header: AI_SECTION.header, color: AI_SECTION.color, tabs: AI_LINKS },
   ...SEGMENTS.map(s => ({
     key: s.key, header: s.header, color: s.color,
     tabs: s.groups.flatMap(g => g.links),

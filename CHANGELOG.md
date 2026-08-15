@@ -411,6 +411,14 @@ The agentic and marketing cycle. Planned scope is in
   [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
 
 ### Changed
+- **The sidebar's AI section is now "Intelligence", and it collapses.** It was the one heading that
+  always had its four links on show while every business segment folded away, so it took up permanent
+  room in a sidebar the rest of which is tidy. It now behaves like the segments: shut by default, and
+  opening itself when you are on a page it holds, so nobody lands on a screen whose own menu is closed.
+  The name and colour now live in `lib/nav-catalogue.ts` rather than being hardcoded separately in the
+  sidebar and the Roles screen — those had already drifted into two copies of the same word, which is
+  how a section ends up called one thing where you read it and another where you grant access to it.
+  The `/ai` route is unchanged: renaming it would invalidate every stored role path pointing at it.
 - **The Action Inbox stops loading customer history in order to count it.** It read every customer
   *with* every appointment they had ever had and a year of transactions, then counted the rows in
   JavaScript. Four facts were actually wanted — when they last came, whether anything is booked ahead,

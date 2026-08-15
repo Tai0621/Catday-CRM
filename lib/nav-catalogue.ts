@@ -18,7 +18,19 @@ export const PINNED: NavLink[] = [
   { href: '/actions', label: 'Action Inbox', icon: 'inbox' },
 ]
 
-/** AI is one place rather than scattered through the segments. */
+/**
+ * AI is one place rather than scattered through the segments.
+ *
+ * Header and colour live here, not in the Nav and the role editor separately —
+ * those had already drifted into two hardcoded copies of the same word, which
+ * is how a section ends up named one thing in the sidebar and another in the
+ * screen that grants access to it.
+ *
+ * The exports keep the AI_ prefix because that is what the section IS;
+ * "Intelligence" is what the owner reads.
+ */
+export const AI_SECTION = { key: 'ai', header: 'Intelligence', color: '#98A86B' } as const
+
 export const AI_LINKS: NavLink[] = [
   { href: '/ai', label: 'Overview', icon: 'ai' },
   { href: '/ask', label: 'Assistant', icon: 'ai' },
