@@ -4,8 +4,15 @@ import { spawn } from 'node:child_process'
 // Run every verify-*.mjs and summarise. Release gate, not a dev loop: it is
 // slow on purpose and reports a line per suite so a failure is attributable.
 //
-//   source .env.demo.sh && npx next start -p 3100 &
-//   source .env.demo.sh && node scripts/run-all-verify.mjs
+//   set -a && . ./.env && set +a && . ./.env.demo.sh   # BOTH, in this order
+//   npx next start -p 3100 &
+//   node scripts/run-all-verify.mjs
+//
+// Export `.env` into the SHELL before starting the server. `next start` here
+// does not load it into the server process the way `next dev` does — its
+// startup banner has no "Environments:" line — so the server comes up with no
+// APP_PASSWORD and rejects every login with `?error=1`. Sourcing .env.demo.sh
+// afterwards keeps the demo database pointed somewhere safe to break.
 //
 // Sequential by design. These suites seed and delete shared rows in one demo
 // database; running them concurrently makes them fail each other and the

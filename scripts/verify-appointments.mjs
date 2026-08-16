@@ -57,6 +57,7 @@ async function cleanup() {
     exec(`DELETE FROM "Customer" WHERE id LIKE '${MARK}%'`),
   ])
 }
+class SkipRest extends Error {}
 
 try {
   await cleanup()
@@ -336,6 +337,24 @@ try {
   }
   check('found the register action', !!createId)
 
+  // Stop here rather than firing the registrations at a null action id.
+  //
+  // `$$RSC_SERVER_ACTION` symbols only exist in a Turbopack DEV build
+  // (AGENTS.md technique B), so against `next start` this id is always null,
+  // every register() call is a no-op, and the first assertion that reads the
+  // customer back died on `madeCust[0]` being undefined — a TypeError twenty
+  // lines from the real cause, which also skipped the remaining checks and made
+  // an environment mismatch look like a broken booking flow. It cost a release
+  // review to diagnose. Fail as a sentence instead.
+  if (!createId) {
+    console.log('\n  ! The registration checks need `node scripts/dev-turso-demo.mjs`.')
+    console.log('    They drive a server action by its dev-build symbol, which a')
+    console.log('    production build does not ship. Skipped, not passed.')
+    console.log(`\n${pass}/${total} passed (registration section skipped)`)
+    process.exitCode = 1
+    throw new SkipRest()
+  }
+
   const register = async payload => {
     const r = await fetch(`${BASE}/appointments/new`, {
       method: 'POST',
@@ -374,6 +393,9 @@ try {
 
   console.log(`\n${pass}/${total} passed`)
   if (pass !== total) process.exitCode = 1
+} catch (e) {
+  // A deliberate early stop is not a crash. Anything else still is.
+  if (!(e instanceof SkipRest)) throw e
 } finally {
   await cleanup()
   console.log('cleaned up')
