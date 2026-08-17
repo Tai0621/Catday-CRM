@@ -285,6 +285,33 @@ a period alongside the record would be a second source of truth that drifts the 
 corrects a date, which is precisely the failure Finance → Records exists to prevent. The blob pathname
 carries the period too, but only as storage layout — the app always re-derives.
 
+## Start local servers through the launchers, never by hand
+
+```bash
+node scripts/start-demo.mjs      # production build (npm run build first)
+node scripts/dev-turso-demo.mjs  # dev build, for the technique-B suites
+node scripts/run-all-verify.mjs  # every verify-*.mjs, with a login preflight
+```
+
+`next start` does **not** load `.env` into the server process the way `next dev`
+does — its banner has no `Environments:` line — so a hand-started server runs on
+whatever the shell was carrying. And `.env.demo.sh` carries its own
+`APP_PASSWORD` (the demo deployment's, not production's), while
+`dev-turso-demo.mjs` deliberately uses a throwaway `dev-local`. Three possible
+passwords, and which one a process got depended entirely on how it was launched.
+
+That produced a full day of phantom failures: `verify-appointments` "crashed",
+`verify-txn-reversal` scored 0/12, nine suites looked broken. Nothing was
+broken. They could not sign in. Run through the launchers and
+`scripts/load-env.mjs` decides for both sides; `run-all-verify` refuses to start
+on a login it cannot make, and prints password fingerprints (never values) so a
+mismatch is one line rather than a day.
+
+**`.env.demo.sh` had a line written in UTF-16** — PowerShell's `Add-Content` and
+`>>` default to it. `grep` could not see that line, so the file looked like it
+had no `APP_PASSWORD`, while bash `source` executed it perfectly well. If you
+append to a `.env*` file from PowerShell, pass `-Encoding utf8`.
+
 ## Verification philosophy — every non-trivial change ships with a script that proves it
 
 This codebase does not consider a feature done because it compiles and "looks right" in a screenshot.

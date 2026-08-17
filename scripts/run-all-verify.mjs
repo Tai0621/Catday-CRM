@@ -1,18 +1,28 @@
 import { readdirSync } from 'node:fs'
 import { spawn } from 'node:child_process'
+import { demoEnv } from './load-env.mjs'
+
+// The suites inherit THIS environment, and they load `.env` with dotenv, which
+// does not overwrite what is already set — so whatever is decided here wins for
+// every one of them. That is the point: the server and the scripts must agree
+// on the password, and the only way to guarantee it is to derive both from the
+// same loader.
+const ENV = demoEnv()
 
 // Run every verify-*.mjs and summarise. Release gate, not a dev loop: it is
 // slow on purpose and reports a line per suite so a failure is attributable.
 //
-//   set -a && . ./.env && set +a && . ./.env.demo.sh   # BOTH, in this order
-//   npx next start -p 3100 &
+//   node scripts/start-demo.mjs &          # production build, demo database
 //   node scripts/run-all-verify.mjs
 //
-// Export `.env` into the SHELL before starting the server. `next start` here
-// does not load it into the server process the way `next dev` does — its
-// startup banner has no "Environments:" line — so the server comes up with no
-// APP_PASSWORD and rejects every login with `?error=1`. Sourcing .env.demo.sh
-// afterwards keeps the demo database pointed somewhere safe to break.
+// Start the server through start-demo.mjs, not by hand. `next start` does not
+// load .env into the server process the way `next dev` does — its banner has no
+// "Environments:" line — so a hand-started server inherits whatever the shell
+// was carrying. That has already produced a server whose APP_PASSWORD matched
+// NO file on disk, rejecting every login while the suites sent the right one.
+// start-demo.mjs builds the environment explicitly and prints a fingerprint of
+// the password; this runner prints its own on mismatch, so the two can be
+// compared in one glance.
 //
 // Sequential by design. These suites seed and delete shared rows in one demo
 // database; running them concurrently makes them fail each other and the
@@ -46,8 +56,57 @@ const suites = readdirSync('scripts')
   .map(f => f.replace(/^verify-|\.mjs$/g, ''))
   .filter(s => !only || only.includes(s))
 
+// Preflight: can we log in at all?
+//
+// Without this the runner cheerfully reports twenty broken features when the
+// real fault is one password. A server started outside scripts/start-demo.mjs
+// can inherit a stale APP_PASSWORD that matches no file on disk, and every
+// suite then fails on "no auth cookie" — which reads as a broken app.
+{
+  const base = ENV.VERIFY_BASE ?? 'http://localhost:3100'
+  const attempt = async pw => {
+    const r = await fetch(`${base}/api/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ password: pw ?? '' }).toString(), redirect: 'manual',
+    }).catch(() => null)
+    return { r, ok: (r?.headers.get('set-cookie') ?? '').includes('auth=') }
+  }
+
+  let { r: res, ok } = await attempt(ENV.APP_PASSWORD)
+
+  // A dev server is a different world: scripts/dev-turso-demo.mjs deliberately
+  // authenticates with a throwaway `dev-local` rather than the real password, so
+  // the suites — which send the one from .env — could never sign in against it.
+  // That is why the dev-only suites have been unverifiable rather than failing.
+  // Detect it and adopt it, instead of reporting nine broken features.
+  if (!ok) {
+    const devTry = await attempt('dev-local')
+    if (devTry.ok) {
+      ENV.APP_PASSWORD = 'dev-local'
+      ok = true
+      console.log('· dev server detected — using its local password for every suite\n')
+    } else {
+      res = res ?? devTry.r
+    }
+  }
+
+  const where = res?.headers.get('location') ?? ''
+  if (!ok) {
+    const { createHash } = await import('node:crypto')
+    console.error(`\nCannot log in — refusing to run, because every suite would report a false failure.\n`)
+    if (!res) console.error(`  The server at ${base} did not answer. Start it first.`)
+    else if (where.includes('error=rate')) console.error(`  Rate-limited: eight failed logins inside fifteen minutes. Restart the server to clear it.`)
+    else console.error(`  The server rejected this password (${where || res.status}).`)
+    const pw = ENV.APP_PASSWORD
+    console.error(`\n  This script's APP_PASSWORD fingerprint: ${pw ? createHash('sha256').update(pw).digest('hex').slice(0, 10) : '(unset)'}`)
+    console.error(`  Start the server with:  node scripts/start-demo.mjs`)
+    console.error(`  It prints its own fingerprint. If the two differ, the server has stale env.\n`)
+    process.exit(1)
+  }
+}
+
 const run = name => new Promise(resolve => {
-  const child = spawn('node', [`scripts/verify-${name}.mjs`], { env: process.env })
+  const child = spawn('node', [`scripts/verify-${name}.mjs`], { env: ENV })
   let out = ''
   const started = Date.now()
   child.stdout.on('data', d => { out += d })
