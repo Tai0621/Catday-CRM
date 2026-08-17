@@ -8,7 +8,7 @@ Versioning policy — what MAJOR / MINOR / PATCH mean for this product — is in
 
 ---
 
-## [1.2.0] — Unreleased
+## [1.2.0] — 2026-08-16
 
 The agentic and marketing cycle. Planned scope is in
 [docs/AGENTIC-ROADMAP.md](docs/AGENTIC-ROADMAP.md) (Track C — Agentic OS, Track M — Marketing).
