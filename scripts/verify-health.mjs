@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for Round 4 health & feeding (boarding SOPs). Seeds three cats in

@@ -8,6 +8,7 @@
 // Run:  VERIFY_BASE=<demo url> node --env-file=<demo env> scripts/verify-customer-duplicate.mjs
 // NEVER run this against production — it seeds and deletes Customer rows.
 import 'dotenv/config'
+import './_guard.mjs'
 
 const BASE = process.env.VERIFY_BASE ?? 'http://localhost:3100'
 const RAW = process.env.DATABASE_URL, DBTOKEN = process.env.DATABASE_AUTH_TOKEN

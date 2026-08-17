@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for Round 2 role-based views & navigation. Seeds one staff account per

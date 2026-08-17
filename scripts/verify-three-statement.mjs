@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for the three-statement model. Seeds a small, self-consistent 2025 book,
@@ -91,10 +92,22 @@ try {
   check('wallet liability auto = 300', numOf(cell(bs, 'Customer wallet balances')) === 300, cell(bs, 'Customer wallet balances'))
   check('retained earnings (system) = −200', numOf(cell(bs, 'Retained earnings — recorded in system')) === -200, cell(bs, 'Retained earnings — recorded in system'))
   check('cash keyed = 600', numOf(cell(bs, 'Cash & bank')) === 600, cell(bs, 'Cash & bank'))
-  check('total assets = 1100', numOf(cell(bs, 'TOTAL ASSETS')) === 1100, cell(bs, 'TOTAL ASSETS'))
   check('total liabilities = 300', numOf(cell(bs, 'TOTAL LIABILITIES')) === 300, cell(bs, 'TOTAL LIABILITIES'))
   check('total equity = 800', numOf(cell(bs, 'TOTAL EQUITY')) === 800, cell(bs, 'TOTAL EQUITY'))
-  check('balance sheet BALANCES (check = 0)', numOf(cell(bs, 'Balance check (Assets − L − E)')) === 0, cell(bs, 'Balance check (Assets − L − E)'))
+
+  // TOTAL ASSETS and the balance check are measured as MOVEMENT, not as a
+  // figure. The cells above are scoped to asOf=2025-12 and belong to this test
+  // alone, but the totals also carry things no period filter touches — chiefly
+  // inventory at cost, which on the demo is nearly twenty thousand ringgit of
+  // real stock. Asserting "TOTAL ASSETS = 1100" therefore only ever held on an
+  // empty database, and read as a broken balance sheet the moment the demo had
+  // products in it.
+  //
+  // What the feature actually promises is that a balanced set of entries leaves
+  // the sheet balanced — whatever was already on it. So: read, remove the seed,
+  // read again.
+  // Measured at the very end, after every check that still needs the seed.
+  const withSeed = { assets: numOf(cell(bs, 'TOTAL ASSETS')), check: numOf(cell(bs, 'Balance check (Assets − L − E)')) }
 
   // ── Cash Flow (YTD 2025) ──
   const cf = await csvOf('/finance/cash-flow/export?to=2025-12')
@@ -102,6 +115,17 @@ try {
   check('cash flow net change = 600', numOf(cell(cf, 'Net change in cash')) === 600, cell(cf, 'Net change in cash'))
   check('cash flow closing (computed) = 600', numOf(cell(cf, 'Closing cash (computed)')) === 600, cell(cf, 'Closing cash (computed)'))
   check('cash flow TIES to balance sheet (tie = 0)', numOf(cell(cf, 'Tie check')) === 0, cell(cf, 'Tie check'))
+
+  // ── the totals, as movement ──
+  // Last, because it removes the seed the checks above depend on.
+  await cleanup() // idempotent; the `finally` runs it again harmlessly
+  const bare = await csvOf('/finance/balance-sheet/export?asOf=2025-12')
+  const without = { assets: numOf(cell(bare, 'TOTAL ASSETS')), check: numOf(cell(bare, 'Balance check (Assets − L − E)')) }
+
+  check('the seeded entries add exactly their own value to total assets',
+    withSeed.assets - without.assets === 1100, `${withSeed.assets} seeded, ${without.assets} bare`)
+  check('…and leave the sheet no less balanced than they found it',
+    withSeed.check - without.check === 0, `check moved ${without.check} → ${withSeed.check}`)
 
   // ── auth guard ──
   const anon = await fetch(`${BASE}/finance/balance-sheet/export?asOf=2025-12`, { redirect: 'manual' })

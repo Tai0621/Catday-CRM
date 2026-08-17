@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // E2E for the Business Settings config seam (lib/config.ts):
 //  - default path: an un-seeded Setting table renders Cat Day's built-in values

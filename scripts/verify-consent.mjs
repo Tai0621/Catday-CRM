@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // Track A / A4 — consent provenance + public privacy notice. Drives the Google
 // Forms webhook (the reachable path through resolveCustomer → consentUpdate) to

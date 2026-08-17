@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // M2 — marketing attribution.
 // The claim under test is not "revenue appears" but "revenue appears ONCE".

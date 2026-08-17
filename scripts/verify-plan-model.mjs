@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // Verify the driver-based plan reproduces the owner's Excel Year-1 model when
 // fed the Excel's inputs (50 rooms, RM88/night, 3×4×RM128 grooming, util

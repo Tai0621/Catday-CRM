@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for drag-to-reorder: saving a section's order changes the row order the

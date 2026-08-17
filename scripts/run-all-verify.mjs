@@ -8,6 +8,7 @@ import { demoEnv } from './load-env.mjs'
 // on the password, and the only way to guarantee it is to derive both from the
 // same loader.
 const ENV = demoEnv()
+let isDevServer = false
 
 // Run every verify-*.mjs and summarise. Release gate, not a dev loop: it is
 // slow on purpose and reports a line per suite so a failure is attributable.
@@ -83,6 +84,7 @@ const suites = readdirSync('scripts')
     const devTry = await attempt('dev-local')
     if (devTry.ok) {
       ENV.APP_PASSWORD = 'dev-local'
+      isDevServer = true
       ok = true
       console.log('· dev server detected — using its local password for every suite\n')
     } else {
@@ -105,9 +107,66 @@ const suites = readdirSync('scripts')
   }
 }
 
+// Does the SERVER have an AI key? Asked of the server, not of ENV, because
+// start-demo.mjs can inject a placeholder that ENV knows nothing about.
+//
+// Two suites want opposite answers and cannot both run against one server:
+// verify-copilot needs the assistant to read as configured so the budget and
+// kill-switch paths in front of the model call are reachable, and
+// verify-daily-brief needs it NOT configured so it can prove a missing key
+// skips the brief instead of faking one. Whichever is contradicted is skipped
+// with its reason, rather than failing and being explained away every run.
+let serverHasAi = false
+try {
+  const base = ENV.VERIFY_BASE ?? 'http://localhost:3100'
+  const login = await fetch(`${base}/api/login`, {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ password: ENV.APP_PASSWORD ?? '' }).toString(), redirect: 'manual',
+  })
+  const cookie = (login.headers.get('set-cookie') ?? '').split(';')[0]
+  const probe = await (await fetch(`${base}/api/ask?path=/`, { headers: { cookie } })).json()
+  serverHasAi = probe?.reason !== 'no-key'
+} catch { /* leave false — the copilot suite will report the detail either way */ }
+
+// Suites that cannot pass HERE, and why. Reported as SKIP with the reason
+// rather than FAIL: a red line that means "wrong server" or "no token" trains
+// people to ignore red lines, which is worse than not running the suite.
+const DEV_ONLY = new Set([
+  'txn-delete', 'txn-reversal', 'statement-overrides', 'statement-rows',
+  'hidden-rows', 'schema-fixes', 'row-reorder', 'appointments', 'booking-lanes',
+  'scenario', 'dev-only',
+])
+const NEEDS_CONFIG = {
+  consent: 'GOOGLE_FORMS_SECRET',
+  'media-live': 'BLOB_READ_WRITE_TOKEN',
+}
+
+function skipReason(name) {
+  if (DEV_ONLY.has(name) && !isDevServer) {
+    return 'needs `node scripts/dev-turso-demo.mjs` (dev-only action ids)'
+  }
+  const key = NEEDS_CONFIG[name]
+  if (key && !ENV[key]) return `needs ${key} in .env`
+  if (name === 'copilot' && !serverHasAi) {
+    return 'needs a server with an AI key — `start-demo.mjs --ai-placeholder`'
+  }
+  if (name === 'daily-brief' && serverHasAi) {
+    return 'needs a server with NO AI key — drop --ai-placeholder'
+  }
+  return null
+}
+
+// Selecting exactly one suite streams its full output — the usual reason to
+// name one is to read every line of why it fails.
+const solo = suites.length === 1
+
 const run = name => new Promise(resolve => {
-  const child = spawn('node', [`scripts/verify-${name}.mjs`], { env: ENV })
+  const child = spawn('node', [`scripts/verify-${name}.mjs`], { env: ENV, stdio: solo ? 'inherit' : 'pipe' })
   let out = ''
+  if (solo) {
+    child.on('close', () => resolve({ name, verdict: 'DONE', detail: '(streamed above)' }))
+    return
+  }
   const started = Date.now()
   child.stdout.on('data', d => { out += d })
   child.stderr.on('data', d => { out += d })
@@ -127,13 +186,23 @@ const run = name => new Promise(resolve => {
 
 const results = []
 for (const s of suites) {
+  const why = skipReason(s)
+  if (why && !solo) {
+    results.push({ name: s, verdict: 'SKIP', detail: why })
+    console.log(`SKIP    ${s.padEnd(26)} ${why}`)
+    continue
+  }
   const r = await run(s)
   results.push(r)
   console.log(`${r.verdict.padEnd(7)} ${s.padEnd(26)} ${r.detail}`)
 }
 
 const by = v => results.filter(r => r.verdict === v)
-console.log(`\n${by('PASS').length} pass · ${by('FAIL').length} fail · ${by('CRASH').length} crash · ${by('TIMEOUT').length} timeout · ${results.length} total`)
+console.log(`\n${by('PASS').length} pass · ${by('FAIL').length} fail · ${by('CRASH').length} crash · ${by('TIMEOUT').length} timeout · ${by('SKIP').length} skipped · ${results.length} total`)
+if (by('SKIP').length) {
+  console.log(`\nSkipped (not run, not passed):`)
+  for (const r of by('SKIP')) console.log(`  ${r.name} — ${r.detail}`)
+}
 if (by('FAIL').length || by('CRASH').length || by('TIMEOUT').length) {
   console.log('\nNot passing:')
   for (const r of [...by('FAIL'), ...by('CRASH'), ...by('TIMEOUT')]) {

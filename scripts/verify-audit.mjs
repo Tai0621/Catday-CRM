@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for Phase 2: the audit trail view + access control. Seeds AuditLog rows

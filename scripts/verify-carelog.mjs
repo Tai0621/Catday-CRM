@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for Round 5 commit 3: structured daily log + SOP care tasks + red-flag

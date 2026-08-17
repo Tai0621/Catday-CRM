@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // C1 — the copilot dock.
 //

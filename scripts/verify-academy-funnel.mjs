@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import { readFileSync } from 'node:fs'
 
 // M7 — the Academy as a funnel.

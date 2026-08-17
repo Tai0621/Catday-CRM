@@ -2,6 +2,26 @@
 // new cat detail + assessment pages render, then removes the temp row.
 // Usage: node scripts/verify-ops.mjs [baseUrl]   (default http://localhost:3100)
 import 'dotenv/config'
+import './_guard.mjs'
+
+// These two suites report with inline ✓/✗ rather than a check() helper, so they
+// had no score line and the release runner graded them as crashes. Tally the
+// marks as they are printed and emit one — cheaper and less risky than
+// rewriting two working suites, and it makes them countable like the rest.
+let __ticks = 0, __crosses = 0
+const __log = console.log
+console.log = (...a) => {
+  const s = a.map(String).join(' ')
+  __ticks += (s.match(/✓/g) ?? []).length
+  __crosses += (s.match(/✗/g) ?? []).length
+  __log(...a)
+}
+process.on('exit', () => {
+  const total = __ticks + __crosses
+  if (total > 0) __log(`\n${__ticks}/${total} checks passed`)
+  if (__crosses > 0) process.exitCode = 1
+})
+
 import { createHash } from 'crypto'
 
 const BASE = process.argv[2] ?? 'http://localhost:3100'
@@ -28,7 +48,10 @@ const login = await fetch(`${BASE}/api/login`, {
 const cookie = (login.headers.get('set-cookie') ?? '').split(',').map(s => s.trim()).find(s => s.startsWith('auth='))?.split(';')[0] ?? ''
 const get = async path => {
   const r = await fetch(BASE + path, { headers: { Cookie: cookie }, redirect: 'manual' })
-  return { status: r.status, text: await r.text() }
+  // React's SSR splits adjacent text nodes with <!-- --> markers, so
+  // 'default cycle 18d' is never literally present. Strip them, as the other
+  // suites do — otherwise a rendered value reads as a missing one.
+  return { status: r.status, text: (await r.text()).replace(/<!--[\s\S]*?-->/g, '') }
 }
 
 // 1) find a customer to attach to
@@ -54,7 +77,11 @@ try {
   const assess = await get(`/cats/${catId}/assess`)
   console.log(`GET /cats/[id]/assess -> ${assess.status} ` +
     `form:${assess.text.includes('Groomer Assessment') ? '✓' : '✗'} ` +
-    `cycleDefault:${assess.text.includes('default cycle 18d') ? '✓' : '✗'}`)
+    // The <select> arrives in the streamed RSC payload, not as HTML, and there
+    // the label is split across JSON tokens: ["Long"," hair (default cycle ",18,"d)"].
+    // A literal 'default cycle 18d' therefore never appears however the
+    // comments are stripped. Match the number with separators allowed between.
+    `cycleDefault:${/default cycle\D{0,8}18\D{0,8}d\)/.test(assess.text) ? '✓' : '✗'}`)
 
   const appts = await get('/appointments')
   console.log(`GET /appointments -> ${appts.status}`)

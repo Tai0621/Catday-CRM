@@ -1,3 +1,4 @@
+import './_guard.mjs'
 // Runs the verify scripts that CANNOT work against a deployed build.
 //
 // Ten scripts drive server actions with AGENTS.md technique B — scraping

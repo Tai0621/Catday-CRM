@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // The diary: an agenda that does not need hunting, registering a walk-in
 // without leaving the booking, and cancelling or moving from the row.

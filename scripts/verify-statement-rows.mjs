@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // E2E for Excel-style statement editing: add a custom row, batch-save cells
 // (Edit → Save cycle), figures land in totals + CSV, delete the row cleanly.

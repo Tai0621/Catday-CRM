@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // E2E for Phase 1 commit 2: login rate-limiting (count failures per IP, block
 // after the threshold, clear on success). Uses a unique X-Forwarded-For so the

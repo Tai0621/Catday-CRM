@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // C2 — write tools behind a confirm gate.
 //

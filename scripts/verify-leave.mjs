@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for HR 2 — leave & calendar. Seeds two staff: one with a PENDING request,

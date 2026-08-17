@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // E2E for Phase 3 commit 1: the public health probe + the backup cron's
 // auth/graceful-degrade. (Error boundaries are build-verified.)

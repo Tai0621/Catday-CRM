@@ -293,6 +293,32 @@ node scripts/dev-turso-demo.mjs  # dev build, for the technique-B suites
 node scripts/run-all-verify.mjs  # every verify-*.mjs, with a login preflight
 ```
 
+**A complete gate is two runs**, because some suites need a dev build and some
+need the opposite AI configuration:
+
+```bash
+npm run build && node scripts/start-demo.mjs --ai-placeholder &
+node scripts/run-all-verify.mjs        # 59 pass, the rest SKIP with a reason
+
+node scripts/dev-turso-demo.mjs &      # then the dev half
+ONLY=txn-delete,txn-reversal,statement-overrides,statement-rows,hidden-rows,\
+schema-fixes,row-reorder,appointments,booking-lanes,scenario,dev-only,daily-brief \
+  node scripts/run-all-verify.mjs      # 12 pass
+```
+
+The runner SKIPS rather than fails a suite it cannot fairly run, and says why:
+a dev-only suite on a production build, a suite needing `GOOGLE_FORMS_SECRET` or
+`BLOB_READ_WRITE_TOKEN`, or the two that want opposite answers about the AI key
+(`verify-copilot` needs one configured so the budget ceiling in front of the
+model call is reachable; `verify-daily-brief` needs none, to prove a missing key
+skips the brief instead of faking it). A red line that means "wrong server"
+teaches people to ignore red lines.
+
+**Verification scripts refuse to run against production.** `scripts/_guard.mjs`
+is imported by every one of them and exits if `DATABASE_URL` names the live
+database — because `.env` holds production, so the default for a script run by
+hand was the dangerous one.
+
 `next start` does **not** load `.env` into the server process the way `next dev`
 does — its banner has no `Environments:` line — so a hand-started server runs on
 whatever the shell was carrying. And `.env.demo.sh` carries its own

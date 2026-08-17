@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for Licenses & Renewals feeding the Action Inbox. Seeds three licences —

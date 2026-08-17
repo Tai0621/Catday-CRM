@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import { readFileSync } from 'node:fs'
 
 // M3 — Content Studio.

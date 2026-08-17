@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import { execSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'

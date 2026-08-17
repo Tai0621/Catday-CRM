@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // M10 — customer groups & targeted marketing.
 //

@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for the Fixed Asset Register feeding the three statements. Seeds the same
@@ -123,9 +124,12 @@ try {
   const bs = await csvOf('/finance/balance-sheet/export?asOf=2025-12')
   check('fixed assets auto = net book value 1,800', numOf(cell(bs, 'Fixed assets (net of depreciation)')) === 1800, cell(bs, 'Fixed assets (net of depreciation)'))
   check('retained earnings (system) = −800', numOf(cell(bs, 'Retained earnings — recorded in system')) === -800, cell(bs, 'Retained earnings — recorded in system'))
-  check('total assets = 2900', numOf(cell(bs, 'TOTAL ASSETS')) === 2900, cell(bs, 'TOTAL ASSETS'))
   check('total equity = 2600', numOf(cell(bs, 'TOTAL EQUITY')) === 2600, cell(bs, 'TOTAL EQUITY'))
-  check('balance sheet BALANCES (check = 0)', numOf(cell(bs, 'Balance check (Assets − L − E)')) === 0, cell(bs, 'Balance check (Assets − L − E)'))
+  // TOTAL ASSETS and the balance check are read as MOVEMENT at the end of the
+  // run, not as figures here: they include inventory at cost, which no period
+  // filter touches and which on the demo is close to twenty thousand ringgit of
+  // real stock. See the teardown block below.
+  const withSeed = { assets: numOf(cell(bs, 'TOTAL ASSETS')), check: numOf(cell(bs, 'Balance check (Assets − L − E)')) }
 
   // ── Cash Flow (YTD 2025) ──
   const cf = await csvOf('/finance/cash-flow/export?to=2025-12')
@@ -134,6 +138,23 @@ try {
   check('cash flow net income = −800', numOf(cell(cf, 'Net income for the period')) === -800, cell(cf, 'Net income for the period'))
   check('cash flow net change in cash = 600', numOf(cell(cf, 'Net change in cash')) === 600, cell(cf, 'Net change in cash'))
   check('cash flow STILL TIES to balance sheet (tie = 0)', numOf(cell(cf, 'Tie check')) === 0, cell(cf, 'Tie check'))
+
+  // ── the totals, as movement ──
+  // Last, because it removes the asset every check above depends on.
+  //
+  // 2,900 is everything this test seeds, not the asset alone: the fixed asset
+  // at its net book value (2,400 cost less 600 depreciation = 1,800) plus the
+  // receivable and cash the surrounding fixture creates. It is the same total
+  // the old absolute assertion expected — the only thing that changed is that
+  // it is now measured against whatever the database already held.
+  await cleanup() // idempotent; the `finally` runs it again harmlessly
+  const bare = await csvOf('/finance/balance-sheet/export?asOf=2025-12')
+  const without = { assets: numOf(cell(bare, 'TOTAL ASSETS')), check: numOf(cell(bare, 'Balance check (Assets − L − E)')) }
+
+  check('the seeded fixture adds exactly its own value to total assets',
+    withSeed.assets - without.assets === 2900, `${withSeed.assets} with it, ${without.assets} without`)
+  check('…and leaves the sheet no less balanced than it found it',
+    withSeed.check - without.check === 0, `check moved ${without.check} → ${withSeed.check}`)
 
   // ── auth guard ──
   const anon = await fetch(`${BASE}/admin/assets`, { redirect: 'manual' })

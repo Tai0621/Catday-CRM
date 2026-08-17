@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // Track A / A2 — customer data export (right of access / portability). Seeds a

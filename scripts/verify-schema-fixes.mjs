@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for the schema gap-fixes:
@@ -79,10 +80,26 @@ try {
   if (!cookie) throw new Error('no auth cookie')
 
   // ── inventory-at-cost on the balance sheet (5 × RM12 = RM60) ──
+  //
+  // Read as a DELTA. The demo carries nearly twenty thousand ringgit of real
+  // stock, so "inventory = 60" only held on an empty database — and reported a
+  // broken balance sheet the moment the shop had products on the shelf. The
+  // claim being made is that a costed product contributes quantity × cost, and
+  // that is what the difference measures.
   const nowMonth = new Date().toISOString().slice(0, 7)
-  const bs = await (await fetch(`${BASE}/finance/balance-sheet/export?asOf=${nowMonth}`, { headers: { Cookie: cookie } })).text()
-  const invRow = bs.split(/\r?\n/).find(l => l.startsWith('Inventory (at cost)')) ?? ''
-  check('inventory auto = 60 (5 × RM12 cost)', invRow.split(',')[1] === '60', invRow)
+  const inventoryNow = async () => {
+    const csv = await (await fetch(`${BASE}/finance/balance-sheet/export?asOf=${nowMonth}`, { headers: { Cookie: cookie } })).text()
+    const row = csv.split(/\r?\n/).find(l => l.startsWith('Inventory (at cost)')) ?? ''
+    return Number(row.split(',')[1])
+  }
+  // Zeroing the stock rather than deleting the product: TransactionLine holds a
+  // foreign key to it, and the checks below still need the sale intact.
+  const invWith = await inventoryNow()
+  await pipe([exec(`UPDATE Product SET stockQty = 0 WHERE id = ?`, [t(prodId)])])
+  const invWithout = await inventoryNow()
+  await pipe([exec(`UPDATE Product SET stockQty = 5 WHERE id = ?`, [t(prodId)])])
+  check('a costed product adds quantity × cost to inventory',
+    invWith - invWithout === 60, `${invWith} with 5 in stock, ${invWithout} with none`)
 
   // ── deleting the sale re-opens the appointment ──
   check('appointment starts paid', String(await scalar(`SELECT paid FROM Appointment WHERE id='${apptId}'`)) === '1')

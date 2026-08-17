@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // Track B / B1 — white-label seam. Overrides the business name, accent colour and
 // logo via Setting rows, then confirms those flow through getConfig() into the

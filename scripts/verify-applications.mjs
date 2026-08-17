@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for HR 4 — recruiting. Drives the REAL public careers form (a plain POST,

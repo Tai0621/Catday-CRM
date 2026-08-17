@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // M8 — Brand voice profile.
 // The voice is a config seam feeding every text generator, so what has to hold

@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // C4 — Action Inbox message variants.
 // What has to hold:

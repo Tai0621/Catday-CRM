@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // Track A / A1 — verifies the orphaned Cat.photos column is gone and that cat
 // pages still render without it. Seeds a customer + cat, logs in as manager,

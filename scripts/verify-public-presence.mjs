@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // M6 — public presence page, booking requests and the funnel.
 //

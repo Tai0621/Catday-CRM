@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for the two-lane booking form: price & end time must be derived on the
@@ -71,8 +72,12 @@ try {
           VALUES (?,?,?,?,?,1,951,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, [t(svcBoard), t(`${MARK} Night`), t('Boarding'), i(1440), f(80)]),
     exec(`INSERT INTO Room (id,name,type,status,sortOrder,isActive,createdAt,updatedAt)
           VALUES (?,?,?,'Available',990,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, [t(roomA), t(`${MARK} Room A`), t('Standard')]),
-    exec(`INSERT INTO Room (id,name,type,status,sortOrder,isActive,createdAt,updatedAt)
-          VALUES (?,?,?,'Available',991,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, [t(roomB), t(`${MARK} Room B`), t('Suite')]),
+    // capacity 1 ON PURPOSE: rooms are filtered by whether they are FULL, not by
+    // whether anyone is in them, and Room.capacity defaults to 2. Seeded without
+    // it, one cat left a free bed and the room was correctly still offered —
+    // which this test then read as a broken capacity filter. The app was right.
+    exec(`INSERT INTO Room (id,name,type,status,capacity,sortOrder,isActive,createdAt,updatedAt)
+          VALUES (?,?,?,'Available',1,991,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, [t(roomB), t(`${MARK} Room B`), t('Suite')]),
     exec(`INSERT INTO Room (id,name,type,status,sortOrder,isActive,createdAt,updatedAt)
           VALUES (?,?,?,'Available',992,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`, [t(roomC), t(`${MARK} Room C`), t('Suite')]),
     exec(`INSERT INTO Service (id,name,category,durationMin,price,active,sortOrder,createdAt,updatedAt)

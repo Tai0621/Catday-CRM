@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for HR 1 — time clock. Seeds a staff member with an open (still-in) punch

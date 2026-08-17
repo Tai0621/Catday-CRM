@@ -26,6 +26,19 @@ process.chdir(resolve(dirname(fileURLToPath(import.meta.url)), '..'))
 // on APP_PASSWORD, which the demo does not share with production.
 const env = demoEnv(process.argv.slice(2).filter(a => a.startsWith('.env')))
 
+// `--ai-placeholder` makes the assistant COUNT as configured without being
+// usable. verify-copilot exercises the budget ceiling and the kill switch, and
+// both live in front of the model call — unreachable while aiConfigured() is
+// false, which is what an empty ANTHROPIC_API_KEY produces. No test here sends
+// a message, and a placeholder could only ever earn an auth error, never a bill.
+//
+// Opt-in, because the opposite is the common case: most suites need a server
+// with NO key so the fail-closed paths are the ones being tested.
+if (process.argv.includes('--ai-placeholder') && !env.ANTHROPIC_API_KEY && !env.GROQ_API_KEY) {
+  env.ANTHROPIC_API_KEY = 'sk-ant-placeholder-not-a-real-key'
+  console.log('AI: placeholder key — assistant reads as configured, cannot call out')
+}
+
 const target = env.DATABASE_URL ?? ''
 if (!target) { console.error('No DATABASE_URL — refusing to start.'); process.exit(1) }
 if (/catday-crm/.test(target)) {

@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 
 // C3 — Action Inbox learning.
 // Seeds two synthetic action histories with opposite records and proves the

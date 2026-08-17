@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for the scenario-analysis + smart recommendation. Seeds a plan whose
@@ -61,8 +62,15 @@ try {
           ON CONFLICT(id) DO UPDATE SET startMonth='2026-01', breakevenMonth='2028-12'`),
     exec(`DELETE FROM PlanDriver`),
     ...[
-      ['cap.boardingRooms', 50], ['util.startPct', 5], ['util.endPct', 35],
-      ['opex.Rent', 8000], ['opex.Salaries', 10000], ['opex.Cleaning Supplies', 0],
+      // A SMALL plan on purpose. Planned monthly cost is fixed opex plus the
+      // variable cost of the modelled capacity, so the original 50 rooms at 35%
+      // utilization budgeted ~53k/month — more than the demo actually spends,
+      // which flipped the recommendation to "under plan" and made this read as
+      // a broken recommendation engine. Two rooms and nominal opex put planned
+      // cost far below any real spend, so the "outrunning" branch is reached
+      // whatever the demo's expense history happens to be this month.
+      ['cap.boardingRooms', 2], ['util.startPct', 5], ['util.endPct', 35],
+      ['opex.Rent', 100], ['opex.Salaries', 100], ['opex.Cleaning Supplies', 0],
       ['opex.Utilities', 0], ['opex.Marketing', 0], ['opex.Maintenance', 0], ['opex.Other Expense', 0],
     ].map(([k, v]) => exec(`INSERT INTO PlanDriver (id,key,value,updatedAt) VALUES (?,?,?,CURRENT_TIMESTAMP)`,
       [t(crypto.randomUUID()), t(k), f(v)])),

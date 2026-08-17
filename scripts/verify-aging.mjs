@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for A/R & A/P: an unpaid completed visit shows as a receivable (aging
@@ -82,12 +83,33 @@ try {
   check('customer list flags "owes RM 320"', /owes RM\s*320/.test(list))
 
   // ── balance sheet payables now auto ──
+  //
+  // Measured as a DELTA, not an absolute. The demo database has its own unpaid
+  // bills and debtors, so "Accounts payable = 500" only ever held on an empty
+  // database and failed the moment the demo had real data in it — which read as
+  // a broken balance sheet rather than a test that assumed it was alone.
+  //
+  // The claim worth making is the one the feature actually makes: an unpaid
+  // expense MOVES payables by its own amount. So read the figure with the seed
+  // in place, remove the seed, read again, and check the difference.
   const nowMonth = new Date().toISOString().slice(0, 7)
-  const bsCsv = await (await fetch(`${BASE}/finance/balance-sheet/export?asOf=${nowMonth}`, { headers: { Cookie: cookie } })).text()
-  const apRow = bsCsv.split(/\r?\n/).find(l => l.startsWith('Accounts payable')) ?? ''
-  check('balance sheet Accounts payable auto = 500', apRow.split(',')[1] === '500', apRow)
-  const arRow = bsCsv.split(/\r?\n/).find(l => l.startsWith('Accounts receivable')) ?? ''
-  check('balance sheet Accounts receivable auto = 320', arRow.split(',')[1] === '320', arRow)
+  const readBalanceSheet = async () => {
+    const csv = await (await fetch(`${BASE}/finance/balance-sheet/export?asOf=${nowMonth}`, { headers: { Cookie: cookie } })).text()
+    const value = label => {
+      const row = csv.split(/\r?\n/).find(l => l.startsWith(label)) ?? ''
+      return Number(row.split(',')[1])
+    }
+    return { ap: value('Accounts payable'), ar: value('Accounts receivable') }
+  }
+
+  const withSeed = await readBalanceSheet()
+  await cleanup() // idempotent — the `finally` below runs it again harmlessly
+  const without = await readBalanceSheet()
+
+  check('an unpaid bill raises Accounts payable by its amount',
+    withSeed.ap - without.ap === 500, `${withSeed.ap} with the bill, ${without.ap} without`)
+  check('an unpaid visit raises Accounts receivable by its amount',
+    withSeed.ar - without.ar === 320, `${withSeed.ar} with the debt, ${without.ar} without`)
 
   console.log(`\n${pass}/${total} checks passed`)
 } finally {

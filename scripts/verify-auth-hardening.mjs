@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for Phase 1 commit 1: salted scrypt PINs + HMAC sessions with expiry &

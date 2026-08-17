@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './_guard.mjs'
 import crypto from 'node:crypto'
 
 // E2E for Hardening Phase 0. Asserts (against a PRODUCTION build on :3100):
