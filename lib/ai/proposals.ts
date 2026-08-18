@@ -7,9 +7,10 @@ import { EXPENSE_CATEGORIES } from '../finance-categories'
 import { LOG_PERIODS, AD_HOC_GROUP_KEY } from '../constants'
 import { createAppointment } from '@/app/appointments/new/actions'
 import { createExpense } from '@/app/finance/expenses/actions'
-import { setReorderLevel } from '@/app/products/actions'
+import { setReorderLevel } from '@/app/inventory/products/actions'
 import { saveCareLog, type CareLogFields } from '@/app/runsheet/[id]/log/actions'
 import { logSend } from '@/app/marketing/actions'
+import { LIVE_CUSTOMER } from '../cat-stock'
 
 // ── C2 · Write tools behind a confirm gate ───────────────────────────────────
 //
@@ -77,7 +78,7 @@ async function resolveCat(name: string) {
   const q = str(name, 60)
   if (!q) return { error: 'Which cat?' }
   const cats = await db.cat.findMany({
-    where: { name: { contains: q }, customer: { erasedAt: null } },
+    where: { name: { contains: q }, customer: LIVE_CUSTOMER },
     select: { id: true, name: true, customerId: true, customer: { select: { name: true, phone: true } } },
     take: 5,
   })
@@ -92,7 +93,7 @@ async function resolveCustomer(name: string) {
   const q = str(name, 60)
   if (!q) return { error: 'Which customer?' }
   const customers = await db.customer.findMany({
-    where: { erasedAt: null, OR: [{ name: { contains: q } }, { phone: { contains: q } }] },
+    where: { ...LIVE_CUSTOMER, OR: [{ name: { contains: q } }, { phone: { contains: q } }] },
     select: { id: true, name: true, phone: true, language: true },
     take: 5,
   })

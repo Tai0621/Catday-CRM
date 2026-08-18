@@ -32,7 +32,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     if (delta === 0) return
     await recordStockMovement(id, delta, reason, { note })
     await recordAudit({ action: 'stock.move', entityType: 'Product', entityId: id, summary: `${p.name}: ${reason} ${delta > 0 ? '+' : ''}${delta}${note ? ` (${note})` : ''}` })
-    revalidatePath(`/products/${id}`)
+    revalidatePath(`/inventory/products/${id}`)
   }
 
   const low = isLow(product.stockQty, product.reorderLevel)
@@ -42,7 +42,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     <div className="max-w-2xl mx-auto space-y-5">
       <div>
         <div className="flex items-center gap-2 mb-0.5">
-          <Link href="/products" className="text-xs cd-muted hover:underline">Products</Link>
+          <Link href="/inventory/products" className="text-xs cd-muted hover:underline">Products</Link>
           <span className="text-xs cd-muted">›</span>
           <span className="text-xs cd-muted">{product.name}</span>
         </div>

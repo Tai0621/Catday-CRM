@@ -2,12 +2,13 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import { nextMemberNumber } from '@/lib/loyalty'
+import { NOT_HOUSE } from '@/lib/cat-stock'
 
 export default async function NewMembershipPage() {
   await requireAuth()
 
   const [customers, tiers] = await Promise.all([
-    db.customer.findMany({ orderBy: { name: 'asc' } }),
+    db.customer.findMany({ where: NOT_HOUSE, orderBy: { name: 'asc' } }),
     db.membershipTier.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }),
   ])
 

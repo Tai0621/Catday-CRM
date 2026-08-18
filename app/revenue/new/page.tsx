@@ -2,11 +2,12 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import { REVENUE_CATEGORIES } from '@/lib/constants'
+import { NOT_HOUSE } from '@/lib/cat-stock'
 
 export default async function NewTransactionPage() {
   await requireAuth()
 
-  const customers = await db.customer.findMany({ orderBy: { name: 'asc' } })
+  const customers = await db.customer.findMany({ where: NOT_HOUSE, orderBy: { name: 'asc' } })
 
   async function create(data: FormData) {
     'use server'

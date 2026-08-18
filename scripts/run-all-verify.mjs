@@ -135,6 +135,9 @@ const DEV_ONLY = new Set([
   'txn-delete', 'txn-reversal', 'statement-overrides', 'statement-rows',
   'hidden-rows', 'schema-fixes', 'row-reorder', 'appointments', 'booking-lanes',
   'scenario', 'dev-only',
+  // cat-sale drives checkout() and deleteTransaction() by resolving their action
+  // ids from the Turbopack chunks — a dev-build artefact.
+  'cat-sale',
 ])
 const NEEDS_CONFIG = {
   consent: 'GOOGLE_FORMS_SECRET',

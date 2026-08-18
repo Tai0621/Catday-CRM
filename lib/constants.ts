@@ -17,6 +17,17 @@ export type Gender = typeof GENDERS[number]
 export const APPOINTMENT_TYPES = ['Grooming', 'Boarding', 'Bath', 'Diagnosis', 'Other'] as const
 export type AppointmentType = typeof APPOINTMENT_TYPES[number]
 
+/**
+ * A house cat living in a room, recorded as an appointment so the room calendar
+ * blocks the room and the run sheet raises its daily care tasks.
+ *
+ * Deliberately NOT in APPOINTMENT_TYPES: that list is what a human may BOOK,
+ * and a residency is created only from the cat inventory. Leaving it out means
+ * no booking form can produce one by accident, and the diary is not polluted
+ * with permanent RM0 rows.
+ */
+export const RESIDENCY_TYPE = 'Residency'
+
 export const APPOINTMENT_STATUSES = ['Scheduled', 'CheckedIn', 'InService', 'QualityCheck', 'Ready', 'Completed', 'NoShow', 'Cancelled'] as const
 export type AppointmentStatus = typeof APPOINTMENT_STATUSES[number]
 
@@ -99,8 +110,61 @@ export const GOLD_SPEND_THRESHOLD = 3000
 // Founder Circle — first N members get a numbered collectible card
 export const FOUNDER_CIRCLE_LIMIT = 100
 
-export const REVENUE_CATEGORIES = ['Grooming', 'Boarding', 'Retail', 'Membership', 'Academy', 'Other'] as const
+export const REVENUE_CATEGORIES = ['Grooming', 'Boarding', 'Retail', 'Membership', 'Academy', 'Cat Sale', 'Other'] as const
 export type RevenueCategory = typeof REVENUE_CATEGORIES[number]
+
+// ── Cat inventory (v1.3.0) ──────────────────────────────────────────────────
+//
+// Two dimensions, deliberately not collapsed into one. `role` is what the cat IS
+// to the business; `status` is where it is in its lifecycle. A working queen is
+// Breeder + InStock; when she retires she becomes Retired + InStock; when she
+// goes to a home she is Retired + Rehomed. One combined field would need a value
+// for every pairing and would lose the distinction the moment a cat changed
+// purpose without changing location.
+export const CAT_STOCK_ROLES = ['Breeder', 'ForSale', 'Retired', 'Resident'] as const
+export type CatStockRole = typeof CAT_STOCK_ROLES[number]
+
+export const CAT_STOCK_ROLE_HINTS: Record<string, string> = {
+  Breeder: 'Working queen or stud — not for sale',
+  ForSale: 'Intended to be sold',
+  Retired: 'Ex-breeder, to be rehomed',
+  Resident: 'Shop cat — never for sale',
+}
+
+export const CAT_STOCK_STATUSES = ['InStock', 'Reserved', 'Sold', 'Rehomed', 'Deceased'] as const
+export type CatStockStatus = typeof CAT_STOCK_STATUSES[number]
+
+export const CAT_STOCK_STATUS_LABELS: Record<string, string> = {
+  InStock: 'In stock', Reserved: 'Reserved', Sold: 'Sold', Rehomed: 'Rehomed', Deceased: 'Deceased',
+}
+
+/** Roles a cat can leave the business under. Both keep the row — see exitAt. */
+export const CAT_EXIT_STATUSES = ['Rehomed', 'Deceased'] as const
+
+export const CAT_COST_CATEGORIES = [
+  'Acquisition', 'Vaccination', 'Deworm', 'Neuter', 'Vet Treatment', 'Transport', 'Registration', 'Other',
+] as const
+export type CatCostCategory = typeof CAT_COST_CATEGORIES[number]
+
+export const CAT_COST_ALLOCATIONS = ['PerCat', 'EvenSplit'] as const
+
+/**
+ * Youngest a kitten may be sold. Twelve weeks is the common welfare standard —
+ * old enough to be weaned, socialised and through a first vaccination.
+ * Owner-confirmable; it is a constant rather than a setting because a shop that
+ * can lower it in the UI will eventually lower it.
+ */
+export const MIN_SALE_AGE_DAYS = 84
+
+/** Life-stage boundaries, derived from date of birth rather than typed by hand. */
+export const KITTEN_MAX_AGE_DAYS = 365
+export const SENIOR_MIN_AGE_DAYS = 365 * 10
+
+/** A reservation this close to expiry earns an Action Inbox card. */
+export const RESERVATION_ALERT_DAYS = 3
+
+/** Cats in stock longer than this are flagged as ageing stock. */
+export const CAT_AGEING_STOCK_DAYS = 180
 
 export const INCIDENT_TYPES = ['Safety', 'Complaint'] as const
 export type IncidentType = typeof INCIDENT_TYPES[number]
@@ -129,6 +193,7 @@ export const ACTION_TYPES = [
   'MembershipExpiry', 'VaccinationExpiry', 'GroomingDue', 'Birthday', 'GoldEligible',
   'PrivateClubEligible', 'VipCheckIn', 'LicenseRenewal', 'TreatmentDue', 'HealthConcern',
   'LeaveApproval', 'ApplicationReview', 'LowStock', 'AcademyFollowUp',
+  'CatReservation', 'CatSaleReady',
 ] as const
 export type ActionType = typeof ACTION_TYPES[number]
 

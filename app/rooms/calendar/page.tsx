@@ -2,6 +2,7 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import Link from 'next/link'
 import { SEGMENTS } from '@/lib/segments'
+import { RESIDENCY_TYPE } from '@/lib/constants'
 
 const DAY = 24 * 60 * 60 * 1000
 const DAYS_SHOWN = 14
@@ -29,7 +30,7 @@ export default async function RoomCalendarPage({
     db.room.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }),
     db.appointment.findMany({
       where: {
-        type: 'Boarding',
+        type: { in: ['Boarding', RESIDENCY_TYPE] },
         status: { notIn: ['Cancelled', 'NoShow', 'Completed'] },
         scheduledAt: { lt: end },
         OR: [{ endsAt: { gte: start } }, { endsAt: null, scheduledAt: { gte: start } }],

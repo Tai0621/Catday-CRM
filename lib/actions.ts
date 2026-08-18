@@ -9,6 +9,7 @@ import { ACTION_SEGMENT, type SegmentKey } from './segments'
 import { buildActionStats, priorityShifts, effectivePriority, isSuppressed, type TypeStats } from './actions-learning'
 import { loadActiveVariants, messageFor } from './action-variants'
 import { loadAcademy, unconverted } from './academy'
+import { NOT_HOUSE, saleGate } from './cat-stock'
 import {
   type ActionType,
   WINBACK_INACTIVE_DAYS,
@@ -20,6 +21,8 @@ import {
   PRIVATE_CLUB_TIER,
   PRIVATE_CLUB_SPEND,
   PRIVATE_CLUB_VISITS,
+  RESERVATION_ALERT_DAYS,
+  MIN_SALE_AGE_DAYS,
 } from './constants'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -108,6 +111,11 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
     // dashboard grow with the length of the business's history rather than with
     // the number of customers.
     db.customer.findMany({
+      // Every card built from this list ends in a message to a human. The house
+      // holding record has no human behind it, so it is excluded at the query
+      // rather than filtered out per card type — one of those is a rule, the
+      // other is a habit that lapses on the next card someone adds.
+      where: NOT_HOUSE,
       select: {
         id: true, name: true, phone: true, language: true,
         memberships: { where: { status: 'Active' }, select: { tier: { select: { name: true } } } },
@@ -377,8 +385,61 @@ export async function buildActionInbox(now: Date = new Date()): Promise<ActionIn
       key: `LowStock:${p.id}`, type: 'LowStock', priority: 4,
       title: `Reorder — ${p.name}`,
       reason: `${p.stockQty} left (reorder at ${p.reorderLevel})`,
-      href: `/products/${p.id}`,
+      href: `/inventory/products/${p.id}`,
     }))
+  }
+
+  // 6b4 · Cat inventory.
+  //
+  // A reservation with no expiry chase becomes a cat held indefinitely for a
+  // buyer who has gone quiet — capacity and a sale, both parked. And a kitten
+  // crossing into sale-readiness is money the shop can only collect if somebody
+  // notices the day it happens.
+  const stockCats = await db.catStock.findMany({
+    where: { status: { in: ['InStock', 'Reserved'] } },
+    select: {
+      id: true, sku: true, status: true, role: true, askingRM: true,
+      microchipNo: true, reservedUntil: true, reservedForId: true,
+      cat: {
+        select: {
+          name: true, dateOfBirth: true, vaccinationExpiry: true,
+          lastVaccinatedAt: true, lastDewormAt: true, desexedAt: true,
+        },
+      },
+    },
+  })
+  for (const s of stockCats) {
+    if (s.status === 'Reserved' && s.reservedUntil) {
+      const daysLeft = Math.ceil((s.reservedUntil.getTime() - now.getTime()) / DAY)
+      if (daysLeft <= RESERVATION_ALERT_DAYS) {
+        out.push(card({
+          key: `CatReservation:${s.id}:${s.reservedUntil.toISOString().slice(0, 10)}`,
+          type: 'CatReservation',
+          priority: daysLeft < 0 ? 2 : 3,
+          title: `${daysLeft < 0 ? 'Hold expired' : 'Hold expiring'} — ${s.sku} ${s.cat.name}`,
+          reason: daysLeft < 0
+            ? `Reserved until ${s.reservedUntil.toISOString().slice(0, 10)} — chase the buyer or release it`
+            : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left on the hold`,
+          href: `/inventory/cats/${s.id}`,
+          customerId: s.reservedForId ?? undefined,
+          amountRM: s.askingRM ?? undefined,
+        }))
+      }
+      continue
+    }
+    // Only fires in the week it becomes true, so it does not sit in the queue
+    // forever for every cat that has ever been sellable.
+    const gate = saleGate(s, now)
+    const ageDays = gate.ageDays
+    if (gate.ready && ageDays != null && ageDays < MIN_SALE_AGE_DAYS + 7 && (s.role === 'ForSale' || s.role === 'Retired')) {
+      out.push(card({
+        key: `CatSaleReady:${s.id}`, type: 'CatSaleReady', priority: 6,
+        title: `Ready to sell — ${s.sku} ${s.cat.name}`,
+        reason: s.askingRM ? `Asking RM ${s.askingRM}` : 'No asking price set yet',
+        href: `/inventory/cats/${s.id}`,
+        amountRM: s.askingRM ?? undefined,
+      }))
+    }
   }
 
   // 6c · Deworm / deflea due (monthly parasite control, boarding SOP). One card

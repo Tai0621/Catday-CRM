@@ -41,7 +41,7 @@ export default async function ProductsPage() {
     } catch {
       // duplicate name — ignore
     }
-    revalidatePath('/products')
+    revalidatePath('/inventory/products')
   }
 
   async function updateProduct(data: FormData) {
@@ -56,7 +56,7 @@ export default async function ProductsPage() {
         reorderLevel: reorderRaw ? Math.max(0, intOr(data.get('reorderLevel'))) : null,
       },
     })
-    revalidatePath('/products')
+    revalidatePath('/inventory/products')
   }
 
   async function stockAction(data: FormData) {
@@ -70,15 +70,19 @@ export default async function ProductsPage() {
     if (!p) return
 
     let delta = 0
-    let reason: 'Restock' | 'Wastage' | 'Adjustment' = 'Restock'
+    let reason: 'Restock' | 'Wastage' | 'Adjustment' | 'HouseUse' = 'Restock'
     if (mode === 'receive') { delta = qty; reason = 'Restock' }
     else if (mode === 'wastage') { delta = -qty; reason = 'Wastage' }
+    // Stock the cattery ate rather than a customer bought. Same movement a sale
+    // makes, minus the sale — so inventory at cost stays right and the cost of
+    // keeping the shop's own cats is measured instead of estimated.
+    else if (mode === 'house') { delta = -qty; reason = 'HouseUse' }
     else if (mode === 'correction') { delta = qty - p.stockQty; reason = 'Adjustment' }
     if (delta === 0) return
 
     await recordStockMovement(id, delta, reason, { note })
     await recordAudit({ action: 'stock.move', entityType: 'Product', entityId: id, summary: `${p.name}: ${reason} ${delta > 0 ? '+' : ''}${delta}${note ? ` (${note})` : ''}` })
-    revalidatePath('/products')
+    revalidatePath('/inventory/products')
   }
 
   async function toggleProduct(data: FormData) {
@@ -86,7 +90,7 @@ export default async function ProductsPage() {
     const id = data.get('id') as string
     const p = await db.product.findUnique({ where: { id } })
     if (p) await db.product.update({ where: { id }, data: { active: !p.active } })
-    revalidatePath('/products')
+    revalidatePath('/inventory/products')
   }
 
   const seg = SEGMENTS.business
@@ -96,9 +100,9 @@ export default async function ProductsPage() {
       <div>
         <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: '#2D1907' }}>
           <span className="rounded-full" style={{ width: 8, height: 8, background: seg.color }} />
-          Products &amp; Inventory
+          Products
         </h1>
-        <p className="text-sm cd-muted">Selling decrements stock automatically. Receive deliveries, correct counts, and write off damage here — every change is logged.</p>
+        <p className="text-sm cd-muted">Selling decrements stock automatically. Receive deliveries, correct counts, write off damage, and record what the cattery consumed — every change is logged.</p>
       </div>
 
       {/* Valuation */}
@@ -135,7 +139,7 @@ export default async function ProductsPage() {
                   return (
                     <tr key={p.id} style={p.active ? undefined : { opacity: 0.45 }}>
                       <td className="px-4 py-2.5 font-medium" style={{ color: '#2D1907' }}>
-                        <Link href={`/products/${p.id}`} className="hover:underline">{p.name}</Link>
+                        <Link href={`/inventory/products/${p.id}`} className="hover:underline">{p.name}</Link>
                         {p.sku && <span className="cd-muted font-normal text-xs"> · {p.sku}</span>}
                       </td>
                       <td className="px-4 py-2.5">
@@ -160,6 +164,7 @@ export default async function ProductsPage() {
                           <select name="mode" className="cd-input text-xs" style={{ width: '6.5rem', padding: '0.25rem 0.4rem' }} defaultValue="receive">
                             <option value="receive">Receive +</option>
                             <option value="wastage">Wastage −</option>
+                            <option value="house">Cattery −</option>
                             <option value="correction">Set to</option>
                           </select>
                           <input name="qty" type="number" min="0" defaultValue={0} className="cd-input" style={{ width: '3.75rem' }} />

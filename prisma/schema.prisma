@@ -22,6 +22,16 @@ model Customer {
   marketingConsentAt     DateTime?
   marketingConsentSource String?   // Staff | GoogleForm | WhatsApp | WalkIn | Import
   needsDetails     Boolean        @default(false)
+  // v1.3.0 · The business's own holding record, so the cats it OWNS can live in
+  // the Cat table and inherit every cat feature (photos, health, boarding, care
+  // tasks) without a parallel schema. Exactly one row carries this flag.
+  //
+  // It is also the ISOLATION PREDICATE: a house customer is not a customer, and
+  // must be excluded from every customer-facing read — the cat list, counts,
+  // marketing, retention, and above all the Action Inbox, which would otherwise
+  // compose WhatsApp messages to a phone number that does not exist. See
+  // lib/cat-stock.ts (NOT_HOUSE / houseCustomer) — never hand-write the filter.
+  isHouse          Boolean        @default(false)
   // M9 · The language this household actually writes in — CUSTOMER_LANGUAGES.
   // Null means unknown, which is a real answer: the OS then uses the business
   // default rather than guessing, because guessing wrong is worse than being
@@ -126,6 +136,13 @@ model Cat {
   careNotes        String?   // boarding care instructions: feeding, medication, quirks
   healthNotes      String?
   vaccinationExpiry DateTime? // drives the "vaccination expiring" dashboard alert; annual, mandatory for boarding
+  lastVaccinatedAt DateTime? // when the last shot was actually given (vaccinationExpiry is when the NEXT is due)
+  rabiesAt         DateTime? // tracked separately from the core vaccine — travel/export paperwork asks for it
+  // One date replaces the owner's "Neutered / Spayed / Intact" column, which was
+  // being used as a gender marker AND with the two words reversed (every male
+  // read "Spayed"). A date cannot be reversed: the word is derived from sex at
+  // render time. Null = intact.
+  desexedAt        DateTime?
   lastDewormAt     DateTime? // parasite control — monthly per boarding SOP; if not current at boarding → RM50 treatment
   lastDefleaAt     DateTime?
   dietType         String?   // Commercial | Prescription | Owner-supplied (DIET_TYPES) — feeding SOP S002
@@ -152,6 +169,125 @@ model Cat {
   appointments     Appointment[]
   transactionLines TransactionLine[]
   assessments      CatAssessment[]
+  stock            CatStock?
+  litterBorn       Litter[]  @relation("LitterDam")
+  litterSired      Litter[]  @relation("LitterSire")
+}
+
+// ─── Cat inventory (v1.3.0) ─────────────────────────────────────────────────
+//
+// The business sells cats as well as products. A cat it OWNS gets a CatStock
+// row; a customer's pet has none, and that ABSENCE is what "not inventory"
+// means. The alternative — a nullable "forSale" column on every Cat — would let
+// one bad UPDATE put a customer's pet on the shelf.
+//
+// The animal itself stays in Cat, which is the whole point: selling a cat moves
+// Cat.customerId to the buyer and closes this row, so the new owner inherits the
+// vaccination record, the photos and the grooming history instead of the shop
+// re-typing them into a fresh file.
+model CatStock {
+  id             String    @id @default(cuid())
+  catId          String    @unique
+  cat            Cat       @relation(fields: [catId], references: [id])
+  sku            String    @unique // CD-BSH-001 — CD, breed code, sequence
+  role           String    // Breeder | ForSale | Retired | Resident — see CAT_STOCK_ROLES
+  status         String    @default("InStock") // InStock | Reserved | Sold | Rehomed | Deceased
+  acquiredAt     DateTime?
+  acquiredFrom   String?   // cattery / breeder, or "Own litter"
+  // The ONLY cat figure that reaches the balance sheet. Vet, vaccine and feed
+  // are expensed as incurred (see docs/PLAN-CAT-INVENTORY.md §8) — capitalising
+  // them here would count the same ringgit twice and overstate profit.
+  // Home-bred kittens therefore carry at nil, which is conservative and right.
+  acquisitionRM  Float     @default(0)
+  askingRM       Float?
+  reservedForId  String?   // Customer holding it
+  depositRM      Float?
+  reservedUntil  DateTime?
+  microchipNo    String?
+  registrationNo String?   // TICA / CFA / MCC
+  litterId       String?
+  litter         Litter?   @relation(fields: [litterId], references: [id])
+  soldAt         DateTime?
+  soldToId       String?   // Customer who bought it
+  saleRM         Float?
+  // The POS reference the sale was booked under, so deleting that sale returns
+  // exactly this cat to stock. Matching on catId alone would be wrong: once a
+  // cat is sold, its new owner brings it back for grooming, and those sale
+  // lines carry the same catId — reversing one of THOSE would silently take a
+  // customer's pet back into inventory.
+  saleReference  String?
+  exitAt         DateTime? // rehomed or died — never a DELETE, it is a welfare record
+  exitReason     String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  costs          CatCost[]
+
+  @@index([status, role])
+}
+
+// A litter. Eight already exist in the owner's workbook as same-DOB groups.
+// Drives supply forecasting: which kittens become sale-ready, and when.
+model Litter {
+  id             String    @id @default(cuid())
+  code           String    @unique // L-2025-07-24-BSH
+  damId          String?
+  dam            Cat?      @relation("LitterDam", fields: [damId], references: [id])
+  sireId         String?
+  sire           Cat?      @relation("LitterSire", fields: [sireId], references: [id])
+  sireName       String?   // free text when the stud is not ours
+  expectedAt     DateTime? // a confirmed pregnancy, before the birth
+  bornAt         DateTime?
+  bornCount      Int?
+  survivingCount Int?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  kittens        CatStock[]
+}
+
+// Per-cat direct costs — vaccination, deworm, neuter, vet, transport.
+//
+// A MANAGEMENT ledger, deliberately: it answers "what has this cat cost me" so
+// the asking price can be set, and it touches no financial statement. The
+// matching Expense row is what the income statement sees; expenseId links the
+// two so the same money is never read as both a cost and an asset.
+model CatCost {
+  id         String        @id @default(cuid())
+  catStockId String
+  stock      CatStock      @relation(fields: [catStockId], references: [id])
+  date       DateTime
+  category   String        // CAT_COST_CATEGORIES in lib/cat-stock.ts
+  amountRM   Float
+  batchId    String?
+  batch      CatCostBatch? @relation(fields: [batchId], references: [id])
+  expenseId  String?       // the Expense this was booked under, when there is one
+  vendor     String?
+  notes      String?
+  createdAt  DateTime      @default(now())
+
+  @@index([catStockId, date])
+  @@index([batchId])
+}
+
+// One vet event covering many cats — the owner's "Costing" sheet as data:
+// 57 cats × RM45 vaccine + RM40 transport + RM5 deworm = RM2,890.
+//
+// Kept as a parent row rather than only as N CatCost rows so the allocation can
+// be re-read and corrected as a unit; deleting the batch deletes its splits.
+model CatCostBatch {
+  id        String    @id @default(cuid())
+  date      DateTime
+  vendor    String?
+  totalRM   Float
+  method    String    @default("PerCat") // PerCat | EvenSplit
+  notes     String?
+  expenseId String?
+  createdAt DateTime  @default(now())
+
+  costs     CatCost[]
 }
 
 // ─── Cat Assessment (美容师诊断建档 — groomer diagnosis record per visit) ────
@@ -676,7 +812,15 @@ model Appointment {
   customer    Customer @relation(fields: [customerId], references: [id])
   catId       String
   cat         Cat      @relation(fields: [catId], references: [id])
-  type        String   // Grooming | Boarding | Bath | Diagnosis | Other
+  // Grooming | Boarding | Bath | Diagnosis | Other | Residency
+  //
+  // `Residency` is a house cat living in a room: same shape as a boarding stay,
+  // so the room calendar blocks the room and the run sheet raises its care
+  // tasks, but priced at 0 and owned by the house customer. It must therefore be
+  // EXCLUDED from revenue, utilisation and the unpaid-visit chase — see
+  // lib/cat-stock.ts SELLABLE_TYPES; a stray inclusion drags average sale value
+  // toward zero with nothing on screen to say why.
+  type        String
   serviceId   String?
   service     Service? @relation(fields: [serviceId], references: [id])
   staffId     String?  // allocated groomer / carer

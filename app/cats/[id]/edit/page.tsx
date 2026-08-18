@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { LIFE_STAGES, GENDERS, DIET_TYPES } from '@/lib/constants'
+import { NOT_HOUSE } from '@/lib/cat-stock'
 
 const COAT_TYPES = ['Short', 'Long']
 const asDate = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '')
@@ -22,7 +23,7 @@ export default async function EditCatPage({ params }: { params: Promise<{ id: st
         portion: true, feedingNotes: true, medication: true,
       },
     }),
-    db.customer.findMany({ select: { id: true, name: true, phone: true }, orderBy: { name: 'asc' } }),
+    db.customer.findMany({ where: NOT_HOUSE, select: { id: true, name: true, phone: true }, orderBy: { name: 'asc' } }),
   ])
   if (!cat) notFound()
 

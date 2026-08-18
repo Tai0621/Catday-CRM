@@ -2,13 +2,20 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import Link from 'next/link'
 import { predictNextGrooming } from '@/lib/grooming-reminder'
+import { CAT_NOT_HOUSE } from '@/lib/cat-stock'
 
 export default async function CatsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   await requireAuth()
   const { q } = await searchParams
 
   const cats = await db.cat.findMany({
-    where: q ? { OR: [{ name: { contains: q } }, { breed: { contains: q } }, { customer: { name: { contains: q } } }] } : {},
+    // Customers' cats only. The shop's own live at /inventory/cats — they are
+    // stock, and mixing them in here means a groomer searching for a booking
+    // scrolls past sixty animals that will never have one.
+    where: {
+      ...CAT_NOT_HOUSE,
+      ...(q ? { OR: [{ name: { contains: q } }, { breed: { contains: q } }, { customer: { name: { contains: q } } }] } : {}),
+    },
     // explicit select keeps the free-text notes fields out of the list query;
     // cover photos are fetched separately from MediaAsset below
     select: {

@@ -43,6 +43,16 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
+  // v1.3.0 renamed Products to Inventory. Kept for bookmarks and for links in
+  // old briefs and AI proposals. Note this alone does NOT rescue a staff role
+  // that was granted `/products`: access is checked on the DESTINATION, so the
+  // stored role paths had to be rewritten too (scripts/migrate-cat-inventory.mjs).
+  async redirects() {
+    return [
+      { source: '/products', destination: '/inventory/products', permanent: false },
+      { source: '/products/:id', destination: '/inventory/products/:id', permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

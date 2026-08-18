@@ -23,7 +23,7 @@ export async function setReorderLevel(productId: string, level: number | null): 
   const clamped = level == null ? null : Math.max(0, Math.floor(level))
   await db.product.update({ where: { id: productId }, data: { reorderLevel: clamped } })
 
-  revalidatePath('/products')
-  revalidatePath(`/products/${productId}`)
+  revalidatePath('/inventory/products')
+  revalidatePath(`/inventory/products/${productId}`)
   return { ok: true, id: productId }
 }

@@ -56,8 +56,16 @@ export const SEGMENTS: NavSegment[] = [
         { href: '/appointments', label: 'Appointments', icon: 'clock' },
         { href: '/requests', label: 'Booking Requests', icon: 'chat' },
         { href: '/pos', label: 'POS Checkout', icon: 'pos' },
-        { href: '/products', label: 'Products', icon: 'box' },
         { href: '/cashup', label: 'Cash-up', icon: 'wallet' },
+      ] },
+      // The shop sells cats as well as products, so "Products" was the wrong
+      // name for the thing it holds. Both halves are stock: one is counted in
+      // units, the other has a name and a vet record.
+      { sub: 'Inventory', subColor: '#B8902B', links: [
+        { href: '/inventory', label: 'Overview', icon: 'box' },
+        { href: '/inventory/products', label: 'Products', icon: 'box' },
+        { href: '/inventory/cats', label: 'Cat Inventory', icon: 'cat' },
+        { href: '/inventory/litters', label: 'Litters', icon: 'star' },
       ] },
     ],
   },

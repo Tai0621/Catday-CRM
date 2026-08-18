@@ -27,7 +27,7 @@ const only = process.env.PERF_ONLY ?? null
 const PAGES = [
   '/', '/board', '/runsheet', '/appointments', '/cats', '/customers', '/pos',
   '/rooms', '/revenue', '/finance/income-statement', '/staff', '/memberships',
-  '/products', '/incidents', '/leave', '/timeclock', '/ai', '/hr/roles',
+  '/inventory/products', '/incidents', '/leave', '/timeclock', '/ai', '/hr/roles',
 ]
 
 // The child's stdout reaches the file a beat after the response reaches us;

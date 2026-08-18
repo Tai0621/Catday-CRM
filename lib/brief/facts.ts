@@ -4,6 +4,7 @@ import { lowStockProducts } from '../inventory'
 import { buildActionQueue } from '../actions'
 import { zonedDayKey, zonedDayRange, shiftDayKey } from '../timezone'
 import { REVENUE_CATEGORIES } from '../constants'
+import { NOT_HOUSE } from '../cat-stock'
 
 // ── C5 · Yesterday, as facts ─────────────────────────────────────────────────
 //
@@ -85,7 +86,7 @@ export async function buildBriefFacts(dayKey: string): Promise<BriefFacts> {
       },
       select: { roomId: true },
     }),
-    db.customer.count({ where: { createdAt: { gte: start, lt: end }, erasedAt: null } }),
+    db.customer.count({ where: { createdAt: { gte: start, lt: end }, erasedAt: null, ...NOT_HOUSE } }),
     db.transaction.aggregate({ where: { date: { gte: monthStart, lt: end } }, _sum: { total: true } }),
     db.monthlyTarget.findUnique({ where: { month: monthKey }, select: { revenueTarget: true } }),
     db.appointment.aggregate({

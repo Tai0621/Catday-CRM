@@ -74,13 +74,13 @@ try {
   const getHtml = async (u, cookie) => strip(await (await fetch(`${BASE}${u}`, { headers: { Cookie: cookie } })).text())
 
   // ── Products list ──
-  const list = await getHtml('/products', mgr)
+  const list = await getHtml('/inventory/products', mgr)
   check('list shows valuation tiles', list.includes('Units in stock') && list.includes('Stock at cost') && list.includes('Low stock'))
   check('low product flagged in the list', list.includes(`${MARK} Cat Litter`) && list.includes('low'))
-  check('product links to its detail page', list.includes(`/products/${pLow}`))
+  check('product links to its detail page', list.includes(`/inventory/products/${pLow}`))
 
   // ── Product detail ──
-  const detail = await getHtml(`/products/${pLow}`, mgr)
+  const detail = await getHtml(`/inventory/products/${pLow}`, mgr)
   check('detail shows the low-stock banner', detail.includes('Low stock') && detail.includes('Time to reorder'))
   check('movement ledger shows opening + sale', detail.includes('Opening stock') && detail.includes('Sale'))
   check('ledger shows the deltas', detail.includes('+10') && detail.includes('-8'))
@@ -90,11 +90,18 @@ try {
   check('low stock raises a Reorder card', inbox.includes(`Reorder — ${MARK} Cat Litter`))
 
   // ── Access control ──
-  const unauth = await fetch(`${BASE}/products`, { redirect: 'manual' })
+  // Asserted against the LIVE route, not the `/products` alias. v1.3.0 renamed
+  // the page and left `/products` as a next.config redirect for bookmarks; that
+  // redirect is resolved by the routing layer BEFORE the proxy runs, so probing
+  // the alias measures the rewrite rather than the auth gate. It leaks nothing —
+  // the destination is still gated, which is the check below.
+  const unauth = await fetch(`${BASE}/inventory/products`, { redirect: 'manual' })
   check('products unauth → /login', unauth.status === 307 && (unauth.headers.get('location') ?? '').includes('/login'))
   const staffTok = craft({ kind: 'staff', staffId: 'x', name: `${MARK} Groomer`, role: 'Groomer' })
-  const staffRes = await fetch(`${BASE}/products`, { headers: { Cookie: `auth=${staffTok}` }, redirect: 'manual' })
-  check('products blocks non-manager staff', staffRes.status === 307 && !(staffRes.headers.get('location') ?? '').includes('/products'))
+  const staffRes = await fetch(`${BASE}/inventory/products`, { headers: { Cookie: `auth=${staffTok}` }, redirect: 'manual' })
+  check('products blocks non-manager staff', staffRes.status === 307 && !(staffRes.headers.get('location') ?? '').includes('/inventory/products'))
+  const alias = await fetch(`${BASE}/products`, { redirect: 'manual' })
+  check('the old /products link still forwards', [307, 308].includes(alias.status) && (alias.headers.get('location') ?? '').includes('/inventory/products'))
 
   console.log(`\n${pass}/${total} checks passed`)
   if (pass !== total) process.exitCode = 1

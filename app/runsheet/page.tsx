@@ -7,6 +7,7 @@ import { boardingHealthGate } from '@/lib/health'
 import { SEGMENTS } from '@/lib/segments'
 import { displayPhone, whatsappUrl } from '@/lib/phone'
 import { getConfig } from '@/lib/config'
+import { RESIDENCY_TYPE } from '@/lib/constants'
 import { TaskCheck } from '@/app/components/Pending'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -23,10 +24,13 @@ export default async function RunSheetPage() {
   const todayEnd = new Date(todayStart.getTime() + DAY)
   const today = dateKey(now)
 
-  // Occupied stays = checked-in boarding whose window covers today
+  // Occupied stays = checked-in boarding whose window covers today, PLUS the
+  // shop's own cats living in rooms. A house cat needs feeding, littering and
+  // watching exactly like a guest does; leaving residencies out would mean the
+  // run sheet quietly under-reports the day's work by however many cats live in.
   const stays = await db.appointment.findMany({
     where: {
-      type: 'Boarding',
+      type: { in: ['Boarding', RESIDENCY_TYPE] },
       status: 'CheckedIn',
       scheduledAt: { lt: todayEnd },
       OR: [{ endsAt: { gte: todayStart } }, { endsAt: null }],

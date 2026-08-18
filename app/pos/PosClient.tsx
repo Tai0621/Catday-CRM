@@ -16,16 +16,19 @@ interface ApptOpt {
 }
 interface ProductOpt { id: string; name: string; price: number; stockQty: number }
 interface ServiceOpt { id: string; name: string; price: number; category: string }
+interface CatOpt { id: string; catId: string; sku: string; name: string; breed: string | null; askingRM: number | null; reservedForId: string | null }
 
 const GROOMING = { color: '#B14919', bg: 'rgba(177,73,25,0.13)' }
 const GOLD = { text: '#8a6c00', bg: 'rgba(231,206,122,0.35)', color: '#B8902B' }
 
-export function PosClient({ preselectCustomerId, customers, appointments, products, services }: {
+export function PosClient({ preselectCustomerId, preselectCatStockId, customers, appointments, products, services, cats }: {
   preselectCustomerId: string | null
+  preselectCatStockId: string | null
   customers: CustomerOpt[]
   appointments: ApptOpt[]
   products: ProductOpt[]
   services: ServiceOpt[]
+  cats: CatOpt[]
 }) {
   const router = useRouter()
 
@@ -43,8 +46,27 @@ export function PosClient({ preselectCustomerId, customers, appointments, produc
   const apptItemsFor = (custId: string): CheckoutItem[] =>
     appointments.filter(a => a.customerId === custId && a.billable).map(apptToItem)
 
+  const catToItem = (c: CatOpt): CheckoutItem => ({
+    kind: 'cat' as const,
+    refId: c.id,
+    catId: c.catId,
+    label: `${c.sku} ${c.name}${c.breed ? ` · ${c.breed}` : ''}`,
+    qty: 1,
+    unitPrice: c.askingRM ?? 0,
+    // No asking price set is not zero — it is unknown, and the cashier has to
+    // say. Charging RM0 for a cat because a field was blank is the kind of
+    // mistake that only shows up in the monthly close.
+    needsPrice: c.askingRM == null || c.askingRM <= 0,
+  })
+
   const [customerId, setCustomerId] = useState<string>(preselectCustomerId ?? '')
-  const [items, setItems] = useState<CheckoutItem[]>(preselectCustomerId ? apptItemsFor(preselectCustomerId) : [])
+  const [items, setItems] = useState<CheckoutItem[]>(() => {
+    const seeded = preselectCustomerId ? apptItemsFor(preselectCustomerId) : []
+    // Arriving from a cat's stock record ("Sell in POS") puts that cat in the
+    // basket, so the flow does not restart at "find the cat again".
+    const preCat = preselectCatStockId ? cats.find(c => c.id === preselectCatStockId) : null
+    return preCat ? [...seeded, catToItem(preCat)] : seeded
+  })
   const [walletInput, setWalletInput] = useState<string>('0')
   const [method, setMethod] = useState<'Cash' | 'Card' | 'QR'>('Cash')
   const [customLabel, setCustomLabel] = useState('')
@@ -178,6 +200,34 @@ export function PosClient({ preselectCustomerId, customers, appointments, produc
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {cats.length > 0 && (
+            <div className="cd-card p-4">
+              <div className="cd-label mb-2">Cats ready to sell</div>
+              <div className="flex flex-wrap gap-2">
+                {cats.map(c => {
+                  const held = c.reservedForId != null && c.reservedForId !== customerId
+                  return (
+                    <button key={c.id} disabled={busy || held}
+                      title={held ? 'Reserved for another customer — release the hold first' : undefined}
+                      onClick={() => addItem(catToItem(c))}
+                      className="text-xs px-3 py-2 rounded-lg text-left"
+                      style={{
+                        background: GOLD.bg, color: GOLD.text,
+                        border: `1px solid ${GOLD.color}55`, opacity: held ? 0.45 : 1,
+                      }}>
+                      <div className="font-semibold">{c.sku} {c.name}</div>
+                      <div>{c.askingRM ? `RM ${c.askingRM.toFixed(0)}` : 'price not set'}{held ? ' · reserved' : ''}</div>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-xs cd-muted mt-2">
+                Selling transfers the cat to the customer with its full history. Only cats that pass
+                the readiness check appear here.
+              </p>
             </div>
           )}
 

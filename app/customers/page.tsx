@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { displayPhone } from '@/lib/phone'
 import { buildCustomerIntel, segmentStyle, SEGMENTS } from '@/lib/intelligence'
 import { receivableByCustomer } from '@/lib/aging'
+import { NOT_HOUSE } from '@/lib/cat-stock'
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string; segment?: string }> }) {
   await requireAuth()
@@ -11,9 +12,13 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   const page = Math.max(1, parseInt(pageStr ?? '1', 10))
   const perPage = 30
 
-  const where = q
-    ? { OR: [{ name: { contains: q } }, { phone: { contains: q } }, { email: { contains: q } }] }
-    : {}
+  // NOT_HOUSE is not optional here: the holding record that owns the shop's own
+  // cats is not a customer, and left in it reads as one with sixty cats, no
+  // spend, and a phone number nobody can call.
+  const where = {
+    ...NOT_HOUSE,
+    ...(q ? { OR: [{ name: { contains: q } }, { phone: { contains: q } }, { email: { contains: q } }] } : {}),
+  }
 
   const include = {
     cats: { select: { id: true } },

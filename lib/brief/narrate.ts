@@ -26,7 +26,7 @@ export const BRIEF_LINKS: Record<string, string> = {
   '/appointments': 'Appointments — the booking diary',
   '/customers': 'Customers — profiles and segments',
   '/marketing/groups': 'Customer groups — targeted outreach lists',
-  '/products': 'Products — stock levels and reorder thresholds',
+  '/inventory/products': 'Products — stock levels and reorder thresholds',
   '/finance/income-statement': 'Income statement — revenue and costs',
   '/finance/expenses': 'Expenses — recorded costs',
   '/finance/aging': 'A/R and A/P aging — who owes what',

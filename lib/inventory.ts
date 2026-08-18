@@ -1,6 +1,6 @@
 import { db } from './db'
 
-export const STOCK_REASONS = ['Sale', 'SaleReversal', 'Restock', 'Adjustment', 'Wastage', 'InitialStock', 'Return'] as const
+export const STOCK_REASONS = ['Sale', 'SaleReversal', 'Restock', 'Adjustment', 'Wastage', 'InitialStock', 'Return', 'HouseUse'] as const
 export type StockReason = typeof STOCK_REASONS[number]
 
 export const STOCK_REASON_LABELS: Record<string, string> = {
@@ -11,6 +11,7 @@ export const STOCK_REASON_LABELS: Record<string, string> = {
   Wastage: 'Wastage / damage',
   InitialStock: 'Opening stock',
   Return: 'Customer return',
+  HouseUse: 'Used by the cattery',
 }
 
 // Manual stock movement: writes the ledger row AND moves the cached balance in
@@ -34,6 +35,23 @@ export async function recordStockMovement(
 
 export function isLow(stockQty: number, reorderLevel: number | null): boolean {
   return reorderLevel != null && stockQty <= reorderLevel
+}
+
+/**
+ * What the cattery consumed from retail stock in a window, at cost.
+ *
+ * This is how livestock feed is costed, and it is deliberately NOT a per-cat
+ * allocation. Sixty-odd cats share bowls; per-cat grams is a number the system
+ * would have to invent, and an invented figure that looks precise gets used to
+ * price an animal. Divide this by head count for a defensible cost per cat.
+ */
+export async function houseUseCost(from: Date, to: Date): Promise<number> {
+  const moves = await db.stockMovement.findMany({
+    where: { reason: 'HouseUse', createdAt: { gte: from, lt: to } },
+    select: { delta: true, product: { select: { costPrice: true } } },
+  })
+  const total = moves.reduce((s, m) => s + Math.abs(m.delta) * (m.product?.costPrice ?? 0), 0)
+  return Math.round(total * 100) / 100
 }
 
 // Prisma can't compare two columns in `where`, so filter in memory (the catalog

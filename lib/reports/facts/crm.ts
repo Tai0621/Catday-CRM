@@ -1,6 +1,7 @@
 import { db } from '../../db'
 import { monthRange } from '../period'
 import { buildCustomerIntel } from '../../intelligence'
+import { LIVE_CUSTOMER } from '../../cat-stock'
 
 // C9 · Customers & CRM.
 //
@@ -43,7 +44,7 @@ export async function crmFacts(month: string): Promise<CrmFacts> {
   const [customers, pointsIn, pointsOut, walletAgg, activeMemberships, startedM, expiredM,
     raised, resolved, openNow] = await Promise.all([
     db.customer.findMany({
-      where: { erasedAt: null },
+      where: LIVE_CUSTOMER,
       select: {
         id: true, createdAt: true, marketingConsent: true,
         appointments: { select: { scheduledAt: true, status: true } },
@@ -53,7 +54,7 @@ export async function crmFacts(month: string): Promise<CrmFacts> {
     }),
     db.loyaltyEntry.aggregate({ where: { createdAt: { gte: start, lt: end }, points: { gt: 0 } }, _sum: { points: true } }),
     db.loyaltyEntry.aggregate({ where: { createdAt: { gte: start, lt: end }, points: { lt: 0 } }, _sum: { points: true } }),
-    db.customer.aggregate({ where: { erasedAt: null }, _sum: { walletBalance: true } }),
+    db.customer.aggregate({ where: LIVE_CUSTOMER, _sum: { walletBalance: true } }),
     db.membership.count({ where: { status: 'Active' } }),
     db.membership.count({ where: { createdAt: { gte: start, lt: end } } }),
     db.membership.count({ where: { expiryDate: { gte: start, lt: end } } }),

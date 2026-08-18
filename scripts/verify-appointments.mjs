@@ -41,11 +41,20 @@ const one = async (sql, args = []) => rows((await pipe([exec(sql, args)]))[0])
 
 const iso = d => d.toISOString().replace('Z', '+00:00')
 /** `days` from now at `hour` local (UTC+8), as an instant. */
+// A wall-clock time in the business's own day (UTC+8), `days` from today.
+//
+// This used to take the UTC calendar date and set the hour to `hour - 8`. Between
+// 16:00 and 24:00 UTC — i.e. any time between midnight and 8am where the shop
+// actually is — the UTC date is still yesterday, so `at(0, 11)` produced
+// "yesterday 11:00" and the diary's upcoming view correctly excluded it. The
+// suite then reported the Today heading as missing, which read as a broken diary
+// rather than a test that only worked in the afternoon.
 const at = (days, hour) => {
-  const d = new Date()
-  d.setUTCDate(d.getUTCDate() + days)
-  d.setUTCHours(hour - 8, 0, 0, 0)
-  return d
+  const shifted = new Date(Date.now() + 8 * 3600_000) // wall clock in UTC+8
+  return new Date(Date.UTC(
+    shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate() + days,
+    hour - 8, 0, 0, 0,
+  ))
 }
 
 async function cleanup() {

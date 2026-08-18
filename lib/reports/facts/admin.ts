@@ -1,6 +1,7 @@
 import { db } from '../../db'
 import { monthRange } from '../period'
 import { depreciationInMonth, fixedAssetsNBV } from '../../assets'
+import { LIVE_CUSTOMER } from '../../cat-stock'
 
 // C9 · Administrative. Compliance, assets, the audit trail, data protection.
 //
@@ -46,7 +47,7 @@ export async function adminFacts(month: string): Promise<AdminFacts> {
     }),
     db.auditLog.groupBy({ by: ['action'], where: { at: { gte: start, lt: end } }, _count: true }),
     db.customer.count({ where: { erasedAt: { gte: start, lt: end } } }),
-    db.customer.count({ where: { erasedAt: null } }),
+    db.customer.count({ where: LIVE_CUSTOMER }),
     db.customer.count({ where: { erasedAt: { not: null } } }),
   ])
 

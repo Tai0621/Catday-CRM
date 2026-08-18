@@ -2,21 +2,23 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { resolveApptCharge } from '@/lib/appointment-charge'
 import { PosClient } from './PosClient'
+import { NOT_HOUSE, stockList, saleGate } from '@/lib/cat-stock'
 
 const DAY = 24 * 60 * 60 * 1000
 
 // POS checkout — closes a visit in one flow. A customer's finished appointments
 // load into the basket automatically (priced from the service / boarding nights);
 // retail and ad-hoc services are one tap away.
-export default async function PosPage({ searchParams }: { searchParams: Promise<{ customerId?: string }> }) {
+export default async function PosPage({ searchParams }: { searchParams: Promise<{ customerId?: string; catStock?: string }> }) {
   await requireAuth()
-  const { customerId } = await searchParams
+  const { customerId, catStock } = await searchParams
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const todayEnd = new Date(todayStart.getTime() + DAY)
 
   const [customers, openAppts, products, services] = await Promise.all([
     db.customer.findMany({
+      where: NOT_HOUSE,
       select: {
         id: true, name: true, phone: true, walletBalance: true, pointsBalance: true,
         memberships: {
@@ -52,6 +54,12 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     db.service.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' } }),
   ])
 
+  // Cats offered at the till are filtered by the SAME gate the inventory page
+  // uses, server-side. An under-age or unvaccinated kitten must not be one tap
+  // from being sold, and the till is not the place to re-litigate the rule.
+  const sellable = (await stockList({ status: { in: ['InStock', 'Reserved'] } }))
+    .filter(s => saleGate(s, now).ready)
+
   // "Billable" = clearly finished → auto-adds to the basket on customer pick.
   // The rest (in-progress today) are offered as one-tap chips so nothing is
   // charged before the service is actually done.
@@ -75,6 +83,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
   return (
     <PosClient
       preselectCustomerId={customerId ?? null}
+      preselectCatStockId={catStock ?? null}
       customers={customers.map(c => ({
         id: c.id, name: c.name, phone: c.phone,
         walletBalance: c.walletBalance, pointsBalance: c.pointsBalance,
@@ -84,6 +93,10 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       appointments={appointments}
       products={products.map(p => ({ id: p.id, name: p.name, price: p.price, stockQty: p.stockQty }))}
       services={services.map(s => ({ id: s.id, name: s.name, price: s.price, category: s.category }))}
+      cats={sellable.map(s => ({
+        id: s.id, catId: s.cat.id, sku: s.sku, name: s.cat.name, breed: s.cat.breed,
+        askingRM: s.askingRM, reservedForId: s.reservedForId,
+      }))}
     />
   )
 }

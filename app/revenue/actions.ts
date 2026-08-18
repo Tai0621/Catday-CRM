@@ -4,9 +4,10 @@ import { db } from '@/lib/db'
 import { getSession, isManager } from '@/lib/auth'
 import { recordAudit } from '@/lib/audit'
 import { revalidatePath } from 'next/cache'
+import { houseCustomer } from '@/lib/cat-stock'
 
 export type DeleteResult =
-  | { ok: true; removed: number; total: number; pointsReversed: number; walletRefunded: number; restocked: number; apptsReopened: number }
+  | { ok: true; removed: number; total: number; pointsReversed: number; walletRefunded: number; restocked: number; apptsReopened: number; catsReturned: number }
   | { ok: false; error: string }
 
 // Remove a wrongly-recorded transaction AND unwind the side effects the POS
@@ -70,6 +71,34 @@ export async function deleteTransaction(id: string): Promise<DeleteResult> {
     ops.push(db.stockMovement.create({ data: { productId: l.productId!, delta: l.quantity, reason: 'SaleReversal', reference: reference ?? null } }))
   }
 
+  // ── return any cats this sale sold to inventory ──
+  //
+  // Matched on the SALE REFERENCE, never on the line's catId. Once a cat is
+  // sold its new owner brings it in for grooming, and those sale lines carry the
+  // same catId — reversing one of those would quietly take a customer's pet back
+  // into stock and put it on sale again.
+  let catsReturned = 0
+  if (reference) {
+    const soldCats = await db.catStock.findMany({
+      where: { saleReference: reference, status: 'Sold' },
+      select: { id: true, catId: true, sku: true },
+    })
+    if (soldCats.length > 0) {
+      catsReturned = soldCats.length
+      const house = await houseCustomer()
+      ops.push(db.catStock.updateMany({
+        where: { id: { in: soldCats.map(c => c.id) } },
+        data: { status: 'InStock', soldAt: null, soldToId: null, saleRM: null, saleReference: null },
+      }))
+      // Ownership goes back to the house with the stock record, or the animal
+      // would sit in inventory while still listed as the buyer's pet.
+      ops.push(db.cat.updateMany({
+        where: { id: { in: soldCats.map(c => c.catId) } },
+        data: { customerId: house.id },
+      }))
+    }
+  }
+
   // ── re-open any appointments this sale settled (mark unpaid again) ──
   const apptLines = await db.transactionLine.findMany({
     where: { transactionId: { in: ids }, appointmentId: { not: null } },
@@ -94,11 +123,12 @@ export async function deleteTransaction(id: string): Promise<DeleteResult> {
     action: 'transaction.delete',
     entityType: 'Transaction',
     entityId: id,
-    summary: `Deleted sale ${reference ?? id} (RM ${roundedTotal.toFixed(2)}) — ${ids.length} row(s), ${pointsReversed} pts reversed, RM ${roundedRefund.toFixed(2)} wallet refunded, ${restocked} restocked, ${apptsReopened} appt(s) reopened`,
-    detail: { reference, ids, total: roundedTotal, pointsReversed, walletRefunded: roundedRefund, restocked, apptsReopened },
+    summary: `Deleted sale ${reference ?? id} (RM ${roundedTotal.toFixed(2)}) — ${ids.length} row(s), ${pointsReversed} pts reversed, RM ${roundedRefund.toFixed(2)} wallet refunded, ${restocked} restocked, ${apptsReopened} appt(s) reopened, ${catsReturned} cat(s) returned to stock`,
+    detail: { reference, ids, total: roundedTotal, pointsReversed, walletRefunded: roundedRefund, restocked, apptsReopened, catsReturned },
   }, session)
 
   revalidatePath('/revenue')
+  revalidatePath('/inventory/cats')
   revalidatePath('/finance/income-statement')
   revalidatePath('/finance/aging')
   revalidatePath('/cashup')
@@ -111,5 +141,6 @@ export async function deleteTransaction(id: string): Promise<DeleteResult> {
     walletRefunded: Math.round(walletRefunded * 100) / 100,
     restocked,
     apptsReopened,
+    catsReturned,
   }
 }

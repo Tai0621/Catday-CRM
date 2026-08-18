@@ -2,6 +2,7 @@ import { db } from '../db'
 import { recordAudit } from '../audit'
 import { SERVICE_CATEGORIES, ROOM_TYPES, TIER_QUALIFICATIONS } from '../constants'
 import type { OnboardingPlan, PlanGroup } from './plan'
+import { LIVE_CUSTOMER } from '../cat-stock'
 
 // ── C6 · Committing a group ──────────────────────────────────────────────────
 //
@@ -36,7 +37,7 @@ export interface CommitResult {
 /** Whether this instance is already carrying a real business. */
 export async function hasLiveData(): Promise<boolean> {
   const [customers, transactions] = await Promise.all([
-    db.customer.count({ where: { erasedAt: null } }),
+    db.customer.count({ where: LIVE_CUSTOMER }),
     db.transaction.count(),
   ])
   return customers > 0 || transactions > 0

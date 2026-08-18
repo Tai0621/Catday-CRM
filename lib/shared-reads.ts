@@ -1,6 +1,7 @@
 import { cache } from 'react'
 import { db } from './db'
-import { MEMBERSHIP_EXPIRY_ALERT_DAYS } from './constants'
+import { MEMBERSHIP_EXPIRY_ALERT_DAYS, RESIDENCY_TYPE } from './constants'
+import { CAT_NOT_HOUSE } from './cat-stock'
 
 // Reads the dashboard needs twice.
 //
@@ -48,6 +49,11 @@ function today() {
  */
 export const allCatsWithVisits = cache(async () =>
   db.cat.findMany({
+    // The shop's own cats are excluded HERE rather than at each caller, because
+    // this one query feeds both the dashboard and the Action Inbox — and the
+    // Action Inbox composes WhatsApp messages. A house cat reaching it produces
+    // a birthday greeting addressed to a phone number that does not exist.
+    where: CAT_NOT_HOUSE,
     select: {
       id: true, name: true, breed: true, coatType: true, groomingInterval: true,
       dateOfBirth: true, vaccinationExpiry: true, lastDewormAt: true, lastDefleaAt: true,
@@ -61,7 +67,10 @@ export const allCatsWithVisits = cache(async () =>
 export const appointmentsToday = cache(async () => {
   const { start, end } = today()
   return db.appointment.findMany({
-    where: { scheduledAt: { gte: start, lt: end }, status: { not: 'Cancelled' } },
+    // A house cat's residency is an appointment so the room calendar and run
+    // sheet see it; the diary is not the place for it. Without this, moving a
+    // cat into a room puts a fake arrival on today's board.
+    where: { scheduledAt: { gte: start, lt: end }, status: { not: 'Cancelled' }, type: { not: RESIDENCY_TYPE } },
     include: {
       customer: { include: { memberships: { where: { status: 'Active' }, include: { tier: true } } } },
       cat: true,
@@ -90,7 +99,7 @@ export const checkoutsToday = cache(async () => {
  */
 export const unpaidVisits = cache(async () =>
   db.appointment.findMany({
-    where: { status: 'Completed', paid: false, price: { not: null } },
+    where: { status: 'Completed', paid: false, price: { not: null }, type: { not: RESIDENCY_TYPE } },
     include: { customer: true, cat: true },
     orderBy: { scheduledAt: 'desc' },
     take: 25,

@@ -1,6 +1,7 @@
 import { db } from './db'
 import { buildCustomerIntel, type CustomerIntel } from './intelligence'
 import { MARKETING_FREQUENCY_CAP_DAYS, MARKETING_SEND_LOOKBACK_DAYS } from './constants'
+import { LIVE_CUSTOMER } from './cat-stock'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -141,7 +142,7 @@ async function loadCandidates(now: Date): Promise<Candidate[]> {
     db.customer.findMany({
       // Erased customers are excluded at the query layer, not the prompt layer —
       // Track A's erasure guarantee has to hold here too.
-      where: { erasedAt: null },
+      where: LIVE_CUSTOMER,
       select: {
         id: true, name: true, phone: true, source: true, marketingConsent: true, createdAt: true,
         language: true,

@@ -31,6 +31,21 @@ const mark = ok => (ok ? '✓' : '✗')
 const now = new Date()
 const iso = d => d.toISOString()
 const todayAt = h => new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, 0, 0)
+
+/**
+ * A moment earlier today that has definitely already passed.
+ *
+ * Case D — "an in-progress visit is offered but not auto-added" — used to seed
+ * a fixed 08:00. The POS only offers today's visits whose time has come
+ * (`scheduledAt <= now`), so before 8am the appointment was legitimately not
+ * offered and the suite failed on the app behaving correctly. Clamped to the
+ * start of the day so a run just after midnight does not reach into yesterday.
+ */
+const alreadyToday = () => {
+  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const hourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+  return hourAgo > dayStart ? hourAgo : dayStart
+}
 const DAY = 86400000
 
 // ── ids ──
@@ -84,7 +99,7 @@ try {
       [t(aNoPrice), t(custId), t(catId), t('Grooming'), nul, t(iso(todayAt(9))), t(iso(todayAt(10))), t('Ready'), nul, nul]),
     exec(`INSERT INTO Appointment (id,customerId,catId,type,serviceId,scheduledAt,endsAt,status,price,depositRM,paid,usedCredit,createdAt,updatedAt)
           VALUES (?,?,?,?,?,?,?,?,?,?,0,0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`,
-      [t(aInProgress), t(custId), t(catId), t('Grooming'), t(svcGroom), t(iso(todayAt(8))), t(iso(todayAt(9))), t('Scheduled'), f(120), nul]),
+      [t(aInProgress), t(custId), t(catId), t('Grooming'), t(svcGroom), t(iso(alreadyToday())), t(iso(todayAt(23))), t('Scheduled'), f(120), nul]),
   ])
   console.log('seeded 4 appointments for', `${MARK} Customer`)
 

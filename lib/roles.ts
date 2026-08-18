@@ -20,7 +20,10 @@ export const STAFF_ROLES = ['FrontDesk', 'Groomer', 'Boarding'] as const
  */
 export const MANAGER_ONLY_PATHS = [
   '/revenue', '/plan', '/academy', '/ask', '/api/ask', '/whatsapp', '/brief', '/reports',
-  '/staff', '/services', '/cashup', '/memberships/tiers', '/finance', '/admin', '/hr', '/products',
+  // `/inventory` covers both halves — retail stock and the cat inventory. Cost
+  // price, margin and acquisition cost all sit under it, so it stays a floor
+  // rather than something a role can be granted piecemeal.
+  '/staff', '/services', '/cashup', '/memberships/tiers', '/finance', '/admin', '/hr', '/inventory',
   '/api/customers', '/marketing',
 ]
 

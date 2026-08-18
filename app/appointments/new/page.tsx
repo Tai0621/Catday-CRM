@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { NewAppointmentClient } from './NewAppointmentClient'
+import { NOT_HOUSE, CAT_NOT_HOUSE } from '@/lib/cat-stock'
 
 // Booking is split into two lanes — grooming and boarding — so only the fields
 // that lane actually needs are on screen. Price and end time are derived from
@@ -14,8 +15,8 @@ export default async function NewAppointmentPage({
   const { customerId, catId } = await searchParams
 
   const [customers, cats, services, staff] = await Promise.all([
-    db.customer.findMany({ select: { id: true, name: true, phone: true }, orderBy: { name: 'asc' } }),
-    db.cat.findMany({ select: { id: true, name: true, customerId: true }, orderBy: { name: 'asc' } }),
+    db.customer.findMany({ where: NOT_HOUSE, select: { id: true, name: true, phone: true }, orderBy: { name: 'asc' } }),
+    db.cat.findMany({ where: CAT_NOT_HOUSE, select: { id: true, name: true, customerId: true }, orderBy: { name: 'asc' } }),
     db.service.findMany({
       where: { active: true },
       select: { id: true, name: true, category: true, price: true, durationMin: true },

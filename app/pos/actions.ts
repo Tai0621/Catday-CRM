@@ -6,8 +6,13 @@ import { awardPoints } from '@/lib/loyalty'
 import { generateReceiptToken } from '@/lib/receipt'
 
 export interface CheckoutItem {
-  kind: 'appointment' | 'product' | 'service' | 'custom'
-  refId?: string // appointmentId / productId / serviceId
+  // 'cat' sells an animal out of inventory; refId is the CatStock id, not the
+  // Cat id. It goes through the POS rather than its own screen so a cat sale
+  // lands in revenue, on the customer's record and in the monthly close like
+  // any other sale — a second sale path is how a business ends up with two sets
+  // of numbers.
+  kind: 'appointment' | 'product' | 'service' | 'custom' | 'cat'
+  refId?: string // appointmentId / productId / serviceId / catStockId
   label: string
   qty: number
   unitPrice: number
@@ -72,9 +77,37 @@ export async function checkout(payloadJson: string): Promise<CheckoutResult> {
     ? await db.appointment.findMany({ where: { id: { in: apptIds } }, select: { id: true, type: true } })
     : []
   const apptType = new Map(appts.map(a => [a.id, a.type]))
+
+  // ── cats ──
+  // Resolved server-side from the CatStock id: the animal it points at, and
+  // whether it may leave at all, are not things the till is allowed to assert.
+  const catStockIds = items.filter(i => i.kind === 'cat' && i.refId).map(i => i.refId!)
+  const catStocks = catStockIds.length
+    ? await db.catStock.findMany({
+        where: { id: { in: catStockIds } },
+        select: { id: true, catId: true, sku: true, status: true, reservedForId: true },
+      })
+    : []
+  if (catStocks.length !== new Set(catStockIds).size) return { ok: false, error: 'A cat in the basket no longer exists.' }
+  if (catStockIds.length > 0 && !p.customerId) {
+    return { ok: false, error: 'A cat sale needs the buyer selected — the animal is transferred to them.' }
+  }
+  for (const s of catStocks) {
+    if (s.status === 'Sold' || s.status === 'Rehomed' || s.status === 'Deceased') {
+      return { ok: false, error: `${s.sku} has already left (${s.status}).` }
+    }
+    // A hold belongs to whoever paid the deposit. Selling it over their head is
+    // not a till decision — release the reservation first, deliberately.
+    if (s.status === 'Reserved' && s.reservedForId && s.reservedForId !== p.customerId) {
+      return { ok: false, error: `${s.sku} is reserved for someone else. Release the hold first.` }
+    }
+  }
+  const catIdOf = new Map(catStocks.map(s => [s.id, s.catId]))
+
   for (const i of items) {
     const key = i.kind === 'appointment' ? (apptType.get(i.refId!) ?? 'Other')
       : i.kind === 'product' ? 'Retail'
+      : i.kind === 'cat' ? 'Cat Sale'
       : 'Other'
     const mapped = key === 'Bath' || key === 'Diagnosis' ? 'Grooming' : key
     catTotals.set(mapped, (catTotals.get(mapped) ?? 0) + i.qty * i.unitPrice)
@@ -85,6 +118,19 @@ export async function checkout(payloadJson: string): Promise<CheckoutResult> {
   const receiptToken = generateReceiptToken() // customer-facing receipt link
   const now = new Date()
   const staffName = session.name
+
+  // One shape for a sale line, because the wallet-only branch below builds the
+  // same rows again and the two drifting apart would mean a cat sold entirely
+  // from wallet credit lost its link to the animal.
+  const lineFor = (i: CheckoutItem) => ({
+    catId: (i.kind === 'cat' && i.refId ? catIdOf.get(i.refId) : i.catId) || null,
+    appointmentId: i.kind === 'appointment' ? i.refId ?? null : null,
+    productId: i.kind === 'product' ? i.refId ?? null : null,
+    description: i.label,
+    quantity: i.qty,
+    unitPrice: i.unitPrice,
+    subtotal: Math.round(i.qty * i.unitPrice * 100) / 100,
+  })
 
   const ops = []
 
@@ -103,15 +149,7 @@ export async function checkout(payloadJson: string): Promise<CheckoutResult> {
       publicToken: receiptToken,
       notes: [p.note?.trim(), `POS · ${staffName}`].filter(Boolean).join(' · '),
       lines: {
-        create: items.map(i => ({
-          catId: i.catId || null,
-          appointmentId: i.kind === 'appointment' ? i.refId ?? null : null,
-          productId: i.kind === 'product' ? i.refId ?? null : null,
-          description: i.label,
-          quantity: i.qty,
-          unitPrice: i.unitPrice,
-          subtotal: Math.round(i.qty * i.unitPrice * 100) / 100,
-        })),
+        create: items.map(lineFor),
       },
     },
   }))
@@ -132,15 +170,7 @@ export async function checkout(payloadJson: string): Promise<CheckoutResult> {
         method: 'Wallet', reference, publicToken: receiptToken,
         notes: [p.note?.trim(), `POS · ${staffName}`].filter(Boolean).join(' · '),
         lines: {
-          create: items.map(i => ({
-            catId: i.catId || null,
-            appointmentId: i.kind === 'appointment' ? i.refId ?? null : null,
-            productId: i.kind === 'product' ? i.refId ?? null : null,
-            description: i.label,
-            quantity: i.qty,
-            unitPrice: i.unitPrice,
-            subtotal: Math.round(i.qty * i.unitPrice * 100) / 100,
-          })),
+          create: items.map(lineFor),
         },
       },
     }))
@@ -153,6 +183,30 @@ export async function checkout(payloadJson: string): Promise<CheckoutResult> {
     if (i.kind === 'product' && i.refId) {
       ops.push(db.product.update({ where: { id: i.refId }, data: { stockQty: { decrement: i.qty } } }))
       ops.push(db.stockMovement.create({ data: { productId: i.refId, delta: -i.qty, reason: 'Sale', reference } }))
+    }
+    // Selling a cat moves the ANIMAL to the buyer and closes its stock record.
+    // The Cat row is not copied or recreated: the new owner inherits the
+    // vaccination history, the photographs and every past visit, which is the
+    // whole reason owned cats live in the Cat table rather than beside it.
+    if (i.kind === 'cat' && i.refId) {
+      const catId = catIdOf.get(i.refId)
+      const price = Math.round(i.qty * i.unitPrice * 100) / 100
+      ops.push(db.catStock.update({
+        where: { id: i.refId },
+        data: {
+          status: 'Sold', soldAt: now, soldToId: p.customerId, saleRM: price,
+          saleReference: reference,
+          reservedForId: null, reservedUntil: null, depositRM: null,
+        },
+      }))
+      if (catId && p.customerId) ops.push(db.cat.update({ where: { id: catId }, data: { customerId: p.customerId } }))
+      // It no longer lives here, so it no longer holds a room.
+      if (catId) {
+        ops.push(db.appointment.updateMany({
+          where: { catId, type: 'Residency', status: 'CheckedIn' },
+          data: { status: 'Completed', endsAt: now },
+        }))
+      }
     }
   }
   if (walletAmount > 0 && p.customerId) {

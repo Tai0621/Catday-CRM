@@ -1,8 +1,9 @@
 import { db } from './db'
 import { buildGroomingPredictions } from './grooming-reminder'
 import { computePacing, monthKey, monthLabel } from './plan'
-import { REVENUE_CATEGORIES, VACCINATION_ALERT_DAYS } from './constants'
+import { REVENUE_CATEGORIES, VACCINATION_ALERT_DAYS, RESIDENCY_TYPE } from './constants'
 import { allCatsWithVisits, appointmentsToday, checkoutsToday, unpaidVisits, membershipsExpiringSoon } from './shared-reads'
+import { NOT_HOUSE, CAT_NOT_HOUSE } from './cat-stock'
 
 const DAY = 24 * 60 * 60 * 1000
 const VIP_TIERS = ['Gold', 'Black Circle']
@@ -50,21 +51,21 @@ export async function getDashboardData() {
     appointmentsToday(),
     db.room.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }),
     allCatsWithVisits(),
-    db.customer.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } }),
+    db.customer.count({ where: { createdAt: { gte: monthStart, lt: monthEnd }, ...NOT_HOUSE } }),
     db.membership.count({ where: { createdAt: { gte: monthStart, lt: monthEnd } } }),
     db.appointment.findMany({
-      where: { scheduledAt: { gte: monthStart, lt: monthEnd } },
+      where: { scheduledAt: { gte: monthStart, lt: monthEnd }, type: { not: RESIDENCY_TYPE } },
       select: { customerId: true, customer: { select: { createdAt: true } } },
     }),
     db.incident.groupBy({ by: ['type'], where: { resolved: false }, _count: true }),
     membershipsExpiringSoon(),
-    db.customer.count(),
+    db.customer.count({ where: NOT_HOUSE }),
     db.whatsAppLead.count({ where: { status: 'Pending' } }),
     checkoutsToday(),
     unpaidVisits(),
     db.businessPlan.findUnique({ where: { id: 'default' } }),
     db.monthlyTarget.findUnique({ where: { month: monthKey(now) } }),
-    db.cat.count({ where: { foundingNumber: { not: null } } }),
+    db.cat.count({ where: { foundingNumber: { not: null }, ...CAT_NOT_HOUSE } }),
     db.membership.count({ where: { status: 'Active', tier: { name: 'Black Circle' } } }),
     db.customer.aggregate({ _sum: { walletBalance: true } }),
   ])

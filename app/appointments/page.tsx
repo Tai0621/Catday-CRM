@@ -1,7 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import Link from 'next/link'
-import { APPOINTMENT_TYPES, APPOINTMENT_STATUSES } from '@/lib/constants'
+import { APPOINTMENT_TYPES, APPOINTMENT_STATUSES, RESIDENCY_TYPE } from '@/lib/constants'
 import { apptTypeStyle } from '@/lib/segments'
 import { getConfig } from '@/lib/config'
 import { zonedDayKey, zonedDayStart, zonedDayRange } from '@/lib/timezone'
@@ -40,7 +40,10 @@ export default async function AppointmentsPage({
   // parameter decides, and the default is what is still to come.
   const view: View = date ? 'day' : viewParam === 'past' ? 'past' : 'upcoming'
 
-  const where: Record<string, unknown> = {}
+  // Residencies are house cats living in rooms, not diary entries. They belong
+  // to the run sheet and the room calendar; here they would be permanent rows
+  // that never complete and can never be actioned.
+  const where: Record<string, unknown> = { type: { not: RESIDENCY_TYPE } }
   if (type) where.type = type
   if (status) where.status = status
 

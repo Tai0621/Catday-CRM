@@ -2,6 +2,7 @@ import { db } from './db'
 import { buildIncomeStatement } from './finance'
 import { payablesTotal } from './aging'
 import { fetchAssetCores, fixedAssetsNBV } from './assets'
+import { livestockAtCost } from './cat-stock'
 
 // The Balance Sheet — a finance-only overlay. It READS operational data
 // (unpaid appointments, the wallet ledger, the income statement) but never
@@ -71,7 +72,7 @@ export async function buildBalanceSheet(asOf: string): Promise<BalanceSheet> {
   const end = monthEnd(asOf) // exclusive
   const [y, m] = asOf.split('-').map(Number)
 
-  const [cells, unpaidAppts, walletAgg, futureDeposits, payables, products, firstTxn, firstExp, assetCores] = await Promise.all([
+  const [cells, unpaidAppts, walletAgg, futureDeposits, payables, products, firstTxn, firstExp, assetCores, livestock] = await Promise.all([
     db.balanceSheetCell.findMany({ where: { asOf }, select: { lineKey: true, amount: true } }),
     // Accounts receivable: completed but unpaid, up to the as-of date
     db.appointment.findMany({
@@ -90,6 +91,7 @@ export async function buildBalanceSheet(asOf: string): Promise<BalanceSheet> {
     db.transaction.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
     db.expense.findFirst({ orderBy: { date: 'asc' }, select: { date: true } }),
     fetchAssetCores(),
+    livestockAtCost(end),
   ])
   const fixedAssets = assetCores
 
@@ -130,6 +132,12 @@ export async function buildBalanceSheet(asOf: string): Promise<BalanceSheet> {
       keyedLine('a.cash', 'Cash & bank'),
       autoLine('a.receivables', 'Accounts receivable', receivables),
       autoLine('a.inventory', 'Inventory (at cost)', inventoryAtCost),
+      // Cats the business owns, at ACQUISITION cost only. Vet, vaccination and
+      // feed are expensed in the month they are paid, so adding them here as
+      // well would count the same ringgit twice and overstate profit by the
+      // difference. A home-bred kitten therefore carries at nil, which is the
+      // conservative and correct answer.
+      autoLine('a.livestock', 'Livestock (cats at cost)', livestock),
       keyedLine('a.prepaid', 'Prepayments & deposits paid'),
       keyedLine('a.otherCurrent', 'Other current assets'),
     ]),

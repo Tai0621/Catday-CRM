@@ -8,14 +8,14 @@ import { scopeForPath } from './scope'
 import { budgetState, recordUsage } from './budget'
 import { writeToolDefs, TOOL_TO_KIND, isWriteTool } from './write-tools'
 import { propose } from './proposals'
+// Track A erased a customer's identity; the assistant must not hand it back,
+// and the house holding record is not a customer to hand back at all. Applied
+// at the QUERY layer on every tool that reads customer records — a prompt
+// instruction would be advisory, a where clause is not.
+import { LIVE_CUSTOMER } from '../cat-stock'
 
 const MAX_TOOL_ROUNDS = 5
 const DAY = 24 * 60 * 60 * 1000
-
-// Track A erased a customer's identity; the assistant must not hand it back.
-// Applied at the QUERY layer on every tool that reads customer records — a
-// prompt instruction would be advisory, a where clause is not.
-const LIVE_CUSTOMER = { erasedAt: null } as const
 
 // ── Safe read-only query tools (no raw SQL ever reaches the model) ──────────
 

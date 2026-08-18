@@ -1,6 +1,8 @@
 # v1.3.0 Plan — Inventory: physical products + cat inventory
 
-**Status: draft for the owner to review and edit. Nothing here is built yet.**
+**Status: BUILT on the demo, awaiting the owner's review.** The plan below is
+unchanged from the draft so the two can be compared; what was actually built,
+and the nine decisions it had to assume, are recorded in "As built" at the end.
 
 Read [AGENTS.md](../AGENTS.md) first. This document is a design proposal, not a
 specification — where I have made a judgement call I have said so and given the
@@ -533,3 +535,61 @@ first symptom is a wrong number in a report nobody re-checks.
 9. **Vet supplier list — in or out?** I have left it out. It is a contact list,
    and adding a supplier model to serve one sheet is scope I would rather spend
    on the sale flow.
+
+---
+
+## As built (v1.3.0, on the demo)
+
+Everything in §12's build order is in, plus the batch-cost screen. The nine
+questions in §13 had to be answered to build at all — these are the assumptions,
+each reversible, each flagged where the owner said nothing:
+
+| # | Question | Assumed | How to change it |
+|---|---|---|---|
+| 1 | `86` / `107` DOBs | **Not dates.** Imported as unknown; 24 cats carry "Date of birth unknown" and cannot pass the sale gate | enter a DOB on the cat's record |
+| 2 | SKU prefixes | **Kept exactly as the workbook has them** | they are editable per cat |
+| 3 | Feed costing | **Herd-level only** — a `Cattery −` movement on the product ledger, shown as cost per cat per month | §6.1 |
+| 4 | Accounting | **(a) expense as incurred**; the balance sheet carries cats at acquisition cost only | §8 |
+| 5 | Rehoming price | **Optional fee**, recorded but not booked as a sale | `exitCat` |
+| 6 | Minimum sale age | **12 weeks** (`MIN_SALE_AGE_DAYS`) | one constant |
+| 7 | Who can see it | **Manager only**, like Products — `/inventory` is in `MANAGER_ONLY_PATHS` | `lib/roles.ts` + `proxy.ts` |
+| 8 | DVS breeder licence | **Not recorded** — no details supplied | add it at `/admin/licenses` |
+| 9 | Vet supplier list | **Left out** | — |
+
+Two more decisions the build forced, worth knowing:
+
+- **Desexing dates are blank for every imported cat.** The workbook records
+  `Neutered`/`Spayed` but never *when*, and the import will not invent a date.
+  The flag is preserved in each cat's notes; the readiness gate therefore warns
+  "Intact — agree desexing with the buyer" until a real date is entered.
+- **Acquisition cost is RM 0 for all 64**, because the workbook does not record
+  what any cat cost. Livestock consequently carries at nil on the balance sheet
+  — conservative and correct, but it means the cattery is currently invisible as
+  an asset until costs are entered.
+
+**One thing the workbook could still give us**: the Master List leaves sex blank
+for 22 cats, but *"Latestt Vaccines List (2)"* has a sex for most of them. I did
+not cross-fill, because the two sheets disagree in places and a guess written
+into the database looks identical to a fact. Say the word and it becomes a
+one-line import option.
+
+### Verification
+
+| Suite | Result |
+|---|---|
+| `verify-cat-inventory` | 24/24 — gate, costs, balance-sheet isolation, house isolation, residency |
+| `verify-cat-sale` | 22/22 — sale, ownership transfer, guards, full reversal |
+| Full production sweep | 61 pass · 0 fail · 15 skip |
+| Full dev sweep | 13 pass · 0 fail |
+
+Two **pre-existing** suites failed and were fixed; neither was caused by this
+work, and both were the test rather than the app:
+
+- `verify-pos-autocharge` seeded an in-progress visit at a fixed 08:00, so it
+  failed on any run before 8am — the POS correctly does not offer a visit whose
+  time has not come.
+- `verify-appointments` built "today" from the UTC calendar date minus eight
+  hours, which lands on *yesterday* between midnight and 8am local, so the diary
+  had no Today group to find.
+
+Both now derive their times from the moment the suite runs.
