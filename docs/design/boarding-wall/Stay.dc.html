@@ -24,7 +24,7 @@
       <span style="font-family: 'Space Mono', monospace; font-size: 11px; padding: 3px 9px; border-radius: 999px; background: rgba(45,25,7,.07); color: rgba(45,25,7,.6)">Z3-08</span>
       <span style="font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: rgba(177,73,25,.15); color: #8d3a14">In house</span>
       <span style="flex-grow: 1"></span>
-      <span style="font-size: 12px; color: rgba(45,25,7,.5)">Night 3 of 7 &middot; out Sun 24 Aug</span>
+      <span style="font-size: 12px; color: rgba(45,25,7,.5)">Night 3 of 7 &middot; out Mon 24 Aug</span>
     </div>
     <div style="font-size: 13px; color: rgba(45,25,7,.55); margin-top: 5px">
       British Shorthair &middot; 4 yr &middot; female &middot; owner Lim Wei Ling &middot; <a href="#">cat record</a>
@@ -52,7 +52,7 @@
     <div style="flex-grow: 1; background: #ECDBB6; border: 1px solid rgba(45,25,7,.12); border-radius: 12px; overflow: hidden">
       <div style="padding: 13px 16px; border-bottom: 1px solid rgba(45,25,7,.1); display: flex; align-items: center; justify-content: space-between">
         <span style="font-size: 14px; font-weight: 600">Today&rsquo;s care</span>
-        <span style="font-size: 12px; color: rgba(45,25,7,.5)">3 of 5 done</span>
+        <span style="font-size: 12px; color: rgba(45,25,7,.5)">{{tally}}</span>
       </div>
       <div style="padding: 6px 8px">
         <sc-for list="{{tasks}}" as="t" hint-placeholder-count="5">
@@ -158,12 +158,13 @@ class Component extends DCLogic {
 
     const stay = [
       { k: 'In', v: 'Mon 17 Aug, 10:15' },
-      { k: 'Out', v: 'Sun 24 Aug' },
+      { k: 'Out', v: 'Mon 24 Aug' },
       { k: 'Nights left', v: '5' },
       { k: 'Balance', v: 'RM 420 due on pickup', accent: true },
     ].map((s) => ({ ...s, vStyle: 'text-align: right; font-weight: 500; color: ' + (s.accent ? '#B14919' : '#2D1907') }))
 
-    return { tasks, care, stay }
+    const doneCount = tasks.filter((t) => t.done).length
+    return { tasks, care, stay, tally: doneCount + ' of ' + tasks.length + ' done' }
   }
 }
 </script>

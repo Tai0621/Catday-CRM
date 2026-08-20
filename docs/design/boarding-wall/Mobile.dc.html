@@ -20,7 +20,7 @@
   <div>
     <div style="font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: rgba(45,25,7,.45)">Boarding</div>
     <h1 style="margin: 3px 0 0; font-size: 21px; font-weight: 700">Wednesday 19 Aug</h1>
-    <div style="font-size: 12.5px; color: rgba(45,25,7,.55); margin-top: 3px">24 in house &middot; 4 out today &middot; 11 tasks left</div>
+    <div style="font-size: 12.5px; color: rgba(45,25,7,.55); margin-top: 3px">24 rooms in use &middot; 5 out today &middot; 11 tasks left</div>
   </div>
 
   <!-- zone tabs: one bank at a time, full width -->
@@ -94,31 +94,33 @@ class Component extends DCLogic {
     const B = {
       Health: { bg: '#B14919', fg: '#ECDBB6' },
       Out:    { bg: '#B8902B', fg: '#2D1907' },
+      Late:   { bg: 'rgba(177,73,25,.85)', fg: '#ECDBB6' },
+      In:     { bg: 'rgba(45,25,7,.35)', fg: '#ECDBB6' },
     }
 
     const zoneDefs = [
-      { label: 'Z1', name: 'Feature wall · 10 units', cols: 2, rooms: [
+      { label: 'Z1', name: 'Feature wall · showing 6 of 10', cols: 2, rooms: [
         ['Z1-01', 'Occupied', 'Mochi', 'Health'], ['Z1-02', 'Occupied', 'Biscuit', null],
         ['Z1-03', 'Available', '', null], ['Z1-04', 'Occupied', 'Tofu', 'Out'],
         ['Z1-05', 'Occupied', 'Pepper', null], ['Z1-06', 'Cleaning', '', null],
       ] },
-      { label: 'Z2', name: 'Porthole bank · 9 units', cols: 3, rooms: [
+      { label: 'Z2', name: 'Porthole bank · all 9', cols: 3, rooms: [
         ['Z2-01', 'Occupied', 'Latte', null], ['Z2-02', 'Occupied', 'Ollie', null], ['Z2-03', 'Available', '', null],
         ['Z2-04', 'Occupied', 'Momo', 'Out'], ['Z2-05', 'Available', '', null], ['Z2-06', 'Maintenance', '', null],
         ['Z2-07', 'Occupied', 'Pudding', null], ['Z2-08', 'Available', '', null], ['Z2-09', 'Occupied', 'Yuzu', null],
       ] },
-      { label: 'Z3', name: 'Standard bank · 18 units', cols: 3, rooms: [
+      { label: 'Z3', name: 'Standard bank · showing 9 of 18', cols: 3, rooms: [
         ['Z3-01', 'Occupied', 'Kopi', null], ['Z3-02', 'Available', '', null], ['Z3-03', 'Occupied', 'Ginger', null],
         ['Z3-04', 'Occupied', 'Snow', null], ['Z3-05', 'Available', '', null], ['Z3-06', 'Cleaning', '', null],
         ['Z3-07', 'Occupied', 'Peanut', null], ['Z3-08', 'Occupied', 'Cendol', 'Health'], ['Z3-09', 'Available', '', null],
       ] },
-      { label: 'Z4', name: 'Suites · 4 units', cols: 2, rooms: [
+      { label: 'Z4', name: 'Suites · all 4', cols: 2, rooms: [
         ['Z4-01', 'Occupied', 'Raja & Ratu', null], ['Z4-02', 'Available', '', null],
         ['Z4-03', 'Occupied', 'Bunga', 'Out'], ['Z4-04', 'Available', '', null],
       ] },
-      { label: 'Stage', name: 'Staging cabinet · 6 cubbies', cols: 3, rooms: [
-        ['S-01', 'Occupied', 'Nala', null], ['S-02', 'Available', '', null], ['S-03', 'Available', '', null],
-        ['S-04', 'Occupied', 'Milo', 'Out'], ['S-05', 'Available', '', null], ['S-06', 'Available', '', null],
+      { label: 'Stage', name: 'Staging cabinet · all 6', cols: 3, rooms: [
+        ['S-01', 'Occupied', 'Chestnut', 'In'], ['S-02', 'Available', '', null], ['S-03', 'Available', '', null],
+        ['S-04', 'Occupied', 'Barley', 'Out'], ['S-05', 'Available', '', null], ['S-06', 'Available', '', null],
       ] },
     ]
 
@@ -159,7 +161,7 @@ class Component extends DCLogic {
 
     const todo = [
       { what: 'Play & brush — Cendol, Z3-08', who: 'nobody assigned' },
-      { what: 'Evening feed — 6 cats in this bank', who: 'due from 17:30' },
+      { what: 'Evening feed — every cat in this bank', who: 'due from 17:30' },
       { what: 'Full litter change — Z3-03', who: 'weekly, due today' },
     ]
 

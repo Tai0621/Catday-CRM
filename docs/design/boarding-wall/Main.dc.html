@@ -111,7 +111,7 @@
             </div>
 
             <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 7px">
-              <sc-for list="{{sel.facts}}" as="f" hint-placeholder-count="4">
+              <sc-for list="{{sel.facts}}" as="f" hint-placeholder-count="5">
                 <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 12px">
                   <span style="color: rgba(45,25,7,.5)">{{f.k}}</span>
                   <span style="font-weight: 500; text-align: right">{{f.v}}</span>
@@ -154,10 +154,12 @@
         <sc-if value="{{sel.empty}}" hint-placeholder-val="{{false}}">
           <div>
             <div style="font-size: 13px; color: rgba(45,25,7,.55); line-height: 1.5">{{sel.emptyLine}}</div>
+            <sc-if value="{{sel.showNext}}" hint-placeholder-val="{{true}}">
             <div style="margin-top: 14px; padding: 11px; border-radius: 8px; background: rgba(114,144,148,.14); border: 1px solid rgba(114,144,148,.3)">
               <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); margin-bottom: 4px">Next booked</div>
               <div style="font-size: 13px; font-weight: 600">{{sel.nextBooking}}</div>
             </div>
+            </sc-if>
             <div style="margin-top: 14px; background: #B14919; color: #ECDBB6; font-size: 13px; padding: 8px 14px; border-radius: 8px; font-weight: 500; display: inline-block; cursor: pointer">Place an arrival here</div>
           </div>
         </sc-if>
@@ -205,6 +207,42 @@ class Component extends DCLogic {
       Late:    { bg: 'rgba(177,73,25,.85)', fg: '#ECDBB6' },
       In:      { bg: 'rgba(45,25,7,.35)', fg: '#ECDBB6' },
     }
+
+    // One guest, one set of facts. The rail reads from here, so selecting a
+    // different tile genuinely changes the owner, the dates and the balance —
+    // a mock where every room shows the same customer teaches the wrong thing
+    // about what the screen is for.
+    const PROFILE = {
+      Mochi:    { breed: 'Persian · 6 yr · female',            owner: 'Nurul Hisham',  stay: '18 – 25 Aug · 7 nights', left: '6', diet: 'Commercial · 50g × 2',   balance: 'Paid in full',        done: 0.5,
+                  flag: 'Matting behind both ears — groomer asked to look before she goes home.' },
+      Biscuit:  { breed: 'Domestic · 3 yr · male',             owner: 'Tan Chee Meng', stay: '19 – 21 Aug · 2 nights', left: '2', diet: 'Owner-supplied',         balance: 'RM 180 due on pickup', done: 1 },
+      Tofu:     { breed: 'Ragdoll · 2 yr · male',              owner: 'Farah Aziz',    stay: '16 – 19 Aug · 3 nights', left: '0', diet: 'Commercial · 60g × 2',   balance: 'RM 240 due today',     done: 0.8 },
+      Pepper:   { breed: 'Devon Rex · 5 yr · female',          owner: 'Goh Li Ping',   stay: '17 – 23 Aug · 6 nights', left: '4', diet: 'Commercial · 45g × 3',   balance: 'Paid in full',         done: 1 },
+      Suki:     { breed: 'British Longhair · 8 yr · female',   owner: 'Amirah Rashid', stay: '12 – 26 Aug · 14 nights', left: '7', diet: 'Prescription · renal',  balance: 'Deposit RM 300 held',  done: 0.75 },
+      Nutmeg:   { breed: 'Munchkin · 1 yr · male',             owner: 'Vinod Kumar',   stay: '19 – 22 Aug · 3 nights', left: '3', diet: 'Kitten · 40g × 3',       balance: 'RM 270 due on pickup', done: 0.35 },
+      Bao:      { breed: 'Exotic Shorthair · 4 yr · male',     owner: 'Chong Mei Yee', stay: '15 – 20 Aug · 5 nights', left: '1', diet: 'Commercial · 55g × 2',   balance: 'Paid in full',         done: 0.6 },
+      Latte:    { breed: 'British Shorthair · 3 yr · female',  owner: 'Siti Zubaidah', stay: '18 – 24 Aug · 6 nights', left: '5', diet: 'Commercial · 50g × 2',   balance: 'RM 420 due on pickup', done: 1 },
+      Ollie:    { breed: 'Domestic · 7 yr · male',             owner: 'Raj Menon',     stay: '19 – 20 Aug · 1 night',  left: '1', diet: 'Owner-supplied',         balance: 'Paid in full',         done: 0.5 },
+      Momo:     { breed: 'Scottish Fold · 2 yr · female',      owner: 'Lee Wai Kit',   stay: '14 – 19 Aug · 5 nights', left: '0', diet: 'Commercial · 45g × 2',   balance: 'RM 400 due today',     done: 0.9 },
+      Pudding:  { breed: 'Persian · 9 yr · female',            owner: 'Hafiz Osman',   stay: '17 – 27 Aug · 10 nights', left: '8', diet: 'Prescription · renal', balance: 'Deposit RM 250 held',  done: 0.45 },
+      Yuzu:     { breed: 'Devon Rex · 4 yr · male',            owner: 'Ong Sze Ling',  stay: '19 – 26 Aug · 7 nights', left: '7', diet: 'Commercial · 55g × 2',   balance: 'RM 490 due on pickup', done: 0.2 },
+      Kopi:     { breed: 'Domestic · 5 yr · male',             owner: 'Danish Iskandar', stay: '16 – 21 Aug · 5 nights', left: '2', diet: 'Commercial · 60g × 2', balance: 'Paid in full',        done: 1 },
+      Ginger:   { breed: 'Maine Coon · 3 yr · male',           owner: 'Yap Hui Xin',   stay: '18 – 22 Aug · 4 nights', left: '3', diet: 'Commercial · 80g × 2',   balance: 'RM 320 due on pickup', done: 0.7 },
+      Snow:     { breed: 'British Longhair · 2 yr · female',   owner: 'Aisyah Kamal',  stay: '19 – 23 Aug · 4 nights', left: '4', diet: 'Commercial · 45g × 2',   balance: 'Paid in full',         done: 0.4 },
+      Peanut:   { breed: 'Munchkin · 6 yr · male',             owner: 'Cheah Boon Hui', stay: '13 – 20 Aug · 7 nights', left: '1', diet: 'Commercial · 50g × 2',  balance: 'RM 560 due on pickup', done: 1 },
+      Cendol:   { breed: 'British Shorthair · 4 yr · female',  owner: 'Lim Wei Ling',  stay: '17 – 24 Aug · 7 nights', left: '5', diet: 'Prescription · renal',   balance: 'RM 420 due on pickup', done: 0.6,
+                  flag: 'Ate under half at both meals yesterday. Owner asked to be called if it happens twice.' },
+      Milo:     { breed: 'Domestic · 4 yr · male',             owner: 'Sharifah Nor',  stay: '15 – 19 Aug · 4 nights', left: '0', diet: 'Commercial · 60g × 2',   balance: 'RM 320 due today',     done: 0.8 },
+      Sesame:   { breed: 'Exotic Shorthair · 5 yr · female',   owner: 'Wong Kar Loon', stay: '18 – 25 Aug · 7 nights', left: '6', diet: 'Commercial · 50g × 2',   balance: 'Deposit RM 200 held',  done: 0.55 },
+      Rambutan: { breed: 'Domestic · 2 yr · male',             owner: 'Izzat Faridah', stay: '19 – 21 Aug · 2 nights', left: '2', diet: 'Owner-supplied',         balance: 'Paid in full',         done: 0.3 },
+      Coco:     { breed: 'Minuet · 3 yr · female',             owner: 'Teoh Ai Wei',   stay: '17 – 20 Aug · 3 nights', left: '1', diet: 'Commercial · 45g × 2',   balance: 'RM 240 due on pickup', done: 1 },
+      Nala:     { breed: 'Ragdoll · 1 yr · female',            owner: 'Zulkifli Hasan', stay: '19 – 24 Aug · 5 nights', left: '5', diet: 'Kitten · 40g × 3',      balance: 'RM 400 due on pickup', done: 0 },
+      'Raja & Ratu': { breed: 'Two British Shorthairs, siblings', owner: 'Priya Nair', stay: '14 – 28 Aug · 14 nights', left: '9', diet: 'Commercial · 50g × 2 each', balance: 'Deposit RM 500 held', done: 0.65 },
+      Bunga:    { breed: 'Persian · 10 yr · female',           owner: 'Hasnah Ibrahim', stay: '12 – 19 Aug · 7 nights', left: '0', diet: 'Prescription · renal',  balance: 'RM 980 due today',     done: 0.85 },
+      Chestnut: { breed: 'Domestic · 3 yr · male',             owner: 'Koh Jin Wei',   stay: 'arriving today · 4 nights', left: '4', diet: 'Commercial · 55g × 2', balance: 'Deposit RM 150 held', done: 0 },
+      Barley:   { breed: 'Munchkin · 5 yr · male',             owner: 'Naimah Yusof',  stay: '16 – 19 Aug · 3 nights', left: '0', diet: 'Commercial · 50g × 2',   balance: 'Settled — awaiting collection', done: 1 },
+    }
+    const BLANK = { breed: '', owner: '—', stay: '—', left: '—', diet: '—', balance: '—', done: 0, flag: '' }
 
     // The wall, zone by zone, laid out on each zone's own grid — exactly the
     // geometry the plan proposes storing on RoomZone / Room rather than tracing.
@@ -259,10 +297,10 @@ class Component extends DCLogic {
         ['Z4-04', 2, 2, 1, 1, 'Available', null,     null],
       ] },
       { code: 'S', name: 'Staging cabinet', cols: 3, rows: 2, kind: 'Staging', rooms: [
-        ['S-01', 1, 1, 1, 1, 'Occupied', 'Nala',     'In'],
+        ['S-01', 1, 1, 1, 1, 'Occupied', 'Chestnut', 'In'],
         ['S-02', 2, 1, 1, 1, 'Available', null,      null],
         ['S-03', 3, 1, 1, 1, 'Available', null,      null],
-        ['S-04', 1, 2, 1, 1, 'Occupied', 'Milo',     'Out'],
+        ['S-04', 1, 2, 1, 1, 'Occupied', 'Barley',   'Out'],
         ['S-05', 2, 2, 1, 1, 'Available', null,      null],
         ['S-06', 3, 2, 1, 1, 'Available', null,      null],
       ] },
@@ -277,7 +315,7 @@ class Component extends DCLogic {
         const [code, col, r, cs, rs, status, occupant, badge] = row
         const s = STATUS[status]
         const selected = this.state.sel === code
-        const done = status === 'Occupied' ? [0.35, 0.6, 1, 0.8, 0.5][code.length % 5] : 0
+        const done = status === 'Occupied' ? (PROFILE[occupant] ? PROFILE[occupant].done : 0.6) : 0
         const room = {
           code, status, occupant: occupant ?? '', badge,
           hasBar: status === 'Occupied',
@@ -336,13 +374,21 @@ class Component extends DCLogic {
       })
     }
 
+    // Boarding only. Staging cubbies are not rooms — counting them as 'free'
+    // would offer capacity that cannot take a booking.
     const totals = { Occupied: 0, Available: 0, Cleaning: 0, Maintenance: 0 }
-    for (const z of zoneDefs) for (const r of z.rooms) totals[r[5]]++
+    let leaving = 0
+    for (const z of zoneDefs) {
+      for (const r of z.rooms) {
+        if (r[7] === 'Out') leaving++
+        if (z.kind !== 'Staging') totals[r[5]]++
+      }
+    }
     const counts = [
-      { label: 'In house', n: String(totals.Occupied), key: 'Occupied' },
+      { label: 'Rooms in use', n: String(totals.Occupied), key: 'Occupied' },
       { label: 'Free', n: String(totals.Available), key: 'Available' },
       { label: 'Cleaning', n: String(totals.Cleaning), key: 'Cleaning' },
-      { label: 'Out today', n: '4', key: 'Out' },
+      { label: 'Out today', n: String(leaving), key: 'Out' },
     ].map((c) => ({
       ...c,
       boxStyle: 'min-width: 92px; padding: 8px 14px; border-radius: 12px; text-align: center; border: 1px solid rgba(45,25,7,.12); background: ' + (STATUS[c.key] ? STATUS[c.key].bg : 'rgba(184,144,43,.2)'),
@@ -350,6 +396,7 @@ class Component extends DCLogic {
     }))
 
     const picked = flat.find((r) => r.code === this.state.sel) ?? flat[0]
+    const p = PROFILE[picked.occupant] ?? BLANK
     const occupied = picked.status === 'Occupied'
     const ps = STATUS[picked.status]
 
@@ -359,21 +406,24 @@ class Component extends DCLogic {
       statusStyle: 'font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: ' + ps.bg + '; color: ' + ps.fg,
       occupied,
       empty: !occupied,
+      // Only a bookable room has a next booking. Showing the heading over a
+      // room that is out of service reads as a contradiction.
+      showNext: picked.status === 'Available',
       cat: picked.occupant,
-      breed: 'British Shorthair · 4 yr · female',
+      breed: p.breed,
       emptyLine: picked.status === 'Cleaning'
         ? 'Being turned over after this morning’s check-out. Mark it ready when the deep clean is done.'
         : picked.status === 'Maintenance'
           ? 'Out of service — door catch replaced, awaiting parts. It cannot be booked while it sits here.'
           : 'Empty and ready. Nothing is in it today.',
-      nextBooking: picked.status === 'Available' ? 'Sat 22 Aug — Chestnut, 4 nights' : '—',
-      flag: picked.badge === 'Health' ? 'Ate under half at both meals yesterday. Owner asked to be called if it happens twice.' : '',
+      nextBooking: picked.status === 'Available' ? 'Sat 22 Aug — Truffle, 4 nights' : '—',
+      flag: picked.badge === 'Health' ? (p.flag ?? '') : '',
       facts: [
-        { k: 'Owner', v: 'Lim Wei Ling' },
-        { k: 'Stay', v: '17 – 24 Aug · 7 nights' },
-        { k: 'Nights left', v: '5' },
-        { k: 'Diet', v: 'Prescription · 60g × 2' },
-        { k: 'Balance', v: 'RM 420 due on pickup' },
+        { k: 'Owner', v: p.owner },
+        { k: 'Stay', v: p.stay },
+        { k: 'Nights left', v: p.left },
+        { k: 'Diet', v: p.diet },
+        { k: 'Balance', v: p.balance },
       ],
       tasks: [
         { label: 'Morning feed', done: true },
