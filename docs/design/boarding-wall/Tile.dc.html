@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #F2EDE0; color: #2D1907; }
+    a { color: #B14919; } a:hover { color: #8d3a14; }
+  </style>
+</helmet>
+
+<div style="width: 760px; padding: 28px 32px; box-sizing: border-box">
+
+  <div style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: rgba(45,25,7,.45)">Component study</div>
+  <h1 style="margin: 4px 0 6px; font-size: 22px; font-weight: 700">The room tile</h1>
+  <p style="margin: 0 0 22px; font-size: 13px; color: rgba(45,25,7,.6); max-width: 60ch; line-height: 1.55">
+    Read at about three metres, forty-one at a time. One colour for state, one name, and a badge only
+    when something is true. Everything else waits inside the room.
+  </p>
+
+  <!-- anatomy -->
+  <div style="display: flex; gap: 28px; align-items: flex-start; margin-bottom: 26px">
+    <div style="width: 168px; height: 116px; background: rgba(177,73,25,.15); border: 1px solid rgba(177,73,25,.42); border-radius: 10px; padding: 9px 11px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between">
+        <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: .04em; opacity: .55">Z3-08</span>
+        <span style="font-size: 9px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 2px 6px; border-radius: 999px; background: #B14919; color: #ECDBB6">Health</span>
+      </div>
+      <div style="flex-grow: 1; display: flex; align-items: center">
+        <span style="font-size: 19px; font-weight: 600">Cendol</span>
+      </div>
+      <div style="height: 4px; border-radius: 999px; background: rgba(45,25,7,.14); overflow: hidden">
+        <div style="height: 100%; width: 60%; background: #B14919; border-radius: 999px"></div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 11px; padding-top: 4px">
+      <sc-for list="{{anatomy}}" as="a" hint-placeholder-count="4">
+        <div style="display: flex; gap: 10px; align-items: baseline">
+          <span style="font-family: 'Space Mono', monospace; font-size: 10px; color: #B14919; width: 16px; flex-shrink: 0">{{a.n}}</span>
+          <div>
+            <div style="font-size: 13px; font-weight: 600">{{a.what}}</div>
+            <div style="font-size: 12px; color: rgba(45,25,7,.55); line-height: 1.45">{{a.why}}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- states -->
+  <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); margin-bottom: 10px">States</div>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+    <sc-for list="{{states}}" as="s" hint-placeholder-count="8">
+      <div>
+        <div style="{{s.tileStyle}}">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px">
+            <span style="font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: .04em; opacity: .55">{{s.code}}</span>
+            <sc-if value="{{s.badge}}" hint-placeholder-val="{{true}}">
+              <span style="{{s.badgeStyle}}">{{s.badge}}</span>
+            </sc-if>
+          </div>
+          <div style="flex-grow: 1; display: flex; align-items: center">
+            <span style="font-size: 13px; font-weight: 600; line-height: 1.15">{{s.name}}</span>
+          </div>
+          <sc-if value="{{s.hasBar}}" hint-placeholder-val="{{true}}">
+            <div style="height: 3px; border-radius: 999px; background: rgba(45,25,7,.14); overflow: hidden">
+              <div style="{{s.barStyle}}"></div>
+            </div>
+          </sc-if>
+        </div>
+        <div style="font-size: 11px; font-weight: 600; margin-top: 7px">{{s.label}}</div>
+        <div style="font-size: 11px; color: rgba(45,25,7,.5); line-height: 1.4">{{s.note}}</div>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- the rule -->
+  <div style="margin-top: 26px; padding: 14px 16px; border-radius: 10px; background: rgba(114,144,148,.14); border: 1px solid rgba(114,144,148,.3)">
+    <div style="font-size: 13px; font-weight: 600; margin-bottom: 5px">One badge at a time, in this order</div>
+    <div style="font-size: 12px; color: rgba(45,25,7,.6); line-height: 1.6">
+      Health flag &rarr; leaving today &rarr; care running late &rarr; arriving. A cat that is both flagged and
+      leaving shows the flag; the tile is not a place to stack four signals, and a carer scanning the
+      wall for trouble should find exactly one thing to look at per room.
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":760,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const S = {
+      Occupied:    { bg: 'rgba(177,73,25,.15)',   bd: 'rgba(177,73,25,.42)',   fg: '#2D1907' },
+      Available:   { bg: 'rgba(114,144,148,.16)', bd: 'rgba(114,144,148,.34)', fg: 'rgba(45,25,7,.5)' },
+      Cleaning:    { bg: 'rgba(231,206,122,.4)',  bd: 'rgba(184,144,43,.45)',  fg: '#7a5c00' },
+      Maintenance: { bg: 'rgba(45,25,7,.07)',     bd: 'rgba(45,25,7,.16)',     fg: 'rgba(45,25,7,.4)' },
+    }
+    const B = {
+      Health: { bg: '#B14919', fg: '#ECDBB6' },
+      Out:    { bg: '#B8902B', fg: '#2D1907' },
+      Late:   { bg: 'rgba(177,73,25,.85)', fg: '#ECDBB6' },
+      In:     { bg: 'rgba(45,25,7,.35)', fg: '#ECDBB6' },
+    }
+    const tile = (status, extra) => [
+      'height: 74px', 'box-sizing: border-box', 'border-radius: 8px', 'padding: 6px 8px',
+      'display: flex', 'flex-direction: column', 'gap: 4px',
+      'background: ' + S[status].bg,
+      'color: ' + S[status].fg,
+      extra || ('border: 1px solid ' + S[status].bd),
+    ].join('; ')
+
+    const badge = (b) => b
+      ? 'font-size: 8px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 1px 5px; border-radius: 999px; white-space: nowrap; background: ' + B[b].bg + '; color: ' + B[b].fg
+      : ''
+    const bar = (pct, done) => 'height: 100%; border-radius: 999px; width: ' + pct + '%; background: ' + (done ? 'rgba(122,138,79,.9)' : '#B14919')
+
+    const states = [
+      { code: 'Z3-01', name: 'Kopi',    status: 'Occupied', badge: null, hasBar: true, barStyle: bar(100, true),
+        label: 'In house', note: 'Care finished for today' },
+      { code: 'Z3-08', name: 'Cendol',  status: 'Occupied', badge: 'Health', hasBar: true, barStyle: bar(60, false),
+        label: 'Flagged', note: 'Red flag on today’s log' },
+      { code: 'Z3-10', name: 'Milo',    status: 'Occupied', badge: 'Out', hasBar: true, barStyle: bar(80, false),
+        label: 'Leaving today', note: 'Collection expected' },
+      { code: 'Z1-09', name: 'Nutmeg',  status: 'Occupied', badge: 'Late', hasBar: true, barStyle: bar(35, false),
+        label: 'Care running late', note: 'After 3pm and unfinished' },
+      { code: 'Z3-17', name: 'Nala',    status: 'Occupied', badge: 'In', hasBar: true, barStyle: bar(0, false),
+        label: 'Arriving', note: 'Booked in, not settled yet' },
+      { code: 'Z3-02', name: '',        status: 'Available', badge: null, hasBar: false, barStyle: '',
+        label: 'Free', note: 'Empty and ready' },
+      { code: 'Z3-06', name: '',        status: 'Cleaning', badge: null, hasBar: false, barStyle: '',
+        label: 'Cleaning', note: 'Turning over after check-out' },
+      { code: 'Z2-06', name: '',        status: 'Maintenance', badge: null, hasBar: false, barStyle: '',
+        label: 'Out of service', note: 'Cannot be booked' },
+    ].map((s) => ({ ...s, tileStyle: tile(s.status), badgeStyle: badge(s.badge) }))
+
+    const anatomy = [
+      { n: '01', what: 'Room code, quiet but always there', why: 'The picture is a shortcut; the number is the identity. A carer must be able to check it.' },
+      { n: '02', what: 'The cat’s name, biggest thing on the tile', why: 'Staff navigate by animal. The room number is how the system navigates.' },
+      { n: '03', what: 'One badge, only when true', why: 'Priority order below. Two badges on a 90px tile is two things nobody reads.' },
+      { n: '04', what: 'Today’s care, as a strip', why: 'Answers “what is left today” without opening anything. Green when done, rust while outstanding.' },
+    ]
+
+    return { states, anatomy }
+  }
+}
+</script>
+</body>
+</html>

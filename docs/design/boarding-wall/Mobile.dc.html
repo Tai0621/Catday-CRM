@@ -1,0 +1,175 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #F2EDE0; color: #2D1907; }
+    a { color: #B14919; } a:hover { color: #8d3a14; }
+    .tap { cursor: pointer; }
+  </style>
+</helmet>
+
+<div style="width: 390px; min-height: 800px; box-sizing: border-box; padding: 20px 16px 24px; display: flex; flex-direction: column; gap: 14px">
+
+  <div>
+    <div style="font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: rgba(45,25,7,.45)">Boarding</div>
+    <h1 style="margin: 3px 0 0; font-size: 21px; font-weight: 700">Wednesday 19 Aug</h1>
+    <div style="font-size: 12.5px; color: rgba(45,25,7,.55); margin-top: 3px">24 in house &middot; 4 out today &middot; 11 tasks left</div>
+  </div>
+
+  <!-- zone tabs: one bank at a time, full width -->
+  <div style="display: flex; gap: 6px">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="5">
+      <div class="tap" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</div>
+    </sc-for>
+  </div>
+
+  <div style="font-size: 12px; color: rgba(45,25,7,.5)">{{zoneName}}</div>
+
+  <!-- the zone -->
+  <div style="{{gridStyle}}">
+    <sc-for list="{{rooms}}" as="r" hint-placeholder-count="9">
+      <div class="tap" style="{{r.style}}">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px">
+          <span style="font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: .04em; opacity: .55">{{r.code}}</span>
+          <sc-if value="{{r.badge}}" hint-placeholder-val="{{true}}">
+            <span style="{{r.badgeStyle}}">{{r.badge}}</span>
+          </sc-if>
+        </div>
+        <div style="flex-grow: 1; display: flex; align-items: center">
+          <span style="font-size: 15px; font-weight: 600; line-height: 1.15">{{r.occupant}}</span>
+        </div>
+        <sc-if value="{{r.hasBar}}" hint-placeholder-val="{{true}}">
+          <div style="height: 3px; border-radius: 999px; background: rgba(45,25,7,.14); overflow: hidden">
+            <div style="{{r.barStyle}}"></div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- what is left today, because a phone is used mid-round -->
+  <div style="background: #ECDBB6; border: 1px solid rgba(45,25,7,.12); border-radius: 12px; padding: 13px 15px">
+    <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); margin-bottom: 9px">Still to do here</div>
+    <div style="display: flex; flex-direction: column; gap: 9px">
+      <sc-for list="{{todo}}" as="t" hint-placeholder-count="3">
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 44px">
+          <span style="width: 20px; height: 20px; border-radius: 6px; border: 1.6px solid rgba(45,25,7,.3); flex-shrink: 0"></span>
+          <div>
+            <div style="font-size: 13.5px; font-weight: 500">{{t.what}}</div>
+            <div style="font-size: 11.5px; color: rgba(45,25,7,.5)">{{t.who}}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="font-size: 11px; color: rgba(45,25,7,.4); text-align: center; line-height: 1.5">
+    Tiles are 44&thinsp;pt minimum &mdash; this is used one-handed, standing up, next to the cabinet.
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":390,"height":830}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props)
+    this.state = { zone: 2 }
+  }
+
+  renderVals() {
+    const S = {
+      Occupied:    { bg: 'rgba(177,73,25,.15)',   bd: 'rgba(177,73,25,.42)',   fg: '#2D1907' },
+      Available:   { bg: 'rgba(114,144,148,.16)', bd: 'rgba(114,144,148,.34)', fg: 'rgba(45,25,7,.5)' },
+      Cleaning:    { bg: 'rgba(231,206,122,.4)',  bd: 'rgba(184,144,43,.45)',  fg: '#7a5c00' },
+      Maintenance: { bg: 'rgba(45,25,7,.07)',     bd: 'rgba(45,25,7,.16)',     fg: 'rgba(45,25,7,.4)' },
+    }
+    const B = {
+      Health: { bg: '#B14919', fg: '#ECDBB6' },
+      Out:    { bg: '#B8902B', fg: '#2D1907' },
+    }
+
+    const zoneDefs = [
+      { label: 'Z1', name: 'Feature wall · 10 units', cols: 2, rooms: [
+        ['Z1-01', 'Occupied', 'Mochi', 'Health'], ['Z1-02', 'Occupied', 'Biscuit', null],
+        ['Z1-03', 'Available', '', null], ['Z1-04', 'Occupied', 'Tofu', 'Out'],
+        ['Z1-05', 'Occupied', 'Pepper', null], ['Z1-06', 'Cleaning', '', null],
+      ] },
+      { label: 'Z2', name: 'Porthole bank · 9 units', cols: 3, rooms: [
+        ['Z2-01', 'Occupied', 'Latte', null], ['Z2-02', 'Occupied', 'Ollie', null], ['Z2-03', 'Available', '', null],
+        ['Z2-04', 'Occupied', 'Momo', 'Out'], ['Z2-05', 'Available', '', null], ['Z2-06', 'Maintenance', '', null],
+        ['Z2-07', 'Occupied', 'Pudding', null], ['Z2-08', 'Available', '', null], ['Z2-09', 'Occupied', 'Yuzu', null],
+      ] },
+      { label: 'Z3', name: 'Standard bank · 18 units', cols: 3, rooms: [
+        ['Z3-01', 'Occupied', 'Kopi', null], ['Z3-02', 'Available', '', null], ['Z3-03', 'Occupied', 'Ginger', null],
+        ['Z3-04', 'Occupied', 'Snow', null], ['Z3-05', 'Available', '', null], ['Z3-06', 'Cleaning', '', null],
+        ['Z3-07', 'Occupied', 'Peanut', null], ['Z3-08', 'Occupied', 'Cendol', 'Health'], ['Z3-09', 'Available', '', null],
+      ] },
+      { label: 'Z4', name: 'Suites · 4 units', cols: 2, rooms: [
+        ['Z4-01', 'Occupied', 'Raja & Ratu', null], ['Z4-02', 'Available', '', null],
+        ['Z4-03', 'Occupied', 'Bunga', 'Out'], ['Z4-04', 'Available', '', null],
+      ] },
+      { label: 'Stage', name: 'Staging cabinet · 6 cubbies', cols: 3, rooms: [
+        ['S-01', 'Occupied', 'Nala', null], ['S-02', 'Available', '', null], ['S-03', 'Available', '', null],
+        ['S-04', 'Occupied', 'Milo', 'Out'], ['S-05', 'Available', '', null], ['S-06', 'Available', '', null],
+      ] },
+    ]
+
+    const tabs = zoneDefs.map((z, i) => {
+      const on = this.state.zone === i
+      return {
+        label: z.label,
+        pick: () => this.setState({ zone: i }),
+        style: [
+          'flex-grow: 1', 'text-align: center', 'min-height: 44px', 'display: flex',
+          'align-items: center', 'justify-content: center', 'border-radius: 10px',
+          'font-size: 13px', 'font-weight: 600',
+          'background: ' + (on ? '#B14919' : 'rgba(45,25,7,.06)'),
+          'color: ' + (on ? '#ECDBB6' : 'rgba(45,25,7,.6)'),
+        ].join('; '),
+      }
+    })
+
+    const z = zoneDefs[this.state.zone]
+    const rooms = z.rooms.map((r, i) => {
+      const [code, status, occupant, badge] = r
+      const pct = status === 'Occupied' ? [100, 60, 80, 35, 100, 45][i % 6] : 0
+      return {
+        code, occupant, badge, hasBar: status === 'Occupied',
+        style: [
+          'min-height: 78px', 'box-sizing: border-box', 'border-radius: 10px', 'padding: 8px 10px',
+          'display: flex', 'flex-direction: column', 'gap: 5px',
+          'background: ' + S[status].bg,
+          'border: 1px solid ' + S[status].bd,
+          'color: ' + S[status].fg,
+        ].join('; '),
+        badgeStyle: badge
+          ? 'font-size: 8.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 2px 6px; border-radius: 999px; background: ' + B[badge].bg + '; color: ' + B[badge].fg
+          : '',
+        barStyle: 'height: 100%; border-radius: 999px; width: ' + pct + '%; background: ' + (pct >= 100 ? 'rgba(122,138,79,.9)' : '#B14919'),
+      }
+    })
+
+    const todo = [
+      { what: 'Play & brush — Cendol, Z3-08', who: 'nobody assigned' },
+      { what: 'Evening feed — 6 cats in this bank', who: 'due from 17:30' },
+      { what: 'Full litter change — Z3-03', who: 'weekly, due today' },
+    ]
+
+    return {
+      tabs, rooms, todo,
+      zoneName: z.name,
+      gridStyle: 'display: grid; grid-template-columns: repeat(' + z.cols + ', minmax(0, 1fr)); gap: 8px',
+    }
+  }
+}
+</script>
+</body>
+</html>

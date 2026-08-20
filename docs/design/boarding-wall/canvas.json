@@ -1,0 +1,32 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1360, "h": 940, "title": "Boarding wall — desktop" },
+    { "file": "Stay.dc.html", "x": 1440, "y": 0, "w": 900, "h": 700, "title": "Room · the stay" },
+    { "file": "Tile.dc.html", "x": 1440, "y": 780, "w": 760, "h": 720, "title": "Room tile — states" },
+    { "file": "Mobile.dc.html", "x": 2420, "y": 0, "w": 390, "h": 830, "title": "Boarding wall — phone" }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 0,
+      "y": -150,
+      "w": 460,
+      "text": "Boarding wall — the cabinet elevation as the room board.\n\nRooms are buttons: click a tile to open it in the rail. The date strip repaints the wall for any of the next 14 days, which is what merges /rooms and the daily calendar question into one screen.\n\nGeometry is DATA (zone + col/row/span), not a traced drawing — so a refit is a drag, not a deploy."
+    },
+    {
+      "id": "counts",
+      "x": 1440,
+      "y": -150,
+      "w": 380,
+      "text": "41 boarding units + 6 staging cubbies, read off the blueprint:\nZ1 10 (irregular, two double-height ends) · Z2 9 (3x3) · Z3 18 (6x3) · Z4 4 (2x2) · staging 6.\n\nThe demo database currently holds 61 placeholder rooms — reconciling those is Question 2 in the plan."
+    },
+    {
+      "id": "phone",
+      "x": 2420,
+      "y": -150,
+      "w": 390,
+      "text": "Phone is the primary device on the floor. Zone tabs rather than 41 tiles at once; every target 44pt+.\n\nNo fake status bar — the real one renders on top."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

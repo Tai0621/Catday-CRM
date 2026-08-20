@@ -1,0 +1,405 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #F2EDE0; color: #2D1907; }
+    a { color: #B14919; text-decoration: none; }
+    a:hover { color: #8d3a14; text-decoration: underline; }
+    .tile { cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; }
+    .tile:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(45,25,7,.16); }
+    .day { cursor: pointer; }
+  </style>
+</helmet>
+
+<div style="width: 1360px; min-height: 940px; padding: 28px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+
+  <!-- header -->
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px">
+    <div>
+      <div style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: rgba(45,25,7,.45)">Operations · Boarding</div>
+      <h1 style="margin: 4px 0 0; font-size: 26px; font-weight: 700; letter-spacing: -.01em">Boarding Wall</h1>
+    </div>
+    <div style="display: flex; gap: 10px">
+      <sc-for list="{{counts}}" as="c" hint-placeholder-count="4">
+        <div style="{{c.boxStyle}}">
+          <div style="{{c.numStyle}}">{{c.n}}</div>
+          <div style="font-size: 11px; color: rgba(45,25,7,.5); margin-top: 2px">{{c.label}}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- date strip -->
+  <div style="background: #ECDBB6; border: 1px solid rgba(45,25,7,.12); border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; gap: 10px">
+    <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); white-space: nowrap; padding-right: 4px">Showing</div>
+    <div style="display: flex; gap: 4px; flex-grow: 1">
+      <sc-for list="{{days}}" as="d" hint-placeholder-count="14">
+        <div class="day" onClick="{{d.pick}}" style="{{d.style}}">
+          <div style="font-size: 9px; letter-spacing: .06em; text-transform: uppercase; opacity: .7">{{d.dow}}</div>
+          <div style="font-size: 14px; font-weight: 600; line-height: 1.2">{{d.dom}}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- wall + rail -->
+  <div style="display: flex; gap: 20px; align-items: flex-start">
+
+    <!-- the wall -->
+    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 16px">
+      <sc-for list="{{zones}}" as="z" hint-placeholder-count="5">
+        <div style="background: #ECDBB6; border: 1px solid rgba(45,25,7,.12); border-radius: 12px; padding: 12px 14px 14px">
+          <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px">
+            <span style="font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; color: #2D1907">{{z.code}}</span>
+            <span style="font-size: 12px; color: rgba(45,25,7,.55)">{{z.name}}</span>
+            <span style="flex-grow: 1"></span>
+            <span style="font-size: 11px; color: rgba(45,25,7,.45)">{{z.tally}}</span>
+          </div>
+          <div style="{{z.gridStyle}}">
+            <sc-for list="{{z.rooms}}" as="r" hint-placeholder-count="9">
+              <div class="tile" onClick="{{r.pick}}" style="{{r.style}}">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px">
+                  <span style="font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: .04em; opacity: .55">{{r.code}}</span>
+                  <sc-if value="{{r.badge}}" hint-placeholder-val="{{true}}">
+                    <span style="{{r.badgeStyle}}">{{r.badge}}</span>
+                  </sc-if>
+                </div>
+                <div style="flex-grow: 1; display: flex; align-items: center">
+                  <span style="font-size: 13px; font-weight: 600; line-height: 1.15">{{r.occupant}}</span>
+                </div>
+                <sc-if value="{{r.hasBar}}" hint-placeholder-val="{{true}}">
+                  <div style="height: 3px; border-radius: 999px; background: rgba(45,25,7,.14); overflow: hidden">
+                    <div style="{{r.barStyle}}"></div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- selected room rail -->
+    <div style="width: 296px; flex-shrink: 0; background: #ECDBB6; border: 1px solid rgba(45,25,7,.12); border-radius: 12px; overflow: hidden">
+      <div style="padding: 14px 16px; border-bottom: 1px solid rgba(45,25,7,.1); display: flex; align-items: center; justify-content: space-between">
+        <span style="font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700">{{sel.code}}</span>
+        <span style="{{sel.statusStyle}}">{{sel.status}}</span>
+      </div>
+
+      <div style="padding: 16px">
+        <sc-if value="{{sel.occupied}}" hint-placeholder-val="{{true}}">
+          <div>
+            <div style="display: flex; align-items: center; gap: 12px">
+              <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(177,73,25,.14); display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B14919" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 5.5 6.5 9M20 5.5 17.5 9"></path>
+                  <path d="M4 5.5c0 4-1 5.5 1 8.5 1.6 2.4 4 4 7 4s5.4-1.6 7-4c2-3 1-4.5 1-8.5"></path>
+                  <path d="M9.5 12h.01M14.5 12h.01"></path>
+                </svg>
+              </div>
+              <div>
+                <div style="font-size: 17px; font-weight: 700; line-height: 1.2">{{sel.cat}}</div>
+                <div style="font-size: 12px; color: rgba(45,25,7,.55)">{{sel.breed}}</div>
+              </div>
+            </div>
+
+            <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 7px">
+              <sc-for list="{{sel.facts}}" as="f" hint-placeholder-count="4">
+                <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 12px">
+                  <span style="color: rgba(45,25,7,.5)">{{f.k}}</span>
+                  <span style="font-weight: 500; text-align: right">{{f.v}}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="margin-top: 16px">
+              <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); margin-bottom: 8px">Today&rsquo;s care</div>
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <sc-for list="{{sel.tasks}}" as="t" hint-placeholder-count="5">
+                  <div style="display: flex; align-items: center; gap: 8px; font-size: 12px">
+                    <span style="{{t.boxStyle}}">
+                      <sc-if value="{{t.done}}" hint-placeholder-val="{{true}}">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ECDBB6" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"></path></svg>
+                      </sc-if>
+                    </span>
+                    <span style="{{t.textStyle}}">{{t.label}}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <sc-if value="{{sel.flag}}" hint-placeholder-val="{{true}}">
+              <div style="margin-top: 14px; padding: 9px 11px; border-radius: 8px; background: rgba(177,73,25,.12); border: 1px solid rgba(177,73,25,.25); display: flex; gap: 8px; align-items: flex-start">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B14919" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px">
+                  <path d="M12 8v5M12 16.5h.01"></path><circle cx="12" cy="12" r="9"></circle>
+                </svg>
+                <span style="font-size: 12px; color: #B14919; line-height: 1.35">{{sel.flag}}</span>
+              </div>
+            </sc-if>
+
+            <div style="margin-top: 16px; display: flex; gap: 8px">
+              <div style="background: #B14919; color: #ECDBB6; font-size: 13px; padding: 8px 14px; border-radius: 8px; font-weight: 500; cursor: pointer">Open room</div>
+              <div style="background: rgba(45,25,7,.08); color: #2D1907; font-size: 13px; padding: 8px 12px; border-radius: 8px; cursor: pointer">Log AM</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{sel.empty}}" hint-placeholder-val="{{false}}">
+          <div>
+            <div style="font-size: 13px; color: rgba(45,25,7,.55); line-height: 1.5">{{sel.emptyLine}}</div>
+            <div style="margin-top: 14px; padding: 11px; border-radius: 8px; background: rgba(114,144,148,.14); border: 1px solid rgba(114,144,148,.3)">
+              <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); margin-bottom: 4px">Next booked</div>
+              <div style="font-size: 13px; font-weight: 600">{{sel.nextBooking}}</div>
+            </div>
+            <div style="margin-top: 14px; background: #B14919; color: #ECDBB6; font-size: 13px; padding: 8px 14px; border-radius: 8px; font-weight: 500; display: inline-block; cursor: pointer">Place an arrival here</div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <!-- legend -->
+  <div style="display: flex; align-items: center; gap: 18px; padding-top: 2px">
+    <sc-for list="{{legend}}" as="l" hint-placeholder-count="4">
+      <div style="display: flex; align-items: center; gap: 6px">
+        <span style="{{l.swatch}}"></span>
+        <span style="font-size: 11px; color: rgba(45,25,7,.55)">{{l.label}}</span>
+      </div>
+    </sc-for>
+    <span style="flex-grow: 1"></span>
+    <span style="font-size: 11px; color: rgba(45,25,7,.4)">Unplaced rooms appear below the wall &mdash; never hidden</span>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"density":{"editor":"enum","options":["Comfortable","Compact"],"default":"Comfortable","section":"Layout"},"$preview":{"width":1360,"height":940}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props)
+    this.state = { sel: 'Z3-08', day: 0 }
+  }
+
+  renderVals() {
+    const compact = (this.props.density ?? 'Comfortable') === 'Compact'
+    const unit = compact ? 62 : 78
+    const gap = compact ? 5 : 7
+
+    const INK = '#2D1907'
+    const STATUS = {
+      Occupied:    { bg: 'rgba(177,73,25,.15)',  bd: 'rgba(177,73,25,.42)',  fg: '#8d3a14' },
+      Available:   { bg: 'rgba(114,144,148,.16)', bd: 'rgba(114,144,148,.34)', fg: 'rgba(45,25,7,.5)' },
+      Cleaning:    { bg: 'rgba(231,206,122,.4)',  bd: 'rgba(184,144,43,.45)',  fg: '#7a5c00' },
+      Maintenance: { bg: 'rgba(45,25,7,.07)',     bd: 'rgba(45,25,7,.16)',     fg: 'rgba(45,25,7,.4)' },
+    }
+    const BADGE = {
+      Health:  { bg: '#B14919', fg: '#ECDBB6' },
+      Out:     { bg: '#B8902B', fg: '#2D1907' },
+      Late:    { bg: 'rgba(177,73,25,.85)', fg: '#ECDBB6' },
+      In:      { bg: 'rgba(45,25,7,.35)', fg: '#ECDBB6' },
+    }
+
+    // The wall, zone by zone, laid out on each zone's own grid — exactly the
+    // geometry the plan proposes storing on RoomZone / Room rather than tracing.
+    const zoneDefs = [
+      { code: 'Z1', name: 'Feature wall', cols: 5, rows: 3, rooms: [
+        ['Z1-01', 1, 1, 1, 2, 'Occupied', 'Mochi',    'Health'],
+        ['Z1-02', 2, 1, 1, 1, 'Occupied', 'Biscuit',  null],
+        ['Z1-03', 3, 1, 1, 1, 'Available', null,      null],
+        ['Z1-04', 4, 1, 2, 1, 'Occupied', 'Tofu',     'Out'],
+        ['Z1-05', 2, 2, 1, 1, 'Occupied', 'Pepper',   null],
+        ['Z1-06', 3, 2, 1, 1, 'Cleaning', null,       null],
+        ['Z1-07', 5, 2, 1, 2, 'Occupied', 'Suki',     null],
+        ['Z1-08', 1, 3, 1, 1, 'Available', null,      null],
+        ['Z1-09', 2, 3, 1, 1, 'Occupied', 'Nutmeg',   'Late'],
+        ['Z1-10', 3, 3, 2, 1, 'Occupied', 'Bao',      null],
+      ] },
+      { code: 'Z2', name: 'Porthole bank', cols: 3, rows: 3, rooms: [
+        ['Z2-01', 1, 1, 1, 1, 'Occupied', 'Latte',   null],
+        ['Z2-02', 2, 1, 1, 1, 'Occupied', 'Ollie',   null],
+        ['Z2-03', 3, 1, 1, 1, 'Available', null,     null],
+        ['Z2-04', 1, 2, 1, 1, 'Occupied', 'Momo',    'Out'],
+        ['Z2-05', 2, 2, 1, 1, 'Available', null,     null],
+        ['Z2-06', 3, 2, 1, 1, 'Maintenance', null,   null],
+        ['Z2-07', 1, 3, 1, 1, 'Occupied', 'Pudding', null],
+        ['Z2-08', 2, 3, 1, 1, 'Available', null,     null],
+        ['Z2-09', 3, 3, 1, 1, 'Occupied', 'Yuzu',    null],
+      ] },
+      { code: 'Z3', name: 'Standard bank', cols: 6, rows: 3, rooms: [
+        ['Z3-01', 1, 1, 1, 1, 'Occupied', 'Kopi',    null],
+        ['Z3-02', 2, 1, 1, 1, 'Available', null,     null],
+        ['Z3-03', 3, 1, 1, 1, 'Occupied', 'Ginger',  null],
+        ['Z3-04', 4, 1, 1, 1, 'Occupied', 'Snow',    null],
+        ['Z3-05', 5, 1, 1, 1, 'Available', null,     null],
+        ['Z3-06', 6, 1, 1, 1, 'Cleaning', null,      null],
+        ['Z3-07', 1, 2, 1, 1, 'Occupied', 'Peanut',  null],
+        ['Z3-08', 2, 2, 1, 1, 'Occupied', 'Cendol',  'Health'],
+        ['Z3-09', 3, 2, 1, 1, 'Available', null,     null],
+        ['Z3-10', 4, 2, 1, 1, 'Occupied', 'Milo',    'Out'],
+        ['Z3-11', 5, 2, 1, 1, 'Occupied', 'Sesame',  null],
+        ['Z3-12', 6, 2, 1, 1, 'Available', null,     null],
+        ['Z3-13', 1, 3, 1, 1, 'Available', null,     null],
+        ['Z3-14', 2, 3, 1, 1, 'Occupied', 'Rambutan', null],
+        ['Z3-15', 3, 3, 1, 1, 'Occupied', 'Coco',    null],
+        ['Z3-16', 4, 3, 1, 1, 'Available', null,     null],
+        ['Z3-17', 5, 3, 1, 1, 'Occupied', 'Nala',    'In'],
+        ['Z3-18', 6, 3, 1, 1, 'Available', null,     null],
+      ] },
+      { code: 'Z4', name: 'Suites', cols: 2, rows: 2, rooms: [
+        ['Z4-01', 1, 1, 1, 1, 'Occupied', 'Raja & Ratu', null],
+        ['Z4-02', 2, 1, 1, 1, 'Available', null,     null],
+        ['Z4-03', 1, 2, 1, 1, 'Occupied', 'Bunga',   'Out'],
+        ['Z4-04', 2, 2, 1, 1, 'Available', null,     null],
+      ] },
+      { code: 'S', name: 'Staging cabinet', cols: 3, rows: 2, kind: 'Staging', rooms: [
+        ['S-01', 1, 1, 1, 1, 'Occupied', 'Nala',     'In'],
+        ['S-02', 2, 1, 1, 1, 'Available', null,      null],
+        ['S-03', 3, 1, 1, 1, 'Available', null,      null],
+        ['S-04', 1, 2, 1, 1, 'Occupied', 'Milo',     'Out'],
+        ['S-05', 2, 2, 1, 1, 'Available', null,      null],
+        ['S-06', 3, 2, 1, 1, 'Available', null,      null],
+      ] },
+    ]
+
+    const flat = []
+    const zones = zoneDefs.map((z) => {
+      const staging = z.kind === 'Staging'
+      const cellW = staging ? Math.round(unit * 1.1) : unit
+      const cellH = staging ? Math.round(unit * 0.62) : Math.round(unit * 0.72)
+      const rooms = z.rooms.map((row) => {
+        const [code, col, r, cs, rs, status, occupant, badge] = row
+        const s = STATUS[status]
+        const selected = this.state.sel === code
+        const done = status === 'Occupied' ? [0.35, 0.6, 1, 0.8, 0.5][code.length % 5] : 0
+        const room = {
+          code, status, occupant: occupant ?? '', badge,
+          hasBar: status === 'Occupied',
+          pick: () => this.setState({ sel: code }),
+          style: [
+            'grid-column: ' + col + ' / span ' + cs,
+            'grid-row: ' + r + ' / span ' + rs,
+            'min-height: ' + (cellH * rs + gap * (rs - 1)) + 'px',
+            'background: ' + s.bg,
+            'border: ' + (selected ? '2px solid ' + INK : '1px solid ' + s.bd),
+            'border-radius: 8px',
+            'padding: ' + (selected ? '5px 7px' : '6px 8px'),
+            'display: flex', 'flex-direction: column', 'gap: 4px',
+            'color: ' + (status === 'Occupied' ? INK : s.fg),
+            'box-shadow: ' + (selected ? '0 0 0 3px rgba(45,25,7,.12)' : 'none'),
+          ].join('; '),
+          badgeStyle: badge ? 'font-size: 8px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 1px 5px; border-radius: 999px; white-space: nowrap; background: ' + BADGE[badge].bg + '; color: ' + BADGE[badge].fg : '',
+          barStyle: 'height: 100%; width: ' + Math.round(done * 100) + '%; border-radius: 999px; background: ' +
+            (done >= 1 ? 'rgba(122,138,79,.9)' : '#B14919'),
+        }
+        flat.push(room)
+        return room
+      })
+      const occ = z.rooms.filter((r) => r[5] === 'Occupied').length
+      return {
+        code: z.code, name: z.name,
+        tally: occ + ' of ' + z.rooms.length + (staging ? ' cubbies in use' : ' occupied'),
+        gridStyle: [
+          'display: grid',
+          'grid-template-columns: repeat(' + z.cols + ', minmax(0, ' + cellW + 'px))',
+          'grid-auto-rows: minmax(' + cellH + 'px, auto)',
+          'gap: ' + gap + 'px',
+          'justify-content: start',
+        ].join('; '),
+        rooms,
+      }
+    })
+
+    // 14 days, today first — the wall repaints for whichever is picked.
+    const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const base = new Date(2026, 7, 19)
+    const days = []
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + i)
+      const on = this.state.day === i
+      days.push({
+        dow: i === 0 ? 'Today' : DOW[d.getDay()],
+        dom: String(d.getDate()),
+        pick: () => this.setState({ day: i }),
+        style: [
+          'flex-grow: 1', 'text-align: center', 'padding: 5px 0', 'border-radius: 8px',
+          'background: ' + (on ? '#B14919' : 'rgba(45,25,7,.05)'),
+          'color: ' + (on ? '#ECDBB6' : 'rgba(45,25,7,.6)'),
+          'border: 1px solid ' + (on ? '#B14919' : 'transparent'),
+        ].join('; '),
+      })
+    }
+
+    const totals = { Occupied: 0, Available: 0, Cleaning: 0, Maintenance: 0 }
+    for (const z of zoneDefs) for (const r of z.rooms) totals[r[5]]++
+    const counts = [
+      { label: 'In house', n: String(totals.Occupied), key: 'Occupied' },
+      { label: 'Free', n: String(totals.Available), key: 'Available' },
+      { label: 'Cleaning', n: String(totals.Cleaning), key: 'Cleaning' },
+      { label: 'Out today', n: '4', key: 'Out' },
+    ].map((c) => ({
+      ...c,
+      boxStyle: 'min-width: 92px; padding: 8px 14px; border-radius: 12px; text-align: center; border: 1px solid rgba(45,25,7,.12); background: ' + (STATUS[c.key] ? STATUS[c.key].bg : 'rgba(184,144,43,.2)'),
+      numStyle: 'font-size: 20px; font-weight: 700; line-height: 1.1; color: ' + (c.key === 'Occupied' ? '#8d3a14' : '#2D1907'),
+    }))
+
+    const picked = flat.find((r) => r.code === this.state.sel) ?? flat[0]
+    const occupied = picked.status === 'Occupied'
+    const ps = STATUS[picked.status]
+
+    const sel = {
+      code: picked.code,
+      status: picked.status,
+      statusStyle: 'font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: ' + ps.bg + '; color: ' + ps.fg,
+      occupied,
+      empty: !occupied,
+      cat: picked.occupant,
+      breed: 'British Shorthair · 4 yr · female',
+      emptyLine: picked.status === 'Cleaning'
+        ? 'Being turned over after this morning’s check-out. Mark it ready when the deep clean is done.'
+        : picked.status === 'Maintenance'
+          ? 'Out of service — door catch replaced, awaiting parts. It cannot be booked while it sits here.'
+          : 'Empty and ready. Nothing is in it today.',
+      nextBooking: picked.status === 'Available' ? 'Sat 22 Aug — Chestnut, 4 nights' : '—',
+      flag: picked.badge === 'Health' ? 'Ate under half at both meals yesterday. Owner asked to be called if it happens twice.' : '',
+      facts: [
+        { k: 'Owner', v: 'Lim Wei Ling' },
+        { k: 'Stay', v: '17 – 24 Aug · 7 nights' },
+        { k: 'Nights left', v: '5' },
+        { k: 'Diet', v: 'Prescription · 60g × 2' },
+        { k: 'Balance', v: 'RM 420 due on pickup' },
+      ],
+      tasks: [
+        { label: 'Morning feed', done: true },
+        { label: 'Litter scoop', done: true },
+        { label: 'Fresh water', done: true },
+        { label: 'Play & brush', done: false },
+        { label: 'Evening feed', done: false },
+      ].map((t) => ({
+        ...t,
+        boxStyle: 'width: 15px; height: 15px; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; ' + (t.done
+          ? 'background: #7A8A4F; border: 1px solid #7A8A4F'
+          : 'background: transparent; border: 1.5px solid rgba(45,25,7,.28)'),
+        textStyle: t.done ? 'color: rgba(45,25,7,.45); text-decoration: line-through' : 'color: #2D1907',
+      })),
+    }
+
+    const legend = [
+      { label: 'In house', key: 'Occupied' },
+      { label: 'Free', key: 'Available' },
+      { label: 'Cleaning', key: 'Cleaning' },
+      { label: 'Out of service', key: 'Maintenance' },
+    ].map((l) => ({ ...l, swatch: 'width: 11px; height: 11px; border-radius: 3px; display: inline-block; background: ' + STATUS[l.key].bg + '; border: 1px solid ' + STATUS[l.key].bd }))
+
+    return { zones, days, counts, sel, legend }
+  }
+}
+</script>
+</body>
+</html>

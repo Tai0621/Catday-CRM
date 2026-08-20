@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #F2EDE0; color: #2D1907; }
+    a { color: #B14919; text-decoration: none; } a:hover { color: #8d3a14; text-decoration: underline; }
+    .row { cursor: pointer; }
+  </style>
+</helmet>
+
+<div style="width: 900px; padding: 26px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+
+  <div>
+    <div style="font-size: 12px; color: rgba(45,25,7,.5); margin-bottom: 6px">&larr; Boarding Wall</div>
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+      <h1 style="margin: 0; font-size: 25px; font-weight: 700">Cendol</h1>
+      <span style="font-family: 'Space Mono', monospace; font-size: 11px; padding: 3px 9px; border-radius: 999px; background: rgba(45,25,7,.07); color: rgba(45,25,7,.6)">Z3-08</span>
+      <span style="font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: rgba(177,73,25,.15); color: #8d3a14">In house</span>
+      <span style="flex-grow: 1"></span>
+      <span style="font-size: 12px; color: rgba(45,25,7,.5)">Night 3 of 7 &middot; out Sun 24 Aug</span>
+    </div>
+    <div style="font-size: 13px; color: rgba(45,25,7,.55); margin-top: 5px">
+      British Shorthair &middot; 4 yr &middot; female &middot; owner Lim Wei Ling &middot; <a href="#">cat record</a>
+    </div>
+  </div>
+
+  <!-- the flag comes first: it is why someone opened this room -->
+  <div style="padding: 13px 15px; border-radius: 10px; background: rgba(177,73,25,.12); border: 1px solid rgba(177,73,25,.28); display: flex; gap: 10px; align-items: flex-start">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B14919" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px">
+      <path d="M12 8v5M12 16.5h.01"></path><circle cx="12" cy="12" r="9"></circle>
+    </svg>
+    <div>
+      <div style="font-size: 13px; font-weight: 600; color: #8d3a14">Ate under half at both meals yesterday</div>
+      <div style="font-size: 12px; color: rgba(45,25,7,.6); margin-top: 2px; line-height: 1.45">
+        Raised on the PM log by Aisyah. Owner asked to be called if it happens a second day.
+      </div>
+    </div>
+    <span style="flex-grow: 1"></span>
+    <div style="background: rgba(45,25,7,.08); font-size: 12px; padding: 6px 11px; border-radius: 8px; white-space: nowrap; cursor: pointer">Call owner</div>
+  </div>
+
+  <div style="display: flex; gap: 16px; align-items: flex-start">
+
+    <!-- care -->
+    <div style="flex-grow: 1; background: #ECDBB6; border: 1px solid rgba(45,25,7,.12); border-radius: 12px; overflow: hidden">
+      <div style="padding: 13px 16px; border-bottom: 1px solid rgba(45,25,7,.1); display: flex; align-items: center; justify-content: space-between">
+        <span style="font-size: 14px; font-weight: 600">Today&rsquo;s care</span>
+        <span style="font-size: 12px; color: rgba(45,25,7,.5)">3 of 5 done</span>
+      </div>
+      <div style="padding: 6px 8px">
+        <sc-for list="{{tasks}}" as="t" hint-placeholder-count="5">
+          <div class="row" onClick="{{t.toggle}}" style="{{t.rowStyle}}">
+            <span style="{{t.boxStyle}}">
+              <sc-if value="{{t.done}}" hint-placeholder-val="{{true}}">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ECDBB6" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"></path></svg>
+              </sc-if>
+            </span>
+            <span style="{{t.textStyle}}">{{t.label}}</span>
+            <span style="flex-grow: 1"></span>
+            <span style="font-size: 11px; color: rgba(45,25,7,.4)">{{t.by}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding: 11px 16px 14px; border-top: 1px solid rgba(45,25,7,.1); display: flex; gap: 8px">
+        <div style="background: #B14919; color: #ECDBB6; font-size: 13px; padding: 8px 14px; border-radius: 8px; font-weight: 500; cursor: pointer">Log PM round</div>
+        <div style="background: rgba(45,25,7,.08); font-size: 13px; padding: 8px 12px; border-radius: 8px; cursor: pointer">Add a note</div>
+      </div>
+    </div>
+
+    <!-- what the carer needs to know -->
+    <div style="width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px">
+      <div style="background: #ECDBB6; border: 1px solid rgba(45,25,7,.12); border-radius: 12px; padding: 14px 16px">
+        <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); margin-bottom: 9px">Feeding &amp; medication</div>
+        <div style="display: flex; flex-direction: column; gap: 7px">
+          <sc-for list="{{care}}" as="c" hint-placeholder-count="4">
+            <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px">
+              <span style="color: rgba(45,25,7,.5); white-space: nowrap">{{c.k}}</span>
+              <span style="font-weight: 500; text-align: right">{{c.v}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(45,25,7,.1); font-size: 12px; color: rgba(45,25,7,.6); line-height: 1.5">
+          Hides under the shelf when the door opens. Let her come out on her own; do not lift her out.
+        </div>
+      </div>
+
+      <div style="background: #ECDBB6; border: 1px solid rgba(45,25,7,.12); border-radius: 12px; padding: 14px 16px">
+        <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); margin-bottom: 9px">The stay</div>
+        <div style="display: flex; flex-direction: column; gap: 7px">
+          <sc-for list="{{stay}}" as="s" hint-placeholder-count="4">
+            <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px">
+              <span style="color: rgba(45,25,7,.5); white-space: nowrap">{{s.k}}</span>
+              <span style="{{s.vStyle}}">{{s.v}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 8px">
+          <div style="background: rgba(45,25,7,.08); font-size: 12.5px; padding: 7px 12px; border-radius: 8px; cursor: pointer">Check out</div>
+          <div style="background: rgba(45,25,7,.08); font-size: 12.5px; padding: 7px 12px; border-radius: 8px; cursor: pointer">Move room</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="font-size: 11.5px; color: rgba(45,25,7,.42); padding-top: 2px">
+    Room settings &mdash; name, size, which zone it sits in &mdash; move behind a manager link. A carer who
+    tapped a cat should not land on a form.
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":900,"height":700}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props)
+    this.state = { done: { am: true, litter: true, water: true, play: false, pm: false } }
+  }
+
+  renderVals() {
+    const d = this.state.done
+    const defs = [
+      { id: 'am',     label: 'Morning feed — 60g prescription', by: 'Aisyah · 7:40' },
+      { id: 'litter', label: 'Litter scoop', by: 'Aisyah · 7:55' },
+      { id: 'water',  label: 'Fresh water', by: 'Aisyah · 7:56' },
+      { id: 'play',   label: 'Play & brush, 10 min', by: '' },
+      { id: 'pm',     label: 'Evening feed — 60g prescription', by: '' },
+    ]
+
+    const tasks = defs.map((t) => {
+      const done = !!d[t.id]
+      return {
+        label: t.label,
+        by: done ? t.by : 'not yet',
+        done,
+        toggle: () => this.setState({ done: { ...this.state.done, [t.id]: !done } }),
+        rowStyle: 'display: flex; align-items: center; gap: 10px; padding: 9px 8px; border-radius: 8px; font-size: 13px; background: ' +
+          (done ? 'transparent' : 'rgba(177,73,25,.06)'),
+        boxStyle: 'width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; ' +
+          (done ? 'background: #7A8A4F; border: 1px solid #7A8A4F' : 'background: transparent; border: 1.6px solid rgba(45,25,7,.3)'),
+        textStyle: done ? 'color: rgba(45,25,7,.45); text-decoration: line-through' : 'color: #2D1907; font-weight: 500',
+      }
+    })
+
+    const care = [
+      { k: 'Diet', v: 'Prescription — renal' },
+      { k: 'Portion', v: '60 g × 2 daily' },
+      { k: 'Medication', v: 'Semintra, 1 ml with AM feed' },
+      { k: 'Last deworm', v: '2 Aug — current' },
+    ]
+
+    const stay = [
+      { k: 'In', v: 'Mon 17 Aug, 10:15' },
+      { k: 'Out', v: 'Sun 24 Aug' },
+      { k: 'Nights left', v: '5' },
+      { k: 'Balance', v: 'RM 420 due on pickup', accent: true },
+    ].map((s) => ({ ...s, vStyle: 'text-align: right; font-weight: 500; color: ' + (s.accent ? '#B14919' : '#2D1907') }))
+
+    return { tasks, care, stay }
+  }
+}
+</script>
+</body>
+</html>

@@ -61,3 +61,7 @@ next-env.d.ts
 .env*
 .tmp-*
 .playwright-mcp/
+
+# Seeded design canvases — 2MB of editor payload, re-seedable from the .dc.html sources
+docs/design/**/*.html
+!docs/design/**/*.dc.html
