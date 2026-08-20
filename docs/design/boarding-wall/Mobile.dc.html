@@ -35,21 +35,27 @@
   <!-- the zone -->
   <div style="{{gridStyle}}">
     <sc-for list="{{rooms}}" as="r" hint-placeholder-count="9">
-      <div class="tap" style="{{r.style}}">
-        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px">
-          <span style="font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: .04em; opacity: .55">{{r.code}}</span>
-          <sc-if value="{{r.badge}}" hint-placeholder-val="{{true}}">
-            <span style="{{r.badgeStyle}}">{{r.badge}}</span>
-          </sc-if>
-        </div>
-        <div style="flex-grow: 1; display: flex; align-items: center">
-          <span style="font-size: 15px; font-weight: 600; line-height: 1.15">{{r.occupant}}</span>
-        </div>
-        <sc-if value="{{r.hasBar}}" hint-placeholder-val="{{true}}">
-          <div style="height: 3px; border-radius: 999px; background: rgba(45,25,7,.14); overflow: hidden">
-            <div style="{{r.barStyle}}"></div>
+      <div class="tap" style="{{r.cellStyle}}">
+        <div style="{{r.ventStyle}}"></div>
+        <div style="{{r.glassStyle}}">
+          <div style="{{r.archStyle}}"></div>
+          <div style="{{r.shelfStyle}}"></div>
+          <div style="{{r.trayStyle}}"></div>
+          <div style="position: relative; z-index: 2; height: 100%; box-sizing: border-box; padding: 5px 6px; display: flex; flex-direction: column; gap: 3px">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px">
+              <span style="font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: .03em; opacity: .5">{{r.code}}</span>
+              <sc-if value="{{r.badge}}" hint-placeholder-val="{{true}}">
+                <span style="{{r.badgeStyle}}">{{r.badge}}</span>
+              </sc-if>
+            </div>
+            <span style="{{r.nameStyle}}">{{r.occupant}}</span>
+            <sc-if value="{{r.hasBar}}" hint-placeholder-val="{{true}}">
+              <div style="height: 3px; border-radius: 999px; background: rgba(45,25,7,.16); overflow: hidden">
+                <div style="{{r.barStyle}}"></div>
+              </div>
+            </sc-if>
           </div>
-        </sc-if>
+        </div>
       </div>
     </sc-for>
   </div>
@@ -85,11 +91,18 @@ class Component extends DCLogic {
   }
 
   renderVals() {
+    // Same cabinet vocabulary as the desktop wall: cream carcass, slat vent,
+    // and only the glass carrying the state.
+    const CARCASS = '#F3EBD0'
+    const OUTLINE = 'rgba(45,25,7,.72)'
+    const HAIR = 'rgba(45,25,7,.34)'
+    const TRAY = 'rgba(150,168,120,.5)'
+    const slats = 'repeating-linear-gradient(90deg, ' + HAIR + ' 0 1px, transparent 1px 4px)'
     const S = {
-      Occupied:    { bg: 'rgba(177,73,25,.15)',   bd: 'rgba(177,73,25,.42)',   fg: '#2D1907' },
-      Available:   { bg: 'rgba(114,144,148,.16)', bd: 'rgba(114,144,148,.34)', fg: 'rgba(45,25,7,.5)' },
-      Cleaning:    { bg: 'rgba(231,206,122,.4)',  bd: 'rgba(184,144,43,.45)',  fg: '#7a5c00' },
-      Maintenance: { bg: 'rgba(45,25,7,.07)',     bd: 'rgba(45,25,7,.16)',     fg: 'rgba(45,25,7,.4)' },
+      Occupied:    { glass: 'rgba(177,73,25,.30)',   edge: 'rgba(177,73,25,.6)',   fg: '#5e2710' },
+      Available:   { glass: 'rgba(114,144,148,.20)', edge: 'rgba(114,144,148,.5)', fg: 'rgba(45,25,7,.45)' },
+      Cleaning:    { glass: 'rgba(231,206,122,.55)', edge: 'rgba(184,144,43,.6)',  fg: '#6b5000' },
+      Maintenance: { glass: 'rgba(45,25,7,.12)',     edge: 'rgba(45,25,7,.3)',     fg: 'rgba(45,25,7,.38)' },
     }
     const B = {
       Health: { bg: '#B14919', fg: '#ECDBB6' },
@@ -145,13 +158,19 @@ class Component extends DCLogic {
       const pct = status === 'Occupied' ? [100, 60, 80, 35, 100, 45][i % 6] : 0
       return {
         code, occupant, badge, hasBar: status === 'Occupied',
-        style: [
-          'min-height: 78px', 'box-sizing: border-box', 'border-radius: 10px', 'padding: 8px 10px',
-          'display: flex', 'flex-direction: column', 'gap: 5px',
-          'background: ' + S[status].bg,
-          'border: 1px solid ' + S[status].bd,
-          'color: ' + S[status].fg,
+        cellStyle: [
+          'min-height: 88px', 'box-sizing: border-box', 'border-radius: 7px', 'padding: 4.5px',
+          'display: flex', 'flex-direction: column', 'gap: 3px',
+          'background: ' + CARCASS,
+          'border: 1.5px solid ' + OUTLINE,
+          'box-shadow: inset 0 0 0 1px rgba(255,255,255,.55)',
         ].join('; '),
+        ventStyle: 'height: 10px; flex-shrink: 0; border-radius: 999px; border: 1px solid ' + HAIR + '; background: ' + slats,
+        glassStyle: 'position: relative; flex-grow: 1; overflow: hidden; border-radius: 5px; background: ' + S[status].glass + '; border: 1px solid ' + S[status].edge + '; color: ' + S[status].fg,
+        archStyle: 'position: absolute; right: 7%; top: 5%; width: 33%; height: 50%; border-radius: 50% 50% 0 0; background: rgba(45,25,7,.13)',
+        shelfStyle: 'position: absolute; left: 7%; right: 7%; top: 53%; height: 2px; border-radius: 2px; background: rgba(45,25,7,.2)',
+        trayStyle: 'position: absolute; left: 9%; right: 24%; bottom: 5%; height: 21%; background: ' + TRAY + '; border: 1px solid rgba(45,25,7,.18); clip-path: polygon(7% 0, 93% 0, 100% 100%, 0 100%); border-radius: 2px',
+        nameStyle: 'flex-grow: 1; display: flex; align-items: center; font-size: 14px; font-weight: 700; line-height: 1.1; text-shadow: 0 1px 2px rgba(243,235,208,.9)',
         badgeStyle: badge
           ? 'font-size: 8.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 2px 6px; border-radius: 999px; background: ' + B[badge].bg + '; color: ' + B[badge].fg
           : '',

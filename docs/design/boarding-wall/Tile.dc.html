@@ -14,34 +14,46 @@
   </style>
 </helmet>
 
-<div style="width: 760px; padding: 28px 32px; box-sizing: border-box">
+<div style="width: 860px; padding: 28px 32px; box-sizing: border-box">
 
   <div style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: rgba(45,25,7,.45)">Component study</div>
-  <h1 style="margin: 4px 0 6px; font-size: 22px; font-weight: 700">The room tile</h1>
-  <p style="margin: 0 0 22px; font-size: 13px; color: rgba(45,25,7,.6); max-width: 60ch; line-height: 1.55">
-    Read at about three metres, forty-one at a time. One colour for state, one name, and a badge only
-    when something is true. Everything else waits inside the room.
+  <h1 style="margin: 4px 0 6px; font-size: 22px; font-weight: 700">The unit, drawn as the cabinet</h1>
+  <p style="margin: 0 0 24px; font-size: 13px; color: rgba(45,25,7,.6); max-width: 66ch; line-height: 1.55">
+    Every part below is lifted off the maker&rsquo;s elevation: cream carcass, slatted vent capsule,
+    glass door on centre hinges, the grey arch, the pale-green litter tray, the porthole in its grey
+    panel. The cabinet never changes. <strong>Only the glass takes the state colour</strong> &mdash;
+    which is how the wall reads in life, since you look through the door to see who is home.
   </p>
 
-  <!-- anatomy -->
-  <div style="display: flex; gap: 28px; align-items: flex-start; margin-bottom: 26px">
-    <div style="width: 168px; height: 116px; background: rgba(177,73,25,.15); border: 1px solid rgba(177,73,25,.42); border-radius: 10px; padding: 9px 11px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0">
-      <div style="display: flex; align-items: flex-start; justify-content: space-between">
-        <span style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: .04em; opacity: .55">Z3-08</span>
-        <span style="font-size: 9px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 2px 6px; border-radius: 999px; background: #B14919; color: #ECDBB6">Health</span>
-      </div>
-      <div style="flex-grow: 1; display: flex; align-items: center">
-        <span style="font-size: 19px; font-weight: 600">Cendol</span>
-      </div>
-      <div style="height: 4px; border-radius: 999px; background: rgba(45,25,7,.14); overflow: hidden">
-        <div style="height: 100%; width: 60%; background: #B14919; border-radius: 999px"></div>
+  <!-- anatomy: one unit at 3x, called out -->
+  <div style="display: flex; gap: 30px; align-items: flex-start; margin-bottom: 30px">
+    <div style="{{hero.cellStyle}}">
+      <div style="{{hero.ventStyle}}"></div>
+      <div style="{{hero.glassStyle}}">
+        <div style="{{hero.archStyle}}"></div>
+        <div style="{{hero.mullionStyle}}"></div>
+        <div style="{{hero.shelfStyle}}"></div>
+        <div style="{{hero.bowlStyle}}"></div>
+        <div style="{{hero.trayStyle}}"></div>
+        <div style="{{hero.hingeLStyle}}"></div>
+        <div style="{{hero.hingeRStyle}}"></div>
+        <div style="position: relative; z-index: 2; height: 100%; box-sizing: border-box; padding: 10px 12px; display: flex; flex-direction: column; gap: 5px">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between">
+            <span style="font-family: 'Space Mono', monospace; font-size: 12px; opacity: .5">Z3-08</span>
+            <span style="font-size: 9px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: #B14919; color: #ECDBB6">Health</span>
+          </div>
+          <span style="flex-grow: 1; display: flex; align-items: center; font-size: 24px; font-weight: 700; text-shadow: 0 1px 3px rgba(243,235,208,.9)">Cendol</span>
+          <div style="height: 5px; border-radius: 999px; background: rgba(45,25,7,.16); overflow: hidden">
+            <div style="height: 100%; width: 60%; border-radius: 999px; background: #B14919"></div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div style="display: flex; flex-direction: column; gap: 11px; padding-top: 4px">
-      <sc-for list="{{anatomy}}" as="a" hint-placeholder-count="4">
+    <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 2px">
+      <sc-for list="{{anatomy}}" as="a" hint-placeholder-count="7">
         <div style="display: flex; gap: 10px; align-items: baseline">
-          <span style="font-family: 'Space Mono', monospace; font-size: 10px; color: #B14919; width: 16px; flex-shrink: 0">{{a.n}}</span>
+          <span style="{{a.dot}}"></span>
           <div>
             <div style="font-size: 13px; font-weight: 600">{{a.what}}</div>
             <div style="font-size: 12px; color: rgba(45,25,7,.55); line-height: 1.45">{{a.why}}</div>
@@ -51,26 +63,70 @@
     </div>
   </div>
 
-  <!-- states -->
-  <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); margin-bottom: 10px">States</div>
-  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
-    <sc-for list="{{states}}" as="s" hint-placeholder-count="8">
+  <!-- the four cabinet kinds -->
+  <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); margin-bottom: 10px">The four cabinets on the drawing</div>
+  <div style="display: flex; gap: 14px; align-items: flex-end; margin-bottom: 28px">
+    <sc-for list="{{kinds}}" as="k" hint-placeholder-count="4">
       <div>
-        <div style="{{s.tileStyle}}">
-          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px">
-            <span style="font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: .04em; opacity: .55">{{s.code}}</span>
-            <sc-if value="{{s.badge}}" hint-placeholder-val="{{true}}">
-              <span style="{{s.badgeStyle}}">{{s.badge}}</span>
-            </sc-if>
-          </div>
-          <div style="flex-grow: 1; display: flex; align-items: center">
-            <span style="font-size: 13px; font-weight: 600; line-height: 1.15">{{s.name}}</span>
-          </div>
-          <sc-if value="{{s.hasBar}}" hint-placeholder-val="{{true}}">
-            <div style="height: 3px; border-radius: 999px; background: rgba(45,25,7,.14); overflow: hidden">
-              <div style="{{s.barStyle}}"></div>
+        <div style="{{k.cellStyle}}">
+          <sc-if value="{{k.isPorthole}}" hint-placeholder-val="{{false}}">
+            <div style="{{k.portColStyle}}">
+              <div style="{{k.slatVertStyle}}"></div>
+              <div style="{{k.portPanelStyle}}"><div style="{{k.portholeStyle}}"></div></div>
             </div>
           </sc-if>
+          <div style="{{k.doorColStyle}}">
+            <div style="{{k.ventStyle}}"></div>
+            <div style="{{k.glassStyle}}">
+              <sc-if value="{{k.hasArch}}" hint-placeholder-val="{{true}}">
+                <div style="{{k.archStyle}}"></div>
+              </sc-if>
+              <div style="{{k.mullionStyle}}"></div>
+              <div style="{{k.shelfStyle}}"></div>
+              <div style="{{k.trayStyle}}"></div>
+              <div style="{{k.hingeLStyle}}"></div>
+              <div style="{{k.hingeRStyle}}"></div>
+            </div>
+          </div>
+          <sc-if value="{{k.hasDrawer}}" hint-placeholder-val="{{false}}">
+            <div style="{{k.drawerStyle}}"></div>
+          </sc-if>
+        </div>
+        <div style="font-size: 11.5px; font-weight: 600; margin-top: 8px">{{k.label}}</div>
+        <div style="font-size: 11px; color: rgba(45,25,7,.5); line-height: 1.4">{{k.note}}</div>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- states -->
+  <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); margin-bottom: 10px">States &mdash; the same cabinet, different glass</div>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 13px">
+    <sc-for list="{{states}}" as="s" hint-placeholder-count="8">
+      <div>
+        <div style="{{s.cellStyle}}">
+          <div style="{{s.ventStyle}}"></div>
+          <div style="{{s.glassStyle}}">
+            <div style="{{s.archStyle}}"></div>
+            <div style="{{s.mullionStyle}}"></div>
+            <div style="{{s.shelfStyle}}"></div>
+            <div style="{{s.trayStyle}}"></div>
+            <div style="{{s.hingeLStyle}}"></div>
+            <div style="{{s.hingeRStyle}}"></div>
+            <div style="position: relative; z-index: 2; height: 100%; box-sizing: border-box; padding: 4px 5px; display: flex; flex-direction: column; gap: 2px">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px">
+                <span style="font-family: 'Space Mono', monospace; font-size: 9px; opacity: .5">{{s.code}}</span>
+                <sc-if value="{{s.badge}}" hint-placeholder-val="{{true}}">
+                  <span style="{{s.badgeStyle}}">{{s.badge}}</span>
+                </sc-if>
+              </div>
+              <span style="{{s.nameStyle}}">{{s.name}}</span>
+              <sc-if value="{{s.hasBar}}" hint-placeholder-val="{{true}}">
+                <div style="height: 3px; border-radius: 999px; background: rgba(45,25,7,.16); overflow: hidden">
+                  <div style="{{s.barStyle}}"></div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
         </div>
         <div style="font-size: 11px; font-weight: 600; margin-top: 7px">{{s.label}}</div>
         <div style="font-size: 11px; color: rgba(45,25,7,.5); line-height: 1.4">{{s.note}}</div>
@@ -78,74 +134,121 @@
     </sc-for>
   </div>
 
-  <!-- the rule -->
   <div style="margin-top: 26px; padding: 14px 16px; border-radius: 10px; background: rgba(114,144,148,.14); border: 1px solid rgba(114,144,148,.3)">
     <div style="font-size: 13px; font-weight: 600; margin-bottom: 5px">One badge at a time, in this order</div>
     <div style="font-size: 12px; color: rgba(45,25,7,.6); line-height: 1.6">
-      Health flag &rarr; leaving today &rarr; care running late &rarr; arriving. A cat that is both flagged and
-      leaving shows the flag; the tile is not a place to stack four signals, and a carer scanning the
-      wall for trouble should find exactly one thing to look at per room.
+      Health flag &rarr; leaving today &rarr; care running late &rarr; arriving. A cat that is both flagged
+      and leaving shows the flag. The drawing already gives each unit a lot to look at; the OS is
+      allowed to add exactly one thing on top of it.
     </div>
   </div>
 
 </div>
 </x-dc>
 
-<script data-dc-script data-props='{"$preview":{"width":760,"height":720}}'>
+<script data-dc-script data-props='{"$preview":{"width":860,"height":940}}'>
 class Component extends DCLogic {
   renderVals() {
+    const CARCASS = '#F3EBD0'
+    const OUTLINE = 'rgba(45,25,7,.72)'
+    const HAIR = 'rgba(45,25,7,.34)'
+    const PANEL = 'rgba(45,25,7,.16)'
+    const TRAY = 'rgba(150,168,120,.5)'
+
     const S = {
-      Occupied:    { bg: 'rgba(177,73,25,.15)',   bd: 'rgba(177,73,25,.42)',   fg: '#2D1907' },
-      Available:   { bg: 'rgba(114,144,148,.16)', bd: 'rgba(114,144,148,.34)', fg: 'rgba(45,25,7,.5)' },
-      Cleaning:    { bg: 'rgba(231,206,122,.4)',  bd: 'rgba(184,144,43,.45)',  fg: '#7a5c00' },
-      Maintenance: { bg: 'rgba(45,25,7,.07)',     bd: 'rgba(45,25,7,.16)',     fg: 'rgba(45,25,7,.4)' },
+      Occupied:    { glass: 'rgba(177,73,25,.30)',   edge: 'rgba(177,73,25,.6)',   fg: '#5e2710' },
+      Available:   { glass: 'rgba(114,144,148,.20)', edge: 'rgba(114,144,148,.5)', fg: 'rgba(45,25,7,.45)' },
+      Cleaning:    { glass: 'rgba(231,206,122,.55)', edge: 'rgba(184,144,43,.6)',  fg: '#6b5000' },
+      Maintenance: { glass: 'rgba(45,25,7,.12)',     edge: 'rgba(45,25,7,.3)',     fg: 'rgba(45,25,7,.38)' },
     }
     const B = {
       Health: { bg: '#B14919', fg: '#ECDBB6' },
       Out:    { bg: '#B8902B', fg: '#2D1907' },
       Late:   { bg: 'rgba(177,73,25,.85)', fg: '#ECDBB6' },
-      In:     { bg: 'rgba(45,25,7,.35)', fg: '#ECDBB6' },
+      In:     { bg: 'rgba(45,25,7,.4)', fg: '#ECDBB6' },
     }
-    const tile = (status, extra) => [
-      'height: 74px', 'box-sizing: border-box', 'border-radius: 8px', 'padding: 6px 8px',
-      'display: flex', 'flex-direction: column', 'gap: 4px',
-      'background: ' + S[status].bg,
-      'color: ' + S[status].fg,
-      extra || ('border: 1px solid ' + S[status].bd),
-    ].join('; ')
+    const slats = 'repeating-linear-gradient(90deg, ' + HAIR + ' 0 1px, transparent 1px 4px)'
+    const slatsVert = 'repeating-linear-gradient(0deg, ' + HAIR + ' 0 1px, transparent 1px 4px)'
 
-    const badge = (b) => b
-      ? 'font-size: 8px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 1px 5px; border-radius: 999px; white-space: nowrap; background: ' + B[b].bg + '; color: ' + B[b].fg
-      : ''
-    const bar = (pct, done) => 'height: 100%; border-radius: 999px; width: ' + pct + '%; background: ' + (done ? 'rgba(122,138,79,.9)' : '#B14919')
+    // One builder, so the study cannot drift from the wall it documents.
+    const cabinet = (o) => {
+      const st = S[o.status]
+      const scale = o.scale ?? 1
+      return {
+        cellStyle: [
+          'width: ' + o.w + 'px', 'height: ' + o.h + 'px', 'box-sizing: border-box',
+          'background: ' + CARCASS, 'border: 1.5px solid ' + OUTLINE, 'border-radius: ' + (7 * scale) + 'px',
+          'padding: ' + (4.5 * scale) + 'px', 'display: flex',
+          'flex-direction: ' + (o.porthole ? 'row' : 'column'),
+          'gap: ' + (3 * scale) + 'px', 'flex-shrink: 0',
+          'box-shadow: inset 0 0 0 1px rgba(255,255,255,.55)',
+        ].join('; '),
+        isPorthole: !!o.porthole,
+        hasArch: !!o.arch,
+        hasDrawer: !!o.drawer,
+        portColStyle: 'width: 31%; flex-shrink: 0; display: flex; flex-direction: column; gap: ' + (3 * scale) + 'px',
+        slatVertStyle: 'height: 28%; border-radius: 3px; border: 1px solid ' + HAIR + '; background: ' + slatsVert,
+        portPanelStyle: 'flex-grow: 1; border-radius: 3px; background: ' + PANEL + '; display: flex; align-items: center; justify-content: center',
+        portholeStyle: 'width: 76%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 32% 28%, #ffffff, rgba(255,255,255,.7)); border: 1.5px solid ' + OUTLINE,
+        doorColStyle: 'flex-grow: 1; display: flex; flex-direction: column; gap: ' + (3 * scale) + 'px; min-width: 0',
+        ventStyle: 'height: ' + (o.cubby ? 7 : 10 * scale) + 'px; flex-shrink: 0; border-radius: 999px; border: 1px solid ' + HAIR + '; background: ' + (o.cubby ? PANEL : slats),
+        glassStyle: 'position: relative; flex-grow: 1; overflow: hidden; border-radius: ' + (5 * scale) + 'px; background: ' + st.glass + '; border: 1px solid ' + st.edge + '; color: ' + st.fg,
+        archStyle: 'position: absolute; right: 7%; top: 5%; width: 33%; height: 50%; border-radius: 50% 50% 0 0; background: rgba(45,25,7,.13)',
+        mullionStyle: 'position: absolute; left: 37%; top: 0; bottom: 0; width: 1px; background: rgba(45,25,7,.15)',
+        shelfStyle: 'position: absolute; left: 7%; right: 7%; top: 53%; height: ' + (2 * scale) + 'px; border-radius: 2px; background: rgba(45,25,7,.2)',
+        bowlStyle: 'position: absolute; right: 16%; top: 60%; width: ' + (10 * scale) + 'px; height: ' + (10 * scale) + 'px; border-radius: 50%; background: rgba(255,255,255,.85); border: 1px solid ' + HAIR,
+        trayStyle: 'position: absolute; left: 9%; right: 24%; bottom: 5%; height: 21%; background: ' + TRAY + '; border: 1px solid rgba(45,25,7,.18); clip-path: polygon(7% 0, 93% 0, 100% 100%, 0 100%); border-radius: 2px',
+        hingeLStyle: 'position: absolute; left: ' + (-3 * scale) + 'px; top: 50%; width: ' + (6 * scale) + 'px; height: ' + (6 * scale) + 'px; margin-top: ' + (-3 * scale) + 'px; border-radius: 50%; border: 1px solid ' + HAIR + '; background: ' + CARCASS,
+        hingeRStyle: 'position: absolute; right: ' + (-3 * scale) + 'px; top: 50%; width: ' + (6 * scale) + 'px; height: ' + (6 * scale) + 'px; margin-top: ' + (-3 * scale) + 'px; border-radius: 50%; border: 1px solid ' + HAIR + '; background: ' + CARCASS,
+        drawerStyle: 'height: ' + (o.big ? 16 : 11) + 'px; flex-shrink: 0; border-radius: 3px; background: ' + PANEL + '; border: 1px solid ' + HAIR + '; background-image: linear-gradient(90deg, transparent 49.5%, ' + HAIR + ' 49.5% 50.5%, transparent 50.5%)',
+        nameStyle: 'flex-grow: 1; display: flex; align-items: center; font-size: 12.5px; font-weight: 700; line-height: 1.1; text-shadow: 0 1px 2px rgba(243,235,208,.9)',
+      }
+    }
 
-    const states = [
-      { code: 'Z3-01', name: 'Kopi',    status: 'Occupied', badge: null, hasBar: true, barStyle: bar(100, true),
-        label: 'In house', note: 'Care finished for today' },
-      { code: 'Z3-08', name: 'Cendol',  status: 'Occupied', badge: 'Health', hasBar: true, barStyle: bar(60, false),
-        label: 'Flagged', note: 'Red flag on today’s log' },
-      { code: 'Z3-10', name: 'Milo',    status: 'Occupied', badge: 'Out', hasBar: true, barStyle: bar(80, false),
-        label: 'Leaving today', note: 'Collection expected' },
-      { code: 'Z1-09', name: 'Nutmeg',  status: 'Occupied', badge: 'Late', hasBar: true, barStyle: bar(35, false),
-        label: 'Care running late', note: 'After 3pm and unfinished' },
-      { code: 'Z3-17', name: 'Nala',    status: 'Occupied', badge: 'In', hasBar: true, barStyle: bar(0, false),
-        label: 'Arriving', note: 'Booked in, not settled yet' },
-      { code: 'Z3-02', name: '',        status: 'Available', badge: null, hasBar: false, barStyle: '',
-        label: 'Free', note: 'Empty and ready' },
-      { code: 'Z3-06', name: '',        status: 'Cleaning', badge: null, hasBar: false, barStyle: '',
-        label: 'Cleaning', note: 'Turning over after check-out' },
-      { code: 'Z2-06', name: '',        status: 'Maintenance', badge: null, hasBar: false, barStyle: '',
-        label: 'Out of service', note: 'Cannot be booked' },
-    ].map((s) => ({ ...s, tileStyle: tile(s.status), badgeStyle: badge(s.badge) }))
+    const hero = cabinet({ status: 'Occupied', w: 300, h: 232, arch: true, scale: 2.4 })
 
-    const anatomy = [
-      { n: '01', what: 'Room code, quiet but always there', why: 'The picture is a shortcut; the number is the identity. A carer must be able to check it.' },
-      { n: '02', what: 'The cat’s name, biggest thing on the tile', why: 'Staff navigate by animal. The room number is how the system navigates.' },
-      { n: '03', what: 'One badge, only when true', why: 'Priority order below. Two badges on a 90px tile is two things nobody reads.' },
-      { n: '04', what: 'Today’s care, as a strip', why: 'Answers “what is left today” without opening anything. Green when done, rust while outstanding.' },
+    const kinds = [
+      { ...cabinet({ status: 'Occupied', w: 116, h: 84, arch: true }),
+        label: 'Standard', note: 'Zones 1 & 3 — 28 units' },
+      { ...cabinet({ status: 'Available', w: 174, h: 105, porthole: true }),
+        label: 'Porthole', note: 'Zone 2 — 9 units' },
+      { ...cabinet({ status: 'Occupied', w: 232, h: 147, porthole: true, drawer: true, big: true }),
+        label: 'Suite', note: 'Zone 4 — 4 units' },
+      { ...cabinet({ status: 'Available', w: 151, h: 71, cubby: true }),
+        label: 'Staging cubby', note: 'Never takes a booking' },
     ]
 
-    return { states, anatomy }
+    const states = [
+      { code: 'Z3-01', name: 'Kopi',   status: 'Occupied',    badge: null,     bar: 100, label: 'In house',           note: 'Care finished for today' },
+      { code: 'Z3-08', name: 'Cendol', status: 'Occupied',    badge: 'Health', bar: 60,  label: 'Flagged',            note: 'Red flag on today’s log' },
+      { code: 'Z3-10', name: 'Milo',   status: 'Occupied',    badge: 'Out',    bar: 80,  label: 'Leaving today',      note: 'Collection expected' },
+      { code: 'Z1-09', name: 'Nutmeg', status: 'Occupied',    badge: 'Late',   bar: 35,  label: 'Care running late',  note: 'After 3pm and unfinished' },
+      { code: 'Z3-17', name: 'Nala',   status: 'Occupied',    badge: 'In',     bar: 0,   label: 'Arriving',           note: 'Booked in, not settled yet' },
+      { code: 'Z3-02', name: '',       status: 'Available',   badge: null,     bar: -1,  label: 'Free',               note: 'Empty and ready' },
+      { code: 'Z3-06', name: '',       status: 'Cleaning',    badge: null,     bar: -1,  label: 'Cleaning',           note: 'Turning over after check-out' },
+      { code: 'Z2-06', name: '',       status: 'Maintenance', badge: null,     bar: -1,  label: 'Out of service',     note: 'Cannot be booked' },
+    ].map((s) => ({
+      ...s,
+      ...cabinet({ status: s.status, w: 178, h: 96, arch: true }),
+      hasBar: s.bar >= 0,
+      badgeStyle: s.badge
+        ? 'font-size: 8px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 1px 4px; border-radius: 999px; white-space: nowrap; background: ' + B[s.badge].bg + '; color: ' + B[s.badge].fg
+        : '',
+      barStyle: 'height: 100%; border-radius: 999px; width: ' + Math.max(0, s.bar) + '%; background: ' + (s.bar >= 100 ? 'rgba(110,128,72,.95)' : '#B14919'),
+    }))
+
+    const dot = (c) => 'width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; display: inline-block; background: ' + c
+    const anatomy = [
+      { what: 'Slatted vent capsule', why: 'The rounded strip above every door. Strongest signature on the drawing — it is what makes the tile read as a cabinet.', dot: dot(HAIR) },
+      { what: 'Glass door, centre mullion, two hinges', why: 'Two leaves with a hinge circle each side, exactly as drawn.', dot: dot('rgba(45,25,7,.5)') },
+      { what: 'Grey arch, top right', why: 'The cat house. Constant furniture, never a signal.', dot: dot('rgba(45,25,7,.2)') },
+      { what: 'Shelf rail and bowl', why: 'Kept faint: they place the eye without competing.', dot: dot('rgba(45,25,7,.25)') },
+      { what: 'Pale green litter tray', why: 'Bottom left, tapered. The one colour on the drawing that is not cream or grey.', dot: dot(TRAY) },
+      { what: 'The glass tint IS the status', why: 'Rust occupied, teal free, gold cleaning, flat grey out of service.', dot: dot('rgba(177,73,25,.45)') },
+      { what: 'Name, code, badge, care bar', why: 'The only four things the OS paints on top of the cabinet.', dot: dot('#B14919') },
+    ]
+
+    return { hero, kinds, states, anatomy }
   }
 }
 </script>

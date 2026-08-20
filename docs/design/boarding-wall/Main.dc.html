@@ -12,21 +12,20 @@
     body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #F2EDE0; color: #2D1907; }
     a { color: #B14919; text-decoration: none; }
     a:hover { color: #8d3a14; text-decoration: underline; }
-    .tile { cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; }
-    .tile:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(45,25,7,.16); }
+    .unit { cursor: pointer; transition: filter .12s ease, box-shadow .12s ease; }
+    .unit:hover { filter: brightness(1.04); box-shadow: 0 4px 12px rgba(45,25,7,.2); }
     .day { cursor: pointer; }
   </style>
 </helmet>
 
-<div style="width: 1360px; min-height: 940px; padding: 28px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+<div style="width: 1200px; padding: 26px 30px 30px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
 
-  <!-- header -->
   <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px">
     <div>
       <div style="font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: rgba(45,25,7,.45)">Operations · Boarding</div>
       <h1 style="margin: 4px 0 0; font-size: 26px; font-weight: 700; letter-spacing: -.01em">Boarding Wall</h1>
     </div>
-    <div style="display: flex; gap: 10px">
+    <div style="display: flex; gap: 9px">
       <sc-for list="{{counts}}" as="c" hint-placeholder-count="4">
         <div style="{{c.boxStyle}}">
           <div style="{{c.numStyle}}">{{c.n}}</div>
@@ -36,7 +35,6 @@
     </div>
   </div>
 
-  <!-- date strip -->
   <div style="background: #ECDBB6; border: 1px solid rgba(45,25,7,.12); border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; gap: 10px">
     <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); white-space: nowrap; padding-right: 4px">Showing</div>
     <div style="display: flex; gap: 4px; flex-grow: 1">
@@ -49,35 +47,63 @@
     </div>
   </div>
 
-  <!-- wall + rail -->
-  <div style="display: flex; gap: 20px; align-items: flex-start">
+  <div style="display: flex; gap: 18px; align-items: flex-start">
 
-    <!-- the wall -->
-    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 16px">
+    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 14px">
       <sc-for list="{{zones}}" as="z" hint-placeholder-count="5">
-        <div style="background: #ECDBB6; border: 1px solid rgba(45,25,7,.12); border-radius: 12px; padding: 12px 14px 14px">
-          <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px">
-            <span style="font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; color: #2D1907">{{z.code}}</span>
+        <div>
+          <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 7px">
+            <span style="font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700">{{z.code}}</span>
             <span style="font-size: 12px; color: rgba(45,25,7,.55)">{{z.name}}</span>
             <span style="flex-grow: 1"></span>
             <span style="font-size: 11px; color: rgba(45,25,7,.45)">{{z.tally}}</span>
           </div>
-          <div style="{{z.gridStyle}}">
+
+          <div style="{{z.runStyle}}">
             <sc-for list="{{z.rooms}}" as="r" hint-placeholder-count="9">
-              <div class="tile" onClick="{{r.pick}}" style="{{r.style}}">
-                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px">
-                  <span style="font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: .04em; opacity: .55">{{r.code}}</span>
-                  <sc-if value="{{r.badge}}" hint-placeholder-val="{{true}}">
-                    <span style="{{r.badgeStyle}}">{{r.badge}}</span>
-                  </sc-if>
-                </div>
-                <div style="flex-grow: 1; display: flex; align-items: center">
-                  <span style="font-size: 13px; font-weight: 600; line-height: 1.15">{{r.occupant}}</span>
-                </div>
-                <sc-if value="{{r.hasBar}}" hint-placeholder-val="{{true}}">
-                  <div style="height: 3px; border-radius: 999px; background: rgba(45,25,7,.14); overflow: hidden">
-                    <div style="{{r.barStyle}}"></div>
+              <div class="unit" onClick="{{r.pick}}" style="{{r.cellStyle}}">
+
+                <sc-if value="{{r.isPorthole}}" hint-placeholder-val="{{false}}">
+                  <div style="{{r.portColStyle}}">
+                    <div style="{{r.slatVertStyle}}"></div>
+                    <div style="{{r.portPanelStyle}}">
+                      <div style="{{r.portholeStyle}}"></div>
+                    </div>
                   </div>
+                </sc-if>
+
+                <div style="{{r.doorColStyle}}">
+                  <div style="{{r.ventStyle}}"></div>
+
+                  <div style="{{r.glassStyle}}">
+                    <sc-if value="{{r.hasArch}}" hint-placeholder-val="{{true}}">
+                      <div style="{{r.archStyle}}"></div>
+                    </sc-if>
+                    <div style="{{r.mullionStyle}}"></div>
+                    <div style="{{r.shelfStyle}}"></div>
+                    <div style="{{r.trayStyle}}"></div>
+                    <div style="{{r.hingeLStyle}}"></div>
+                    <div style="{{r.hingeRStyle}}"></div>
+
+                    <div style="{{r.labelStyle}}">
+                      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 4px">
+                        <span style="font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: .03em; opacity: .5">{{r.code}}</span>
+                        <sc-if value="{{r.badge}}" hint-placeholder-val="{{true}}">
+                          <span style="{{r.badgeStyle}}">{{r.badge}}</span>
+                        </sc-if>
+                      </div>
+                      <span style="{{r.nameStyle}}">{{r.occupant}}</span>
+                      <sc-if value="{{r.hasBar}}" hint-placeholder-val="{{true}}">
+                        <div style="height: 3px; border-radius: 999px; background: rgba(45,25,7,.16); overflow: hidden">
+                          <div style="{{r.barStyle}}"></div>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </div>
+                </div>
+
+                <sc-if value="{{r.hasDrawer}}" hint-placeholder-val="{{false}}">
+                  <div style="{{r.drawerStyle}}"></div>
                 </sc-if>
               </div>
             </sc-for>
@@ -86,19 +112,18 @@
       </sc-for>
     </div>
 
-    <!-- selected room rail -->
-    <div style="width: 296px; flex-shrink: 0; background: #ECDBB6; border: 1px solid rgba(45,25,7,.12); border-radius: 12px; overflow: hidden">
-      <div style="padding: 14px 16px; border-bottom: 1px solid rgba(45,25,7,.1); display: flex; align-items: center; justify-content: space-between">
+    <div style="width: 290px; flex-shrink: 0; background: #ECDBB6; border: 1px solid rgba(45,25,7,.12); border-radius: 12px; overflow: hidden; position: sticky; top: 20px">
+      <div style="padding: 13px 16px; border-bottom: 1px solid rgba(45,25,7,.1); display: flex; align-items: center; justify-content: space-between">
         <span style="font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700">{{sel.code}}</span>
         <span style="{{sel.statusStyle}}">{{sel.status}}</span>
       </div>
 
-      <div style="padding: 16px">
+      <div style="padding: 15px 16px">
         <sc-if value="{{sel.occupied}}" hint-placeholder-val="{{true}}">
           <div>
-            <div style="display: flex; align-items: center; gap: 12px">
-              <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(177,73,25,.14); display: flex; align-items: center; justify-content: center; flex-shrink: 0">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B14919" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <div style="display: flex; align-items: center; gap: 11px">
+              <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(177,73,25,.14); display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+                <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#B14919" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4 5.5 6.5 9M20 5.5 17.5 9"></path>
                   <path d="M4 5.5c0 4-1 5.5 1 8.5 1.6 2.4 4 4 7 4s5.4-1.6 7-4c2-3 1-4.5 1-8.5"></path>
                   <path d="M9.5 12h.01M14.5 12h.01"></path>
@@ -110,7 +135,7 @@
               </div>
             </div>
 
-            <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 7px">
+            <div style="margin-top: 13px; display: flex; flex-direction: column; gap: 6px">
               <sc-for list="{{sel.facts}}" as="f" hint-placeholder-count="5">
                 <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 12px">
                   <span style="color: rgba(45,25,7,.5)">{{f.k}}</span>
@@ -119,9 +144,9 @@
               </sc-for>
             </div>
 
-            <div style="margin-top: 16px">
-              <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); margin-bottom: 8px">Today&rsquo;s care</div>
-              <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="margin-top: 15px">
+              <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); margin-bottom: 7px">Today&rsquo;s care</div>
+              <div style="display: flex; flex-direction: column; gap: 5px">
                 <sc-for list="{{sel.tasks}}" as="t" hint-placeholder-count="5">
                   <div style="display: flex; align-items: center; gap: 8px; font-size: 12px">
                     <span style="{{t.boxStyle}}">
@@ -136,7 +161,7 @@
             </div>
 
             <sc-if value="{{sel.flag}}" hint-placeholder-val="{{true}}">
-              <div style="margin-top: 14px; padding: 9px 11px; border-radius: 8px; background: rgba(177,73,25,.12); border: 1px solid rgba(177,73,25,.25); display: flex; gap: 8px; align-items: flex-start">
+              <div style="margin-top: 13px; padding: 9px 11px; border-radius: 8px; background: rgba(177,73,25,.12); border: 1px solid rgba(177,73,25,.25); display: flex; gap: 8px; align-items: flex-start">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B14919" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px">
                   <path d="M12 8v5M12 16.5h.01"></path><circle cx="12" cy="12" r="9"></circle>
                 </svg>
@@ -144,7 +169,7 @@
               </div>
             </sc-if>
 
-            <div style="margin-top: 16px; display: flex; gap: 8px">
+            <div style="margin-top: 15px; display: flex; gap: 8px">
               <div style="background: #B14919; color: #ECDBB6; font-size: 13px; padding: 8px 14px; border-radius: 8px; font-weight: 500; cursor: pointer">Open room</div>
               <div style="background: rgba(45,25,7,.08); color: #2D1907; font-size: 13px; padding: 8px 12px; border-radius: 8px; cursor: pointer">Log AM</div>
             </div>
@@ -155,20 +180,19 @@
           <div>
             <div style="font-size: 13px; color: rgba(45,25,7,.55); line-height: 1.5">{{sel.emptyLine}}</div>
             <sc-if value="{{sel.showNext}}" hint-placeholder-val="{{true}}">
-            <div style="margin-top: 14px; padding: 11px; border-radius: 8px; background: rgba(114,144,148,.14); border: 1px solid rgba(114,144,148,.3)">
-              <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); margin-bottom: 4px">Next booked</div>
-              <div style="font-size: 13px; font-weight: 600">{{sel.nextBooking}}</div>
-            </div>
+              <div style="margin-top: 13px; padding: 11px; border-radius: 8px; background: rgba(114,144,148,.14); border: 1px solid rgba(114,144,148,.3)">
+                <div style="font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgba(45,25,7,.6); margin-bottom: 4px">Next booked</div>
+                <div style="font-size: 13px; font-weight: 600">{{sel.nextBooking}}</div>
+              </div>
+              <div style="margin-top: 13px; background: #B14919; color: #ECDBB6; font-size: 13px; padding: 8px 14px; border-radius: 8px; font-weight: 500; display: inline-block; cursor: pointer">Place an arrival here</div>
             </sc-if>
-            <div style="margin-top: 14px; background: #B14919; color: #ECDBB6; font-size: 13px; padding: 8px 14px; border-radius: 8px; font-weight: 500; display: inline-block; cursor: pointer">Place an arrival here</div>
           </div>
         </sc-if>
       </div>
     </div>
   </div>
 
-  <!-- legend -->
-  <div style="display: flex; align-items: center; gap: 18px; padding-top: 2px">
+  <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
     <sc-for list="{{legend}}" as="l" hint-placeholder-count="4">
       <div style="display: flex; align-items: center; gap: 6px">
         <span style="{{l.swatch}}"></span>
@@ -176,13 +200,13 @@
       </div>
     </sc-for>
     <span style="flex-grow: 1"></span>
-    <span style="font-size: 11px; color: rgba(45,25,7,.4)">Unplaced rooms appear below the wall &mdash; never hidden</span>
+    <span style="font-size: 11px; color: rgba(45,25,7,.4)">The glass carries the state; the cabinet stays cabinet</span>
   </div>
 
 </div>
 </x-dc>
 
-<script data-dc-script data-props='{"density":{"editor":"enum","options":["Comfortable","Compact"],"default":"Comfortable","section":"Layout"},"$preview":{"width":1360,"height":940}}'>
+<script data-dc-script data-props='{"density":{"editor":"enum","options":["Comfortable","Compact"],"default":"Comfortable","section":"Layout"},"$preview":{"width":1200,"height":1900}}'>
 class Component extends DCLogic {
   constructor(props) {
     super(props)
@@ -191,75 +215,87 @@ class Component extends DCLogic {
 
   renderVals() {
     const compact = (this.props.density ?? 'Comfortable') === 'Compact'
-    const unit = compact ? 62 : 78
-    const gap = compact ? 5 : 7
+    const W = compact ? 94 : 116
+    const H = compact ? 68 : 84
+    const GAP = compact ? 5 : 7
 
+    // The cabinet's own colours, taken off the maker's drawing: cream carcass,
+    // near-black outline, grey porthole panels, pale-green litter trays. None of
+    // this changes with state — a cabinet is a cabinet whoever is inside it.
+    const CARCASS = '#F3EBD0'
+    const OUTLINE = 'rgba(45,25,7,.72)'
+    const HAIR = 'rgba(45,25,7,.34)'
+    const PANEL = 'rgba(45,25,7,.16)'
+    const TRAY = 'rgba(150,168,120,.5)'
     const INK = '#2D1907'
+
+    // Only the GLASS takes the status colour. That is also how the wall reads in
+    // life — you look through the door to see whether anyone is home — and it
+    // keeps the furniture from competing with the one signal that must carry.
     const STATUS = {
-      Occupied:    { bg: 'rgba(177,73,25,.15)',  bd: 'rgba(177,73,25,.42)',  fg: '#8d3a14' },
-      Available:   { bg: 'rgba(114,144,148,.16)', bd: 'rgba(114,144,148,.34)', fg: 'rgba(45,25,7,.5)' },
-      Cleaning:    { bg: 'rgba(231,206,122,.4)',  bd: 'rgba(184,144,43,.45)',  fg: '#7a5c00' },
-      Maintenance: { bg: 'rgba(45,25,7,.07)',     bd: 'rgba(45,25,7,.16)',     fg: 'rgba(45,25,7,.4)' },
+      Occupied:    { glass: 'rgba(177,73,25,.30)',   edge: 'rgba(177,73,25,.6)',   fg: '#5e2710',           chip: 'rgba(177,73,25,.15)',   pill: '#8d3a14' },
+      Available:   { glass: 'rgba(114,144,148,.20)', edge: 'rgba(114,144,148,.5)', fg: 'rgba(45,25,7,.45)', chip: 'rgba(114,144,148,.16)', pill: 'rgba(45,25,7,.5)' },
+      Cleaning:    { glass: 'rgba(231,206,122,.55)', edge: 'rgba(184,144,43,.6)',  fg: '#6b5000',           chip: 'rgba(231,206,122,.4)',  pill: '#7a5c00' },
+      Maintenance: { glass: 'rgba(45,25,7,.12)',     edge: 'rgba(45,25,7,.3)',     fg: 'rgba(45,25,7,.38)', chip: 'rgba(45,25,7,.07)',     pill: 'rgba(45,25,7,.4)' },
     }
     const BADGE = {
-      Health:  { bg: '#B14919', fg: '#ECDBB6' },
-      Out:     { bg: '#B8902B', fg: '#2D1907' },
-      Late:    { bg: 'rgba(177,73,25,.85)', fg: '#ECDBB6' },
-      In:      { bg: 'rgba(45,25,7,.35)', fg: '#ECDBB6' },
+      Health: { bg: '#B14919', fg: '#ECDBB6' },
+      Out:    { bg: '#B8902B', fg: '#2D1907' },
+      Late:   { bg: 'rgba(177,73,25,.85)', fg: '#ECDBB6' },
+      In:     { bg: 'rgba(45,25,7,.4)', fg: '#ECDBB6' },
     }
 
-    // One guest, one set of facts. The rail reads from here, so selecting a
-    // different tile genuinely changes the owner, the dates and the balance —
-    // a mock where every room shows the same customer teaches the wrong thing
-    // about what the screen is for.
+    const slats = 'repeating-linear-gradient(90deg, ' + HAIR + ' 0 1px, transparent 1px 4px)'
+    const slatsVert = 'repeating-linear-gradient(0deg, ' + HAIR + ' 0 1px, transparent 1px 4px)'
+
     const PROFILE = {
-      Mochi:    { breed: 'Persian · 6 yr · female',            owner: 'Nurul Hisham',  stay: '18 – 25 Aug · 7 nights', left: '6', diet: 'Commercial · 50g × 2',   balance: 'Paid in full',        done: 0.5,
+      Mochi:    { breed: 'Persian · 6 yr · female',           owner: 'Nurul Hisham',    stay: '18 – 25 Aug · 7 nights',  left: '6', diet: 'Commercial · 50g × 2', balance: 'Paid in full',        done: 0.5,
                   flag: 'Matting behind both ears — groomer asked to look before she goes home.' },
-      Biscuit:  { breed: 'Domestic · 3 yr · male',             owner: 'Tan Chee Meng', stay: '19 – 21 Aug · 2 nights', left: '2', diet: 'Owner-supplied',         balance: 'RM 180 due on pickup', done: 1 },
-      Tofu:     { breed: 'Ragdoll · 2 yr · male',              owner: 'Farah Aziz',    stay: '16 – 19 Aug · 3 nights', left: '0', diet: 'Commercial · 60g × 2',   balance: 'RM 240 due today',     done: 0.8 },
-      Pepper:   { breed: 'Devon Rex · 5 yr · female',          owner: 'Goh Li Ping',   stay: '17 – 23 Aug · 6 nights', left: '4', diet: 'Commercial · 45g × 3',   balance: 'Paid in full',         done: 1 },
-      Suki:     { breed: 'British Longhair · 8 yr · female',   owner: 'Amirah Rashid', stay: '12 – 26 Aug · 14 nights', left: '7', diet: 'Prescription · renal',  balance: 'Deposit RM 300 held',  done: 0.75 },
-      Nutmeg:   { breed: 'Munchkin · 1 yr · male',             owner: 'Vinod Kumar',   stay: '19 – 22 Aug · 3 nights', left: '3', diet: 'Kitten · 40g × 3',       balance: 'RM 270 due on pickup', done: 0.35 },
-      Bao:      { breed: 'Exotic Shorthair · 4 yr · male',     owner: 'Chong Mei Yee', stay: '15 – 20 Aug · 5 nights', left: '1', diet: 'Commercial · 55g × 2',   balance: 'Paid in full',         done: 0.6 },
-      Latte:    { breed: 'British Shorthair · 3 yr · female',  owner: 'Siti Zubaidah', stay: '18 – 24 Aug · 6 nights', left: '5', diet: 'Commercial · 50g × 2',   balance: 'RM 420 due on pickup', done: 1 },
-      Ollie:    { breed: 'Domestic · 7 yr · male',             owner: 'Raj Menon',     stay: '19 – 20 Aug · 1 night',  left: '1', diet: 'Owner-supplied',         balance: 'Paid in full',         done: 0.5 },
-      Momo:     { breed: 'Scottish Fold · 2 yr · female',      owner: 'Lee Wai Kit',   stay: '14 – 19 Aug · 5 nights', left: '0', diet: 'Commercial · 45g × 2',   balance: 'RM 400 due today',     done: 0.9 },
-      Pudding:  { breed: 'Persian · 9 yr · female',            owner: 'Hafiz Osman',   stay: '17 – 27 Aug · 10 nights', left: '8', diet: 'Prescription · renal', balance: 'Deposit RM 250 held',  done: 0.45 },
-      Yuzu:     { breed: 'Devon Rex · 4 yr · male',            owner: 'Ong Sze Ling',  stay: '19 – 26 Aug · 7 nights', left: '7', diet: 'Commercial · 55g × 2',   balance: 'RM 490 due on pickup', done: 0.2 },
-      Kopi:     { breed: 'Domestic · 5 yr · male',             owner: 'Danish Iskandar', stay: '16 – 21 Aug · 5 nights', left: '2', diet: 'Commercial · 60g × 2', balance: 'Paid in full',        done: 1 },
-      Ginger:   { breed: 'Maine Coon · 3 yr · male',           owner: 'Yap Hui Xin',   stay: '18 – 22 Aug · 4 nights', left: '3', diet: 'Commercial · 80g × 2',   balance: 'RM 320 due on pickup', done: 0.7 },
-      Snow:     { breed: 'British Longhair · 2 yr · female',   owner: 'Aisyah Kamal',  stay: '19 – 23 Aug · 4 nights', left: '4', diet: 'Commercial · 45g × 2',   balance: 'Paid in full',         done: 0.4 },
-      Peanut:   { breed: 'Munchkin · 6 yr · male',             owner: 'Cheah Boon Hui', stay: '13 – 20 Aug · 7 nights', left: '1', diet: 'Commercial · 50g × 2',  balance: 'RM 560 due on pickup', done: 1 },
-      Cendol:   { breed: 'British Shorthair · 4 yr · female',  owner: 'Lim Wei Ling',  stay: '17 – 24 Aug · 7 nights', left: '5', diet: 'Prescription · renal',   balance: 'RM 420 due on pickup', done: 0.6,
+      Biscuit:  { breed: 'Domestic · 3 yr · male',            owner: 'Tan Chee Meng',   stay: '19 – 21 Aug · 2 nights',  left: '2', diet: 'Owner-supplied',       balance: 'RM 180 due on pickup', done: 1 },
+      Tofu:     { breed: 'Ragdoll · 2 yr · male',             owner: 'Farah Aziz',      stay: '16 – 19 Aug · 3 nights',  left: '0', diet: 'Commercial · 60g × 2', balance: 'RM 240 due today',     done: 0.8 },
+      Pepper:   { breed: 'Devon Rex · 5 yr · female',         owner: 'Goh Li Ping',     stay: '17 – 23 Aug · 6 nights',  left: '4', diet: 'Commercial · 45g × 3', balance: 'Paid in full',         done: 1 },
+      Suki:     { breed: 'British Longhair · 8 yr · female',  owner: 'Amirah Rashid',   stay: '12 – 26 Aug · 14 nights', left: '7', diet: 'Prescription · renal', balance: 'Deposit RM 300 held',  done: 0.75 },
+      Nutmeg:   { breed: 'Munchkin · 1 yr · male',            owner: 'Vinod Kumar',     stay: '19 – 22 Aug · 3 nights',  left: '3', diet: 'Kitten · 40g × 3',     balance: 'RM 270 due on pickup', done: 0.35 },
+      Bao:      { breed: 'Exotic Shorthair · 4 yr · male',    owner: 'Chong Mei Yee',   stay: '15 – 20 Aug · 5 nights',  left: '1', diet: 'Commercial · 55g × 2', balance: 'Paid in full',         done: 0.6 },
+      Latte:    { breed: 'British Shorthair · 3 yr · female', owner: 'Siti Zubaidah',   stay: '18 – 24 Aug · 6 nights',  left: '5', diet: 'Commercial · 50g × 2', balance: 'RM 420 due on pickup', done: 1 },
+      Ollie:    { breed: 'Domestic · 7 yr · male',            owner: 'Raj Menon',       stay: '19 – 20 Aug · 1 night',   left: '1', diet: 'Owner-supplied',       balance: 'Paid in full',         done: 0.5 },
+      Momo:     { breed: 'Scottish Fold · 2 yr · female',     owner: 'Lee Wai Kit',     stay: '14 – 19 Aug · 5 nights',  left: '0', diet: 'Commercial · 45g × 2', balance: 'RM 400 due today',     done: 0.9 },
+      Pudding:  { breed: 'Persian · 9 yr · female',           owner: 'Hafiz Osman',     stay: '17 – 27 Aug · 10 nights', left: '8', diet: 'Prescription · renal', balance: 'Deposit RM 250 held',  done: 0.45 },
+      Yuzu:     { breed: 'Devon Rex · 4 yr · male',           owner: 'Ong Sze Ling',    stay: '19 – 26 Aug · 7 nights',  left: '7', diet: 'Commercial · 55g × 2', balance: 'RM 490 due on pickup', done: 0.2 },
+      Kopi:     { breed: 'Domestic · 5 yr · male',            owner: 'Danish Iskandar', stay: '16 – 21 Aug · 5 nights',  left: '2', diet: 'Commercial · 60g × 2', balance: 'Paid in full',         done: 1 },
+      Ginger:   { breed: 'Maine Coon · 3 yr · male',          owner: 'Yap Hui Xin',     stay: '18 – 22 Aug · 4 nights',  left: '3', diet: 'Commercial · 80g × 2', balance: 'RM 320 due on pickup', done: 0.7 },
+      Snow:     { breed: 'British Longhair · 2 yr · female',  owner: 'Aisyah Kamal',    stay: '19 – 23 Aug · 4 nights',  left: '4', diet: 'Commercial · 45g × 2', balance: 'Paid in full',         done: 0.4 },
+      Peanut:   { breed: 'Munchkin · 6 yr · male',            owner: 'Cheah Boon Hui',  stay: '13 – 20 Aug · 7 nights',  left: '1', diet: 'Commercial · 50g × 2', balance: 'RM 560 due on pickup', done: 1 },
+      Cendol:   { breed: 'British Shorthair · 4 yr · female', owner: 'Lim Wei Ling',    stay: '17 – 24 Aug · 7 nights',  left: '5', diet: 'Prescription · renal', balance: 'RM 420 due on pickup', done: 0.6,
                   flag: 'Ate under half at both meals yesterday. Owner asked to be called if it happens twice.' },
-      Milo:     { breed: 'Domestic · 4 yr · male',             owner: 'Sharifah Nor',  stay: '15 – 19 Aug · 4 nights', left: '0', diet: 'Commercial · 60g × 2',   balance: 'RM 320 due today',     done: 0.8 },
-      Sesame:   { breed: 'Exotic Shorthair · 5 yr · female',   owner: 'Wong Kar Loon', stay: '18 – 25 Aug · 7 nights', left: '6', diet: 'Commercial · 50g × 2',   balance: 'Deposit RM 200 held',  done: 0.55 },
-      Rambutan: { breed: 'Domestic · 2 yr · male',             owner: 'Izzat Faridah', stay: '19 – 21 Aug · 2 nights', left: '2', diet: 'Owner-supplied',         balance: 'Paid in full',         done: 0.3 },
-      Coco:     { breed: 'Minuet · 3 yr · female',             owner: 'Teoh Ai Wei',   stay: '17 – 20 Aug · 3 nights', left: '1', diet: 'Commercial · 45g × 2',   balance: 'RM 240 due on pickup', done: 1 },
-      Nala:     { breed: 'Ragdoll · 1 yr · female',            owner: 'Zulkifli Hasan', stay: '19 – 24 Aug · 5 nights', left: '5', diet: 'Kitten · 40g × 3',      balance: 'RM 400 due on pickup', done: 0 },
-      'Raja & Ratu': { breed: 'Two British Shorthairs, siblings', owner: 'Priya Nair', stay: '14 – 28 Aug · 14 nights', left: '9', diet: 'Commercial · 50g × 2 each', balance: 'Deposit RM 500 held', done: 0.65 },
-      Bunga:    { breed: 'Persian · 10 yr · female',           owner: 'Hasnah Ibrahim', stay: '12 – 19 Aug · 7 nights', left: '0', diet: 'Prescription · renal',  balance: 'RM 980 due today',     done: 0.85 },
-      Chestnut: { breed: 'Domestic · 3 yr · male',             owner: 'Koh Jin Wei',   stay: 'arriving today · 4 nights', left: '4', diet: 'Commercial · 55g × 2', balance: 'Deposit RM 150 held', done: 0 },
-      Barley:   { breed: 'Munchkin · 5 yr · male',             owner: 'Naimah Yusof',  stay: '16 – 19 Aug · 3 nights', left: '0', diet: 'Commercial · 50g × 2',   balance: 'Settled — awaiting collection', done: 1 },
+      Milo:     { breed: 'Domestic · 4 yr · male',            owner: 'Sharifah Nor',    stay: '15 – 19 Aug · 4 nights',  left: '0', diet: 'Commercial · 60g × 2', balance: 'RM 320 due today',     done: 0.8 },
+      Sesame:   { breed: 'Exotic Shorthair · 5 yr · female',  owner: 'Wong Kar Loon',   stay: '18 – 25 Aug · 7 nights',  left: '6', diet: 'Commercial · 50g × 2', balance: 'Deposit RM 200 held',  done: 0.55 },
+      Rambutan: { breed: 'Domestic · 2 yr · male',            owner: 'Izzat Faridah',   stay: '19 – 21 Aug · 2 nights',  left: '2', diet: 'Owner-supplied',       balance: 'Paid in full',         done: 0.3 },
+      Coco:     { breed: 'Minuet · 3 yr · female',            owner: 'Teoh Ai Wei',     stay: '17 – 20 Aug · 3 nights',  left: '1', diet: 'Commercial · 45g × 2', balance: 'RM 240 due on pickup', done: 1 },
+      Nala:     { breed: 'Ragdoll · 1 yr · female',           owner: 'Zulkifli Hasan',  stay: '19 – 24 Aug · 5 nights',  left: '5', diet: 'Kitten · 40g × 3',     balance: 'RM 400 due on pickup', done: 0 },
+      'Raja & Ratu': { breed: 'Two British Shorthairs, siblings', owner: 'Priya Nair',  stay: '14 – 28 Aug · 14 nights', left: '9', diet: 'Commercial · 50g × 2 each', balance: 'Deposit RM 500 held', done: 0.65 },
+      Bunga:    { breed: 'Persian · 10 yr · female',          owner: 'Hasnah Ibrahim',  stay: '12 – 19 Aug · 7 nights',  left: '0', diet: 'Prescription · renal', balance: 'RM 980 due today',     done: 0.85 },
+      Chestnut: { breed: 'Domestic · 3 yr · male',            owner: 'Koh Jin Wei',     stay: 'arriving today · 4 nights', left: '4', diet: 'Commercial · 55g × 2', balance: 'Deposit RM 150 held', done: 0 },
+      Barley:   { breed: 'Munchkin · 5 yr · male',            owner: 'Naimah Yusof',    stay: '16 – 19 Aug · 3 nights',  left: '0', diet: 'Commercial · 50g × 2', balance: 'Settled — awaiting collection', done: 1 },
     }
     const BLANK = { breed: '', owner: '—', stay: '—', left: '—', diet: '—', balance: '—', done: 0, flag: '' }
 
-    // The wall, zone by zone, laid out on each zone's own grid — exactly the
-    // geometry the plan proposes storing on RoomZone / Room rather than tracing.
+    // `kind` picks which cabinet a unit is drawn as; col/row/span are exactly
+    // what the plan proposes storing on Room, so the wall stays rearrangeable.
     const zoneDefs = [
-      { code: 'Z1', name: 'Feature wall', cols: 5, rows: 3, rooms: [
-        ['Z1-01', 1, 1, 1, 2, 'Occupied', 'Mochi',    'Health'],
-        ['Z1-02', 2, 1, 1, 1, 'Occupied', 'Biscuit',  null],
-        ['Z1-03', 3, 1, 1, 1, 'Available', null,      null],
-        ['Z1-04', 4, 1, 2, 1, 'Occupied', 'Tofu',     'Out'],
-        ['Z1-05', 2, 2, 1, 1, 'Occupied', 'Pepper',   null],
-        ['Z1-06', 3, 2, 1, 1, 'Cleaning', null,       null],
-        ['Z1-07', 5, 2, 1, 2, 'Occupied', 'Suki',     null],
-        ['Z1-08', 1, 3, 1, 1, 'Available', null,      null],
-        ['Z1-09', 2, 3, 1, 1, 'Occupied', 'Nutmeg',   'Late'],
-        ['Z1-10', 3, 3, 2, 1, 'Occupied', 'Bao',      null],
+      { code: 'Z1', name: 'Feature wall', kind: 'arch', cols: 5, cw: W, ch: H, rooms: [
+        ['Z1-01', 1, 1, 1, 2, 'Occupied', 'Mochi',   'Health'],
+        ['Z1-02', 2, 1, 1, 1, 'Occupied', 'Biscuit', null],
+        ['Z1-03', 3, 1, 1, 1, 'Available', null,     null],
+        ['Z1-04', 4, 1, 2, 1, 'Occupied', 'Tofu',    'Out'],
+        ['Z1-05', 2, 2, 1, 1, 'Occupied', 'Pepper',  null],
+        ['Z1-06', 3, 2, 1, 1, 'Cleaning', null,      null],
+        ['Z1-07', 5, 2, 1, 2, 'Occupied', 'Suki',    null],
+        ['Z1-08', 1, 3, 1, 1, 'Available', null,     null],
+        ['Z1-09', 2, 3, 1, 1, 'Occupied', 'Nutmeg',  'Late'],
+        ['Z1-10', 3, 3, 2, 1, 'Occupied', 'Bao',     null],
       ] },
-      { code: 'Z2', name: 'Porthole bank', cols: 3, rows: 3, rooms: [
+      { code: 'Z2', name: 'Porthole bank', kind: 'porthole', cols: 3, cw: Math.round(W * 1.5), ch: Math.round(H * 1.25), rooms: [
         ['Z2-01', 1, 1, 1, 1, 'Occupied', 'Latte',   null],
         ['Z2-02', 2, 1, 1, 1, 'Occupied', 'Ollie',   null],
         ['Z2-03', 3, 1, 1, 1, 'Available', null,     null],
@@ -270,33 +306,33 @@ class Component extends DCLogic {
         ['Z2-08', 2, 3, 1, 1, 'Available', null,     null],
         ['Z2-09', 3, 3, 1, 1, 'Occupied', 'Yuzu',    null],
       ] },
-      { code: 'Z3', name: 'Standard bank', cols: 6, rows: 3, rooms: [
-        ['Z3-01', 1, 1, 1, 1, 'Occupied', 'Kopi',    null],
-        ['Z3-02', 2, 1, 1, 1, 'Available', null,     null],
-        ['Z3-03', 3, 1, 1, 1, 'Occupied', 'Ginger',  null],
-        ['Z3-04', 4, 1, 1, 1, 'Occupied', 'Snow',    null],
-        ['Z3-05', 5, 1, 1, 1, 'Available', null,     null],
-        ['Z3-06', 6, 1, 1, 1, 'Cleaning', null,      null],
-        ['Z3-07', 1, 2, 1, 1, 'Occupied', 'Peanut',  null],
-        ['Z3-08', 2, 2, 1, 1, 'Occupied', 'Cendol',  'Health'],
-        ['Z3-09', 3, 2, 1, 1, 'Available', null,     null],
-        ['Z3-10', 4, 2, 1, 1, 'Occupied', 'Milo',    'Out'],
-        ['Z3-11', 5, 2, 1, 1, 'Occupied', 'Sesame',  null],
-        ['Z3-12', 6, 2, 1, 1, 'Available', null,     null],
-        ['Z3-13', 1, 3, 1, 1, 'Available', null,     null],
+      { code: 'Z3', name: 'Standard bank', kind: 'arch', cols: 6, cw: W, ch: H, rooms: [
+        ['Z3-01', 1, 1, 1, 1, 'Occupied', 'Kopi',     null],
+        ['Z3-02', 2, 1, 1, 1, 'Available', null,      null],
+        ['Z3-03', 3, 1, 1, 1, 'Occupied', 'Ginger',   null],
+        ['Z3-04', 4, 1, 1, 1, 'Occupied', 'Snow',     null],
+        ['Z3-05', 5, 1, 1, 1, 'Available', null,      null],
+        ['Z3-06', 6, 1, 1, 1, 'Cleaning', null,       null],
+        ['Z3-07', 1, 2, 1, 1, 'Occupied', 'Peanut',   null],
+        ['Z3-08', 2, 2, 1, 1, 'Occupied', 'Cendol',   'Health'],
+        ['Z3-09', 3, 2, 1, 1, 'Available', null,      null],
+        ['Z3-10', 4, 2, 1, 1, 'Occupied', 'Milo',     'Out'],
+        ['Z3-11', 5, 2, 1, 1, 'Occupied', 'Sesame',   null],
+        ['Z3-12', 6, 2, 1, 1, 'Available', null,      null],
+        ['Z3-13', 1, 3, 1, 1, 'Available', null,      null],
         ['Z3-14', 2, 3, 1, 1, 'Occupied', 'Rambutan', null],
-        ['Z3-15', 3, 3, 1, 1, 'Occupied', 'Coco',    null],
-        ['Z3-16', 4, 3, 1, 1, 'Available', null,     null],
-        ['Z3-17', 5, 3, 1, 1, 'Occupied', 'Nala',    'In'],
-        ['Z3-18', 6, 3, 1, 1, 'Available', null,     null],
+        ['Z3-15', 3, 3, 1, 1, 'Occupied', 'Coco',     null],
+        ['Z3-16', 4, 3, 1, 1, 'Available', null,      null],
+        ['Z3-17', 5, 3, 1, 1, 'Occupied', 'Nala',     'In'],
+        ['Z3-18', 6, 3, 1, 1, 'Available', null,      null],
       ] },
-      { code: 'Z4', name: 'Suites', cols: 2, rows: 2, rooms: [
+      { code: 'Z4', name: 'Suites', kind: 'suite', cols: 2, cw: Math.round(W * 2), ch: Math.round(H * 1.75), rooms: [
         ['Z4-01', 1, 1, 1, 1, 'Occupied', 'Raja & Ratu', null],
-        ['Z4-02', 2, 1, 1, 1, 'Available', null,     null],
-        ['Z4-03', 1, 2, 1, 1, 'Occupied', 'Bunga',   'Out'],
-        ['Z4-04', 2, 2, 1, 1, 'Available', null,     null],
+        ['Z4-02', 2, 1, 1, 1, 'Available', null,      null],
+        ['Z4-03', 1, 2, 1, 1, 'Occupied', 'Bunga',    'Out'],
+        ['Z4-04', 2, 2, 1, 1, 'Available', null,      null],
       ] },
-      { code: 'S', name: 'Staging cabinet', cols: 3, rows: 2, kind: 'Staging', rooms: [
+      { code: 'S', name: 'Staging cabinet', kind: 'cubby', staging: true, cols: 3, cw: Math.round(W * 1.3), ch: Math.round(H * 0.85), rooms: [
         ['S-01', 1, 1, 1, 1, 'Occupied', 'Chestnut', 'In'],
         ['S-02', 2, 1, 1, 1, 'Available', null,      null],
         ['S-03', 3, 1, 1, 1, 'Available', null,      null],
@@ -308,53 +344,95 @@ class Component extends DCLogic {
 
     const flat = []
     const zones = zoneDefs.map((z) => {
-      const staging = z.kind === 'Staging'
-      const cellW = staging ? Math.round(unit * 1.1) : unit
-      const cellH = staging ? Math.round(unit * 0.62) : Math.round(unit * 0.72)
       const rooms = z.rooms.map((row) => {
         const [code, col, r, cs, rs, status, occupant, badge] = row
         const s = STATUS[status]
-        const selected = this.state.sel === code
-        const done = status === 'Occupied' ? (PROFILE[occupant] ? PROFILE[occupant].done : 0.6) : 0
+        const sel = this.state.sel === code
+        const p = PROFILE[occupant] ?? BLANK
+        const done = status === 'Occupied' ? p.done : 0
+
+        const porthole = z.kind === 'porthole' || z.kind === 'suite'
+        const cubby = z.kind === 'cubby'
+        const drawer = rs > 1 || z.kind === 'suite'
+        const cellH = z.ch * rs + GAP * (rs - 1)
+        const big = z.kind === 'suite'
+
         const room = {
           code, status, occupant: occupant ?? '', badge,
           hasBar: status === 'Occupied',
+          isPorthole: porthole,
+          hasArch: !cubby && !porthole,
+          hasDrawer: drawer,
           pick: () => this.setState({ sel: code }),
-          style: [
+
+          cellStyle: [
             'grid-column: ' + col + ' / span ' + cs,
             'grid-row: ' + r + ' / span ' + rs,
-            'min-height: ' + (cellH * rs + gap * (rs - 1)) + 'px',
-            'background: ' + s.bg,
-            'border: ' + (selected ? '2px solid ' + INK : '1px solid ' + s.bd),
-            'border-radius: 8px',
-            'padding: ' + (selected ? '5px 7px' : '6px 8px'),
-            'display: flex', 'flex-direction: column', 'gap: 4px',
-            'color: ' + (status === 'Occupied' ? INK : s.fg),
-            'box-shadow: ' + (selected ? '0 0 0 3px rgba(45,25,7,.12)' : 'none'),
+            'min-height: ' + cellH + 'px',
+            'background: ' + CARCASS,
+            'border: ' + (sel ? '2.5px solid ' + INK : '1.5px solid ' + OUTLINE),
+            'border-radius: 7px',
+            'padding: ' + (sel ? '3.5px' : '4.5px'),
+            'display: flex',
+            'flex-direction: ' + (porthole ? 'row' : 'column'),
+            'gap: 3px',
+            'box-shadow: ' + (sel ? '0 0 0 3px rgba(45,25,7,.14)' : 'inset 0 0 0 1px rgba(255,255,255,.55)'),
           ].join('; '),
-          badgeStyle: badge ? 'font-size: 8px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 1px 5px; border-radius: 999px; white-space: nowrap; background: ' + BADGE[badge].bg + '; color: ' + BADGE[badge].fg : '',
-          barStyle: 'height: 100%; width: ' + Math.round(done * 100) + '%; border-radius: 999px; background: ' +
-            (done >= 1 ? 'rgba(122,138,79,.9)' : '#B14919'),
+
+          portColStyle: 'width: 31%; flex-shrink: 0; display: flex; flex-direction: column; gap: 3px',
+          slatVertStyle: 'height: 28%; border-radius: 3px; border: 1px solid ' + HAIR + '; background: ' + slatsVert,
+          portPanelStyle: 'flex-grow: 1; border-radius: 3px; background: ' + PANEL + '; display: flex; align-items: center; justify-content: center',
+          portholeStyle: 'width: 76%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 32% 28%, #ffffff, rgba(255,255,255,.7)); border: 1.5px solid ' + OUTLINE,
+
+          doorColStyle: 'flex-grow: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0',
+          ventStyle: 'height: ' + (cubby ? 7 : 10) + 'px; flex-shrink: 0; border-radius: 999px; border: 1px solid ' + HAIR + '; background: ' + (cubby ? PANEL : slats),
+
+          glassStyle: [
+            'position: relative', 'flex-grow: 1', 'overflow: hidden', 'border-radius: 5px',
+            'background: ' + s.glass,
+            'border: 1px solid ' + s.edge,
+            'color: ' + s.fg,
+          ].join('; '),
+
+          archStyle: 'position: absolute; right: 7%; top: 5%; width: 33%; height: 50%; border-radius: 50% 50% 0 0; background: rgba(45,25,7,.13)',
+          mullionStyle: 'position: absolute; left: 37%; top: 0; bottom: 0; width: 1px; background: rgba(45,25,7,.15)',
+          shelfStyle: 'position: absolute; left: 7%; right: 7%; top: 53%; height: 2px; border-radius: 2px; background: rgba(45,25,7,.2)',
+          trayStyle: 'position: absolute; left: 9%; right: 24%; bottom: 5%; height: 21%; background: ' + TRAY + '; border: 1px solid rgba(45,25,7,.18); clip-path: polygon(7% 0, 93% 0, 100% 100%, 0 100%); border-radius: 2px',
+          hingeLStyle: 'position: absolute; left: -3px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; border: 1px solid ' + HAIR + '; background: ' + CARCASS,
+          hingeRStyle: 'position: absolute; right: -3px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; border: 1px solid ' + HAIR + '; background: ' + CARCASS,
+
+          drawerStyle: 'height: ' + (big ? 16 : 11) + 'px; flex-shrink: 0; border-radius: 3px; background: ' + PANEL + '; border: 1px solid ' + HAIR + '; background-image: linear-gradient(90deg, transparent 49.5%, ' + HAIR + ' 49.5% 50.5%, transparent 50.5%)',
+
+          labelStyle: 'position: relative; z-index: 2; height: 100%; box-sizing: border-box; padding: 4px 5px; display: flex; flex-direction: column; gap: 2px',
+          nameStyle: 'flex-grow: 1; display: flex; align-items: center; font-size: ' + (big ? 15 : 12.5) + 'px; font-weight: 700; line-height: 1.1; text-shadow: 0 1px 2px rgba(243,235,208,.9)',
+          badgeStyle: badge
+            ? 'font-size: 8px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 1px 4px; border-radius: 999px; white-space: nowrap; background: ' + BADGE[badge].bg + '; color: ' + BADGE[badge].fg
+            : '',
+          barStyle: 'height: 100%; border-radius: 999px; width: ' + Math.round(done * 100) + '%; background: ' + (done >= 1 ? 'rgba(110,128,72,.95)' : '#B14919'),
         }
         flat.push(room)
         return room
       })
-      const occ = z.rooms.filter((r) => r[5] === 'Occupied').length
+
+      const occ = z.rooms.filter((x) => x[5] === 'Occupied').length
       return {
         code: z.code, name: z.name,
-        tally: occ + ' of ' + z.rooms.length + (staging ? ' cubbies in use' : ' occupied'),
-        gridStyle: [
+        tally: occ + ' of ' + z.rooms.length + (z.staging ? ' cubbies in use' : ' occupied'),
+        runStyle: [
           'display: grid',
-          'grid-template-columns: repeat(' + z.cols + ', minmax(0, ' + cellW + 'px))',
-          'grid-auto-rows: minmax(' + cellH + 'px, auto)',
-          'gap: ' + gap + 'px',
+          'grid-template-columns: repeat(' + z.cols + ', ' + z.cw + 'px)',
+          'grid-auto-rows: ' + z.ch + 'px',
+          'gap: ' + GAP + 'px',
           'justify-content: start',
+          'padding: ' + GAP + 'px',
+          'border-radius: 9px',
+          'background: ' + CARCASS,
+          'border: 1.5px solid ' + OUTLINE,
         ].join('; '),
         rooms,
       }
     })
 
-    // 14 days, today first — the wall repaints for whichever is picked.
     const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     const base = new Date(2026, 7, 19)
     const days = []
@@ -374,16 +452,17 @@ class Component extends DCLogic {
       })
     }
 
-    // Boarding only. Staging cubbies are not rooms — counting them as 'free'
-    // would offer capacity that cannot take a booking.
+    // Boarding only. A staging cubby cannot take a booking, so counting one as
+    // "free" would offer capacity that does not exist.
     const totals = { Occupied: 0, Available: 0, Cleaning: 0, Maintenance: 0 }
     let leaving = 0
     for (const z of zoneDefs) {
       for (const r of z.rooms) {
         if (r[7] === 'Out') leaving++
-        if (z.kind !== 'Staging') totals[r[5]]++
+        if (!z.staging) totals[r[5]]++
       }
     }
+
     const counts = [
       { label: 'Rooms in use', n: String(totals.Occupied), key: 'Occupied' },
       { label: 'Free', n: String(totals.Available), key: 'Available' },
@@ -391,11 +470,11 @@ class Component extends DCLogic {
       { label: 'Out today', n: String(leaving), key: 'Out' },
     ].map((c) => ({
       ...c,
-      boxStyle: 'min-width: 92px; padding: 8px 14px; border-radius: 12px; text-align: center; border: 1px solid rgba(45,25,7,.12); background: ' + (STATUS[c.key] ? STATUS[c.key].bg : 'rgba(184,144,43,.2)'),
+      boxStyle: 'min-width: 90px; padding: 8px 13px; border-radius: 12px; text-align: center; border: 1px solid rgba(45,25,7,.12); background: ' + (STATUS[c.key] ? STATUS[c.key].chip : 'rgba(184,144,43,.2)'),
       numStyle: 'font-size: 20px; font-weight: 700; line-height: 1.1; color: ' + (c.key === 'Occupied' ? '#8d3a14' : '#2D1907'),
     }))
 
-    const picked = flat.find((r) => r.code === this.state.sel) ?? flat[0]
+    const picked = flat.find((x) => x.code === this.state.sel) ?? flat[0]
     const p = PROFILE[picked.occupant] ?? BLANK
     const occupied = picked.status === 'Occupied'
     const ps = STATUS[picked.status]
@@ -403,11 +482,9 @@ class Component extends DCLogic {
     const sel = {
       code: picked.code,
       status: picked.status,
-      statusStyle: 'font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: ' + ps.bg + '; color: ' + ps.fg,
+      statusStyle: 'font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: ' + ps.chip + '; color: ' + ps.pill,
       occupied,
       empty: !occupied,
-      // Only a bookable room has a next booking. Showing the heading over a
-      // room that is out of service reads as a contradiction.
       showNext: picked.status === 'Available',
       cat: picked.occupant,
       breed: p.breed,
@@ -426,18 +503,21 @@ class Component extends DCLogic {
         { k: 'Balance', v: p.balance },
       ],
       tasks: [
-        { label: 'Morning feed', done: true },
-        { label: 'Litter scoop', done: true },
-        { label: 'Fresh water', done: true },
-        { label: 'Play & brush', done: false },
-        { label: 'Evening feed', done: false },
-      ].map((t) => ({
-        ...t,
-        boxStyle: 'width: 15px; height: 15px; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; ' + (t.done
-          ? 'background: #7A8A4F; border: 1px solid #7A8A4F'
-          : 'background: transparent; border: 1.5px solid rgba(45,25,7,.28)'),
-        textStyle: t.done ? 'color: rgba(45,25,7,.45); text-decoration: line-through' : 'color: #2D1907',
-      })),
+        { label: 'Morning feed', at: 0.2 },
+        { label: 'Litter scoop', at: 0.4 },
+        { label: 'Fresh water', at: 0.6 },
+        { label: 'Play & brush', at: 0.8 },
+        { label: 'Evening feed', at: 1 },
+      ].map((t) => {
+        const isDone = p.done >= t.at
+        return {
+          label: t.label,
+          done: isDone,
+          boxStyle: 'width: 15px; height: 15px; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; ' +
+            (isDone ? 'background: #7A8A4F; border: 1px solid #7A8A4F' : 'background: transparent; border: 1.5px solid rgba(45,25,7,.28)'),
+          textStyle: isDone ? 'color: rgba(45,25,7,.45); text-decoration: line-through' : 'color: #2D1907',
+        }
+      }),
     }
 
     const legend = [
@@ -445,7 +525,10 @@ class Component extends DCLogic {
       { label: 'Free', key: 'Available' },
       { label: 'Cleaning', key: 'Cleaning' },
       { label: 'Out of service', key: 'Maintenance' },
-    ].map((l) => ({ ...l, swatch: 'width: 11px; height: 11px; border-radius: 3px; display: inline-block; background: ' + STATUS[l.key].bg + '; border: 1px solid ' + STATUS[l.key].bd }))
+    ].map((l) => ({
+      ...l,
+      swatch: 'width: 16px; height: 12px; border-radius: 3px; display: inline-block; background: ' + STATUS[l.key].glass + '; border: 1px solid ' + STATUS[l.key].edge,
+    }))
 
     return { zones, days, counts, sel, legend }
   }
