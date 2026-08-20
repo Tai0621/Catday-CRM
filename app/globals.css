@@ -169,3 +169,22 @@ body {
   main { padding: 0 !important; overflow: visible !important; }
   body { background: #fff !important; }
 }
+
+/* Boarding Wall — a unit of the cabinet elevation. The hover lift is the only
+   affordance saying "this is a button"; the drawing itself carries no chrome. */
+.cd-unit {
+  display: flex;
+  transition: filter 0.12s ease, box-shadow 0.12s ease;
+}
+.cd-unit:hover {
+  filter: brightness(1.04);
+  box-shadow: 0 4px 12px rgba(45, 25, 7, 0.2);
+}
+.cd-unit:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-unit { transition: none; }
+}

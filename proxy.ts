@@ -22,7 +22,7 @@ const PUBLIC_PATHS = ['/login', '/api/login', '/api/whatsapp', '/api/google-form
 const MANAGER_PATHS = [
   '/revenue', '/plan', '/academy', '/ask', '/api/ask', '/whatsapp', '/brief', '/reports',
   '/staff', '/services', '/cashup', '/memberships/tiers', '/finance', '/admin', '/hr', '/inventory',
-  '/api/customers', '/marketing',
+  '/api/customers', '/marketing', '/rooms/arrange',
 ]
 
 // Edge-runtime mirror of lib/auth's v3 token check (Web Crypto, no node:crypto).

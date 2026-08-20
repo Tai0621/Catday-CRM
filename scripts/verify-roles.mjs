@@ -95,7 +95,16 @@ try {
   check('Boarding blocked from /pos → /runsheet', (await visit(b.cookie, '/pos')).to === '/runsheet')
   check('Boarding blocked from /customers → /runsheet', (await visit(b.cookie, '/customers')).to === '/runsheet')
   const bNav = await navHtml(b.cookie, '/runsheet')
-  check('Boarding nav shows Run Sheet + Rooms', bNav.includes('Run Sheet') && bNav.includes('Rooms'))
+  // Asserted on HREFS, not labels. The old form looked for the words "Run Sheet"
+  // and "Rooms" in the stripped page — but "Run Sheet" also matches the run
+  // sheet's own heading, so only half of it was really testing the nav, and the
+  // other half broke the moment /rooms was renamed to the Boarding Wall. The
+  // claim is which tabs the role gets, and an href is what says that.
+  const bRaw = await (await fetch(`${BASE}/runsheet`, { headers: { Cookie: b.cookie } })).text()
+  const bAside = bRaw.match(/<aside[\s\S]*?<\/aside>/)?.[0] ?? ''
+  check('Boarding nav shows the run sheet and the boarding wall',
+    bAside.includes('href="/runsheet"') && bAside.includes('href="/rooms"'),
+    bAside.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 160))
   check('Boarding nav hides POS & Service Board', !bNav.includes('POS Checkout') && !bNav.includes('Service Board'))
 
   // ── Front Desk ──

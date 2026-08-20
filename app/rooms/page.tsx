@@ -1,151 +1,166 @@
 import { requireAuth } from '@/lib/auth'
-import { db } from '@/lib/db'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { ROOM_STATUSES } from '@/lib/constants'
+import { buildWall, wallDays } from '@/lib/boarding-wall'
+import { CabinetUnit, GLASS } from '@/app/components/CabinetUnit'
 
-export default async function RoomsPage() {
+// The Boarding Wall — the boarding landing page.
+//
+// It replaces a table of room names with the wall itself, because a carer who
+// wants to know whether Mochi is in 12 or 14 should not have to match a number
+// to a door. Every unit is a button into that room.
+//
+// The geometry comes from RoomZone / Room, never from a traced picture of the
+// maker's drawing: these cabinets are still being built, and a traced elevation
+// would freeze the layout behind a deploy the first time one moves.
+export default async function BoardingWallPage({ searchParams }: {
+  searchParams: Promise<{ date?: string }>
+}) {
   await requireAuth()
+  const { date } = await searchParams
 
-  const rooms = await db.room.findMany({
-    where: { isActive: true },
-    include: {
-      appointments: {
-        where: { status: 'CheckedIn' },
-        include: { cat: true, customer: true },
-        take: 1,
-      },
-    },
-    orderBy: { sortOrder: 'asc' },
-  })
+  const [wall, days] = await Promise.all([buildWall(date), wallDays(14)])
+  const to = (d: string) => (d === wall.todayKey ? '/rooms' : `/rooms?date=${d}`)
+  const roomHref = (id: string) => (wall.isToday ? `/rooms/${id}` : `/rooms/${id}?date=${wall.dayKey}`)
 
-  const stats = {
-    available: rooms.filter(r => r.status === 'Available').length,
-    occupied: rooms.filter(r => r.status === 'Occupied').length,
-    cleaning: rooms.filter(r => r.status === 'Cleaning').length,
-    maintenance: rooms.filter(r => r.status === 'Maintenance').length,
-  }
-
-  async function updateRoomStatus(data: FormData) {
-    'use server'
-    const roomId = data.get('roomId') as string
-    const status = data.get('status') as string
-    await db.room.update({ where: { id: roomId }, data: { status } })
-    redirect('/rooms')
-  }
-
-  const statCards = [
-    { label: 'Available', value: stats.available, bg: 'rgba(114,144,148,0.18)', color: '#2D1907', border: 'rgba(114,144,148,0.3)' },
-    { label: 'Occupied', value: stats.occupied, bg: 'rgba(177,73,25,0.15)', color: '#B14919', border: 'rgba(177,73,25,0.25)' },
-    { label: 'Cleaning', value: stats.cleaning, bg: 'rgba(231,206,122,0.35)', color: '#7a5c00', border: 'rgba(231,206,122,0.5)' },
-    { label: 'Maintenance', value: stats.maintenance, bg: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.5)', border: 'rgba(45,25,7,0.12)' },
+  const tiles = [
+    { label: 'Rooms in use', n: wall.totals.occupied, key: 'Occupied' },
+    { label: 'Free', n: wall.totals.available, key: 'Available' },
+    { label: 'Cleaning', n: wall.totals.cleaning, key: 'Cleaning' },
+    { label: 'Out today', n: wall.totals.leaving, key: 'Out' },
   ]
 
+  const empty = wall.zones.length === 0
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold" style={{ color: '#2D1907' }}>Room Tracker</h1>
-        <Link href="/rooms/new" className="cd-btn">+ Add Room</Link>
+    <div className="max-w-6xl mx-auto space-y-4">
+      <div className="flex items-end justify-between gap-6 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: '#2D1907' }}>Boarding Wall</h1>
+          <p className="text-sm cd-muted">
+            {wall.isToday ? 'Today' : wall.dayKey} · every unit opens its room
+          </p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {tiles.map(t => (
+            <div key={t.label} className="rounded-xl px-3.5 py-2 text-center"
+              style={{
+                minWidth: 88,
+                background: GLASS[t.key]?.chip ?? 'rgba(184,144,43,0.2)',
+                border: '1px solid rgba(45,25,7,0.12)',
+              }}>
+              <div className="text-xl font-bold" style={{ color: t.key === 'Occupied' ? '#8d3a14' : '#2D1907' }}>{t.n}</div>
+              <div className="text-xs cd-muted">{t.label}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
-        {statCards.map(s => (
-          <div key={s.label} className="rounded-xl px-4 py-3 text-center"
-            style={{ background: s.bg, border: `1px solid ${s.border}` }}>
-            <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
-            <div className="text-xs" style={{ color: s.color, opacity: 0.75 }}>{s.label}</div>
+      {/* The day being shown. A wall answers "now"; boarding mostly asks about
+          later, so the strip is what stops this needing a second page. */}
+      <div className="cd-card p-2.5 flex items-center gap-2.5">
+        <span className="cd-label mb-0 whitespace-nowrap">Showing</span>
+        <div className="flex gap-1 flex-grow overflow-x-auto">
+          {days.map(d => {
+            const on = d.key === wall.dayKey
+            return (
+              <Link key={d.key} href={to(d.key)} className="flex-grow text-center rounded-lg py-1 px-1.5"
+                style={{
+                  background: on ? '#B14919' : 'rgba(45,25,7,0.05)',
+                  color: on ? '#ECDBB6' : 'rgba(45,25,7,0.6)',
+                  border: `1px solid ${on ? '#B14919' : 'transparent'}`,
+                  minWidth: 40,
+                }}>
+                <div className="text-[9px] uppercase tracking-wider opacity-70">{d.dow}</div>
+                <div className="text-sm font-semibold leading-tight">{d.dom}</div>
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+
+      {empty && (
+        <div className="cd-card px-4 py-10 text-center space-y-3">
+          <p className="text-sm cd-muted">
+            No cabinet banks are set up yet, so there is nothing to draw.
+          </p>
+          <Link href="/rooms/arrange" className="cd-btn inline-block">Set up the wall</Link>
+        </div>
+      )}
+
+      {wall.zones.map(z => {
+        const occ = z.rooms.filter(r => r.status === 'Occupied').length
+        return (
+          <section key={z.id} className="space-y-1.5">
+            <div className="flex items-baseline gap-2">
+              <span className="text-xs font-bold" style={{ fontFamily: 'var(--font-brand)', color: '#2D1907' }}>{z.code}</span>
+              <span className="text-xs cd-muted">{z.name}</span>
+              <span className="flex-grow" />
+              <span className="text-xs cd-muted">
+                {occ} of {z.rooms.length} {z.kind === 'Staging' ? 'cubbies in use' : 'occupied'}
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${z.cols}, ${z.kind === 'Staging' ? 150 : z.rooms.some(r => r.unitKind === 'suite') ? 232 : z.rooms.some(r => r.unitKind === 'porthole') ? 174 : 116}px)`,
+                gridAutoRows: `${z.kind === 'Staging' ? 71 : z.rooms.some(r => r.unitKind === 'suite') ? 147 : z.rooms.some(r => r.unitKind === 'porthole') ? 105 : 84}px`,
+                gap: 7,
+                justifyContent: 'start',
+                padding: 7,
+                borderRadius: 9,
+                background: '#F3EBD0',
+                border: '1.5px solid rgba(45,25,7,0.72)',
+                width: 'fit-content',
+              }}>
+                {z.rooms.map(r => <CabinetUnit key={r.id} room={r} href={roomHref(r.id)} />)}
+              </div>
+            </div>
+          </section>
+        )
+      })}
+
+      {/* Rooms with no place on the wall. Never hidden: a cat in a room the
+          screen does not draw is the one failure mode that could harm an animal. */}
+      {wall.unplaced.length > 0 && (
+        <section className="space-y-1.5">
+          <div className="flex items-baseline gap-2">
+            <span className="text-xs font-bold" style={{ color: '#B14919' }}>Unplaced</span>
+            <span className="text-xs cd-muted">
+              {wall.unplaced.length} room{wall.unplaced.length === 1 ? '' : 's'} not yet given a place on the wall
+            </span>
+            <span className="flex-grow" />
+            <Link href="/rooms/arrange" className="cd-link text-xs">Arrange the wall →</Link>
+          </div>
+          <div className="flex flex-wrap gap-2" style={{ padding: 7, borderRadius: 9, background: 'rgba(177,73,25,0.06)', border: '1px dashed rgba(177,73,25,0.35)' }}>
+            {wall.unplaced.map(r => (
+              <div key={r.id} style={{ width: 116, height: 84, display: 'flex' }}>
+                <CabinetUnit room={r} href={roomHref(r.id)} gridded={false} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <div className="flex items-center gap-4 flex-wrap pt-1">
+        {[
+          { label: 'In house', key: 'Occupied' },
+          { label: 'Free', key: 'Available' },
+          { label: 'Cleaning', key: 'Cleaning' },
+          { label: 'Out of service', key: 'Maintenance' },
+        ].map(l => (
+          <div key={l.key} className="flex items-center gap-1.5">
+            <span style={{
+              width: 16, height: 12, borderRadius: 3, display: 'inline-block',
+              background: GLASS[l.key].glass, border: `1px solid ${GLASS[l.key].edge}`,
+            }} />
+            <span className="text-xs cd-muted">{l.label}</span>
           </div>
         ))}
+        <span className="flex-grow" />
+        <Link href="/rooms/list" className="cd-link text-xs">List view</Link>
+        <Link href="/rooms/calendar" className="cd-link text-xs">Room calendar</Link>
+        <Link href="/rooms/arrange" className="cd-link text-xs">Arrange</Link>
       </div>
-
-      {rooms.length === 0 ? (
-        <div className="cd-card py-16 text-center">
-          <p className="cd-muted mb-3">No rooms set up yet</p>
-          <Link href="/rooms/new" className="cd-link text-sm">Add your first room</Link>
-        </div>
-      ) : (
-        groupByType(rooms).map(([type, group]) => {
-          const avail = group.filter(r => r.status === 'Available').length
-          return (
-            <section key={type} className="space-y-3">
-              <div className="flex items-baseline gap-2">
-                <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: '#2D1907', letterSpacing: '0.08em' }}>
-                  {TYPE_LABEL[type] ?? type}
-                </h2>
-                <span className="text-xs cd-muted">{avail}/{group.length} free</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {group.map(room => {
-                  const currentGuest = room.appointments[0]
-                  const { borderColor, badgeStyle } = roomStyles(room.status)
-                  return (
-                    <div key={room.id} className="rounded-xl border-2 p-4 space-y-3"
-                      style={{ background: '#ECDBB6', borderColor }}>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="font-semibold" style={{ color: '#2D1907' }}>{room.name}</div>
-                          <div className="text-xs cd-muted">{room.type}</div>
-                        </div>
-                        <span className="cd-pill" style={badgeStyle}>{room.status}</span>
-                      </div>
-
-                      {currentGuest && (
-                        <div className="rounded-lg px-3 py-2 text-sm" style={{ background: 'rgba(45,25,7,0.06)' }}>
-                          <div className="font-medium" style={{ color: '#2D1907' }}>{currentGuest.cat.name}</div>
-                          <div className="text-xs cd-muted">{currentGuest.customer.name ?? currentGuest.customer.phone}</div>
-                        </div>
-                      )}
-
-                      {room.description && <p className="text-xs cd-muted">{room.description}</p>}
-
-                      <form action={updateRoomStatus} className="flex gap-1 flex-wrap">
-                        <input type="hidden" name="roomId" value={room.id} />
-                        {ROOM_STATUSES.map(s => (
-                          <button key={s} name="status" value={s} type="submit"
-                            disabled={room.status === s}
-                            className="text-xs px-2 py-1 rounded transition-opacity"
-                            style={room.status === s
-                              ? { background: 'rgba(45,25,7,0.08)', color: 'rgba(45,25,7,0.35)', cursor: 'default', border: '1px solid rgba(45,25,7,0.08)' }
-                              : { background: '#F2EDE0', color: '#2D1907', border: '1px solid rgba(45,25,7,0.2)' }
-                            }>
-                            {s}
-                          </button>
-                        ))}
-                      </form>
-
-                      <Link href={`/rooms/${room.id}`} className="block text-xs cd-link">Edit room →</Link>
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-          )
-        })
-      )}
     </div>
   )
-}
-
-// Group rooms by type, in a stable display order (Suites first, then Standard, then anything else)
-const TYPE_ORDER = ['Suite', 'Standard', 'DayStay']
-const TYPE_LABEL: Record<string, string> = { Suite: 'Suites', Standard: 'Standard Rooms', DayStay: 'Day Stay' }
-function groupByType<T extends { type: string }>(rooms: T[]): [string, T[]][] {
-  const map = new Map<string, T[]>()
-  for (const r of rooms) {
-    if (!map.has(r.type)) map.set(r.type, [])
-    map.get(r.type)!.push(r)
-  }
-  return [...map.entries()].sort(
-    (a, b) => (TYPE_ORDER.indexOf(a[0]) + 1 || 99) - (TYPE_ORDER.indexOf(b[0]) + 1 || 99),
-  )
-}
-
-function roomStyles(status: string) {
-  const map: Record<string, { borderColor: string; badgeStyle: React.CSSProperties }> = {
-    Available:   { borderColor: 'rgba(114,144,148,0.4)', badgeStyle: { background: 'rgba(114,144,148,0.2)', color: '#729094' } },
-    Occupied:    { borderColor: 'rgba(177,73,25,0.4)',   badgeStyle: { background: 'rgba(177,73,25,0.15)', color: '#B14919' } },
-    Cleaning:    { borderColor: 'rgba(231,206,122,0.6)', badgeStyle: { background: 'rgba(231,206,122,0.4)', color: '#7a5c00' } },
-    Maintenance: { borderColor: 'rgba(45,25,7,0.18)',    badgeStyle: { background: 'rgba(45,25,7,0.08)', color: 'rgba(45,25,7,0.5)' } },
-  }
-  return map[status] ?? { borderColor: 'rgba(45,25,7,0.18)', badgeStyle: { background: 'rgba(45,25,7,0.08)', color: 'rgba(45,25,7,0.5)' } }
 }

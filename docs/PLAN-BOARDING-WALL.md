@@ -1,6 +1,8 @@
 # Boarding UI — the cabinet wall as the interface
 
-**Status: plan for review. Nothing built.** Companion to
+**Status: BUILT on the demo.** The plan below is unchanged from the draft so the
+two can be compared; what was actually built, and the assumptions it had to
+make, are in "As built" at the end. Companion to
 [PLAN-CAT-INVENTORY.md](PLAN-CAT-INVENTORY.md); same house style — where I have
 made a judgement call it says so and gives the reason, so you can overrule it
 with the reason in front of you.
@@ -317,3 +319,66 @@ booking in the right room, and staging cubbies refuse a boarding booking.
    room detail nobody tracks?
 6. **How many cats can actually share a unit?** `capacity` is 2 for everything
    today, which I doubt is right for Zone 3's singles or Zone 4's suites.
+
+---
+
+## As built (v1.3.0, on the demo)
+
+Phases 1–6 are in, plus the arrange screen. Where the plan asked a question, the
+build assumed an answer — each one reversible, each one still open:
+
+| # | Question | Assumed |
+|---|---|---|
+| 1 | Zone 1 double-sided? | **No** — the rear elevation is treated as construction only. One unit, one door. |
+| 2 | Is 41 the real number? | **Yes for the banks.** The demo's 61 rooms are *placed*, not replaced: 41 fill the drawing, 20 stay in the Unplaced strip. Nothing was deleted, so no booking was orphaned. |
+| 3 | Numbering | **Left alone.** The seed places the existing `Room 01…` names rather than renaming anything — whatever is painted on the real doors should win, and I do not know what that is. |
+| 4 | Pricing tiers | **Untouched.** `unitKind` is presentation only; it never decides price or bookability. |
+| 5 | Staging on the wall | **Yes**, as a zone with `kind: 'Staging'` — drawn, but never counted as bookable capacity. |
+| 6 | Capacity per unit | **Untouched.** |
+
+### What changed
+
+| Route | Now |
+|---|---|
+| `/rooms` | the wall — the boarding landing page |
+| `/rooms/[id]` | the **stay**: who is in it, today's care tickable in place, feeding and medication, the balance |
+| `/rooms/[id]/settings` | the old edit form, manager-only |
+| `/rooms/list` | the old table, kept — faster to search, and the fallback when the wall looks wrong |
+| `/rooms/arrange` | new, manager-only: banks and unit positions |
+| `/rooms/calendar`, `/runsheet` | unchanged |
+
+Schema: `RoomZone`, plus `zoneId / gridCol / gridRow / colSpan / rowSpan /
+unitKind` on `Room` — all nullable, so an unplaced room still renders.
+
+### The units are drawn as the cabinets
+
+`app/components/CabinetUnit.tsx` renders each unit with the anatomy from the
+maker's elevation: cream carcass, slatted vent capsule, glass door with a centre
+mullion and hinge circles, the grey arch, the pale-green litter tray, and the
+grey panel + porthole on Zones 2 and 4. **Only the glass takes the status
+colour** — the cabinet is constant furniture, which is how the wall reads in
+life and stops shelf brackets competing with the one signal that must carry.
+
+This is still drawn from data, not traced: `unitKind` picks the recipe, and
+zone/col/row/span place it. The §3 argument stands.
+
+### Verification
+
+`verify-boarding-wall` — 22/22. The first two assertions are the ones that
+matter: every active room appears on the wall exactly once, and an unplaced room
+still appears. A cat in a room the screen does not draw is the only way this
+feature could hurt an animal.
+
+Also covered: the date strip repaints for a future day, a unit links to its
+room, the room page opens on the stay rather than the settings form, settings
+reject an invalid session, staging cubbies add nothing to bookable capacity
+(measured as movement — add a cubby, count, flip it to Boarding, count again),
+and the arrange screen refuses to put two rooms in one cell.
+
+### Still to do
+
+- The blueprint-underlay toggle (§3) and drag-a-cat-between-rooms (§11 phase 7).
+- The print stylesheet (§9). The arrange screen tells you to print and walk the
+  room; it will currently print the whole page chrome with it.
+- Phone layout is responsive but not yet zone-tabbed (§9) — on a narrow screen
+  each bank scrolls horizontally instead.

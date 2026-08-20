@@ -24,7 +24,7 @@ export const MANAGER_ONLY_PATHS = [
   // price, margin and acquisition cost all sit under it, so it stays a floor
   // rather than something a role can be granted piecemeal.
   '/staff', '/services', '/cashup', '/memberships/tiers', '/finance', '/admin', '/hr', '/inventory',
-  '/api/customers', '/marketing',
+  '/api/customers', '/marketing', '/rooms/arrange',
 ]
 
 export function isManagerOnly(pathname: string): boolean {

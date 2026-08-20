@@ -789,6 +789,29 @@ model WalletEntry {
 
 // ─── Room ────────────────────────────────────────────────────────────────────
 
+// A bank of cabinets, as drawn on the maker's elevations: 1区…4区 plus the
+// 暂存柜 staging cabinet. The Boarding Wall renders zone by zone, in sortOrder.
+//
+// The wall is drawn from THIS, not from a traced picture of the drawing. These
+// cabinets are being custom-built; a traced elevation would freeze the layout
+// behind a deploy the first time a unit is added, split or taken out of service.
+model RoomZone {
+  id        String   @id @default(cuid())
+  code      String   @unique // "Z1" — matches 1区 on the drawing
+  name      String            // "Feature wall", "Standard bank"
+  // Boarding | Staging. A staging cubby is where a cat waits while its room is
+  // prepared, or after check-out before collection — it must never take a
+  // booking, so bookable capacity is a property of the bank, not of the room.
+  kind      String   @default("Boarding")
+  cols      Int      @default(1)
+  rows      Int      @default(1)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rooms     Room[]
+}
+
 model Room {
   id          String   @id @default(cuid())
   name        String   @unique
@@ -798,10 +821,26 @@ model Room {
   status      String   @default("Available") // Available | Occupied | Cleaning | Maintenance
   sortOrder   Int      @default(0)
   isActive    Boolean  @default(true)
+  // ── Where this unit physically sits on the wall (v1.3.0) ──
+  // Nullable on purpose: a room with no place still renders, in an "Unplaced"
+  // strip under the wall. A cat in a room the screen does not draw is the one
+  // failure mode of this feature that could actually harm an animal, so the
+  // fallback is not optional.
+  zoneId      String?
+  zone        RoomZone? @relation(fields: [zoneId], references: [id])
+  gridCol     Int?     // 1-based column within the zone's grid
+  gridRow     Int?
+  colSpan     Int      @default(1)
+  rowSpan     Int      @default(1) // 2 for Zone 1's double-height ends
+  // Which cabinet to draw: arch | porthole | suite | cubby (UNIT_KINDS).
+  // Presentation only — it never decides whether a room can be booked.
+  unitKind    String   @default("arch")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   appointments Appointment[]
+
+  @@index([zoneId])
 }
 
 // ─── Appointment ─────────────────────────────────────────────────────────────

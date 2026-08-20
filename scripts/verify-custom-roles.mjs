@@ -151,8 +151,12 @@ try {
   // A group holding the current page opens itself, so nobody lands on a screen
   // whose own menu is shut.
   const openHere = (await (await visit('/rooms', cookie)).text()).match(/<aside[\s\S]*?<\/aside>/)?.[0] ?? ''
+  // Asserted on the LINK, not its label. A collapsed group renders no links at
+  // all, so the href being present is exactly the claim — and it survives the
+  // tab being renamed, which is what broke this check when /rooms became the
+  // Boarding Wall.
   check('the drop-down holding the current page is open',
-    openHere.includes('Rooms'), openHere.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 200))
+    openHere.includes('href="/rooms"'), openHere.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 200))
 
   // Renaming is presentation only — it must not change what opens.
   await setLayout({ pinned: ['/runsheet'], groups: [{ label: 'Night shift', paths: ['/rooms', '/cats', '/pos'] }] })

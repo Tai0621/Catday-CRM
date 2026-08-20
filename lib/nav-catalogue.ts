@@ -48,9 +48,12 @@ export const SEGMENTS: NavSegment[] = [
         { href: '/services', label: 'Service Menu', icon: 'scissors' },
       ] },
       { sub: 'Boarding', subColor: '#729094', links: [
+        // The wall is the boarding landing page — it opens on the cabinets as
+        // they physically are, and every unit opens its room.
+        { href: '/rooms', label: 'Boarding Wall', icon: 'rooms' },
         { href: '/runsheet', label: 'Run Sheet', icon: 'runsheet' },
         { href: '/rooms/calendar', label: 'Room Calendar', icon: 'calendar' },
-        { href: '/rooms', label: 'Rooms', icon: 'rooms' },
+        { href: '/rooms/list', label: 'Rooms', icon: 'box' },
       ] },
       { sub: 'Sales', subColor: '#ECDBB6', links: [
         { href: '/appointments', label: 'Appointments', icon: 'clock' },

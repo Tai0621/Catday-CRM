@@ -66,6 +66,27 @@ export type RoomType = typeof ROOM_TYPES[number]
 export const ROOM_STATUSES = ['Available', 'Occupied', 'Cleaning', 'Maintenance'] as const
 export type RoomStatus = typeof ROOM_STATUSES[number]
 
+// ── Boarding Wall (v1.3.0) ──────────────────────────────────────────────────
+//
+// Which cabinet a unit is drawn as on the wall, matching the maker's elevations.
+// Presentation only: `unitKind` never decides whether a room can be booked —
+// that follows from its zone's kind.
+export const UNIT_KINDS = ['arch', 'porthole', 'suite', 'cubby'] as const
+export type UnitKind = typeof UNIT_KINDS[number]
+
+export const UNIT_KIND_LABELS: Record<string, string> = {
+  arch: 'Standard — vent, glass door, arch',
+  porthole: 'Porthole — grey panel and round door',
+  suite: 'Suite — porthole, tall glass, drawers',
+  cubby: 'Staging cubby — plain door',
+}
+
+export const ZONE_KINDS = ['Boarding', 'Staging'] as const
+export type ZoneKind = typeof ZONE_KINDS[number]
+
+/** Past this hour, an unfinished care list on an occupied room is running late. */
+export const CARE_LATE_HOUR = 15
+
 export const MEMBERSHIP_STATUSES = ['Active', 'Expired', 'Cancelled', 'Paused'] as const
 export type MembershipStatus = typeof MEMBERSHIP_STATUSES[number]
 
