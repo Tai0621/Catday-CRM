@@ -69,7 +69,14 @@ async function cleanup() {
 
 const staffRow = (id, name, rate) => exec(
   `INSERT INTO Staff (id,name,role,pinHash,active,commissionRatePct,createdAt,updatedAt) VALUES (?,?,?,?,1,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`,
-  [t(id), t(name), t('Groomer'), t(`scrypt$ph$${id}`), rate == null ? { type: 'null' } : f(rate)])
+  // A REAL-shaped hash of an unguessable value. These staff never log in, so the
+  // old `scrypt$ph$<id>` placeholder looked harmless — but it is a shape
+  // `verifyPassword` cannot parse, and login verifies every active staff row in
+  // turn, so while these rows exist NO staff member can sign in. A crash before
+  // cleanup left them behind once and broke five later suites.
+  [t(id), t(name), t('Groomer'),
+   t(crypto.createHash('sha256').update(`catday:unusable-${id}`).digest('hex')),
+   rate == null ? { type: 'null' } : f(rate)])
 const svcRow = (id, name, price, rate) => exec(
   `INSERT INTO Service (id,name,category,durationMin,price,active,sortOrder,commissionRatePct,createdAt,updatedAt) VALUES (?,?,?,60,?,1,0,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`,
   [t(id), t(name), t('Grooming'), f(price), rate == null ? { type: 'null' } : f(rate)])

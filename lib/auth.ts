@@ -31,9 +31,25 @@ function legacyHash(password: string): string {
 
 /** Verify a plaintext against a stored hash (salted scrypt, or legacy sha256). */
 export function verifyPassword(password: string, stored: string): boolean {
+  // A hash that does not parse must not MATCH, and must not THROW.
+  //
+  // This runs inside a `find` over every active staff member (app/api/login),
+  // so an exception here is not one account failing to sign in — it is a 500
+  // for the whole login route, and nobody on a PIN can get in. That happened:
+  // an interrupted verification run left three staff rows carrying a
+  // placeholder `scrypt$ph$<id>`, and `Buffer.from(undefined, 'hex')` threw on
+  // every attempt until they were deleted. Returning false keeps the blast
+  // radius at the corrupt row.
+  if (!stored) return false
+
   if (stored.startsWith('scrypt$')) {
-    const [, N, r, p, saltHex, hashHex] = stored.split('$')
+    const parts = stored.split('$')
+    if (parts.length !== 6) return false
+    const [, N, r, p, saltHex, hashHex] = parts
+    if (!saltHex || !hashHex) return false
+    if (![N, r, p].every(v => Number.isInteger(+v) && +v > 0)) return false
     const want = Buffer.from(hashHex, 'hex')
+    if (want.length === 0) return false
     const dk = scryptSync(password, Buffer.from(saltHex, 'hex'), want.length, { N: +N, r: +r, p: +p })
     return dk.length === want.length && timingSafeEqual(dk, want)
   }

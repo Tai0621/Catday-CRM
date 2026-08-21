@@ -130,7 +130,17 @@ try {
   const unguarded = customerReads.filter(q => !q.includes('LIVE_CUSTOMER'))
   check('every customer/cat tool query filters erased records', unguarded.length === 0,
     `${unguarded.length} unguarded of ${customerReads.length}`)
-  check('the filter is a where clause, not a prompt instruction', code.includes('const LIVE_CUSTOMER = { erasedAt: null }'))
+  // Asserted on the DEFINITION wherever it lives, not on a literal line in this
+  // file. `LIVE_CUSTOMER` moved to lib/cat-stock.ts and grew `isHouse: false`
+  // when the shop's own cats became stock; a string match on the old text broke
+  // while the guarantee it protects was intact and in fact stronger, since there
+  // is now one shared constant instead of a per-file copy.
+  const stock = await import('node:fs').then(fs => fs.readFileSync('lib/cat-stock.ts', 'utf8'))
+  const def = stock.match(/export const LIVE_CUSTOMER = \{[^}]*\}/)?.[0] ?? ''
+  check('the filter is a where clause, not a prompt instruction',
+    /erasedAt:\s*null/.test(def), def || 'LIVE_CUSTOMER definition not found')
+  check('…and ask.ts uses that shared constant rather than its own copy',
+    /import \{[^}]*LIVE_CUSTOMER[^}]*\} from '\.\.\/cat-stock'/.test(src) && !/const LIVE_CUSTOMER/.test(code))
 
   console.log(`\n${pass}/${total} passed`)
   if (pass !== total) process.exitCode = 1
