@@ -51,6 +51,13 @@ const nextConfig: NextConfig = {
     return [
       { source: '/products', destination: '/inventory/products', permanent: false },
       { source: '/products/:id', destination: '/inventory/products/:id', permanent: false },
+      // The rooms list stopped being its own tab and became a section of the
+      // wall. Redirected HERE rather than with `permanentRedirect()` in a page:
+      // `app/loading.tsx` puts every route behind Suspense, so the shell has
+      // already streamed by the time a page body runs and Next can only fall
+      // back to a client-side bounce — a 200 that needs JavaScript to move.
+      // A config redirect is a real 307 before any render.
+      { source: '/rooms/list', destination: '/rooms', permanent: false },
     ];
   },
 };

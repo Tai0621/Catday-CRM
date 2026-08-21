@@ -53,7 +53,6 @@ export const SEGMENTS: NavSegment[] = [
         { href: '/rooms', label: 'Boarding Wall', icon: 'rooms' },
         { href: '/runsheet', label: 'Run Sheet', icon: 'runsheet' },
         { href: '/rooms/calendar', label: 'Room Calendar', icon: 'calendar' },
-        { href: '/rooms/list', label: 'Rooms', icon: 'box' },
       ] },
       { sub: 'Sales', subColor: '#ECDBB6', links: [
         { href: '/appointments', label: 'Appointments', icon: 'clock' },

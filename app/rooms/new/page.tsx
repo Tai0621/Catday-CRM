@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ROOM_TYPES } from '@/lib/constants'
 
@@ -25,33 +26,40 @@ export default async function NewRoomPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto">
-      <h1 className="text-xl font-bold text-gray-900 mb-6">Add Room</h1>
-      <form action={create} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+    <div className="max-w-md mx-auto space-y-4">
+      <div>
+        <Link href="/rooms" className="text-xs cd-muted hover:underline">← Boarding Wall</Link>
+        <h1 className="text-xl font-bold" style={{ color: '#2D1907' }}>Add Room</h1>
+        {/* A new room has no cell on the wall yet, so it lands in Unplaced
+            rather than nowhere. Saying so here stops it reading as a bug. */}
+        <p className="text-sm cd-muted">
+          It appears under Unplaced until you give it a spot in <Link href="/rooms/arrange" className="cd-link">Arrange</Link>.
+        </p>
+      </div>
+
+      <form action={create} className="cd-card p-5 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Room Name *</label>
-          <input name="name" required placeholder="e.g. Suite A, Room 1, Day Stay 3"
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
+          <label className="cd-label">Room name *</label>
+          <input name="name" required placeholder="e.g. Suite A, Room 1, Day Stay 3" className="cd-input" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-          <select name="type" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300">
+          <label className="cd-label">Type</label>
+          <select name="type" className="cd-input">
             {ROOM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Capacity (cats)</label>
-          <input name="capacity" type="number" min="1" max="10" placeholder="blank = by type (Standard 2, Suite 6)"
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
+          <label className="cd-label">Capacity (cats)</label>
+          <input name="capacity" type="number" min="1" max="10" className="cd-input"
+            placeholder="blank = by type (Standard 2, Suite 6, Day Stay 1)" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-          <input name="description" placeholder="Optional notes about this room"
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
+          <label className="cd-label">Description</label>
+          <input name="description" placeholder="Optional notes about this room" className="cd-input" />
         </div>
-        <div className="flex gap-3 pt-2">
-          <button type="submit" className="bg-rose-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-rose-700">Add Room</button>
-          <a href="/rooms" className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">Cancel</a>
+        <div className="flex gap-3 pt-1 items-center">
+          <button type="submit" className="cd-btn">Add Room</button>
+          <Link href="/rooms" className="cd-link text-sm">Cancel</Link>
         </div>
       </form>
     </div>

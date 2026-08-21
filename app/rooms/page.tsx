@@ -1,25 +1,43 @@
 import { requireAuth } from '@/lib/auth'
+import { db } from '@/lib/db'
 import Link from 'next/link'
-import { buildWall, wallDays } from '@/lib/boarding-wall'
+import { revalidatePath } from 'next/cache'
+import { buildWall, wallDays, type WallRoom } from '@/lib/boarding-wall'
 import { CabinetUnit, GLASS } from '@/app/components/CabinetUnit'
 
-// The Boarding Wall — the boarding landing page.
+// The Boarding Wall — the boarding landing page, and now the only rooms tab.
 //
 // It replaces a table of room names with the wall itself, because a carer who
 // wants to know whether Mochi is in 12 or 14 should not have to match a number
 // to a door. Every unit is a button into that room.
 //
+// The old /rooms/list lives on at the bottom of this page rather than as its
+// own tab. Two tabs for one set of rooms made a reader choose between them, and
+// the list counted occupancy off `Room.status` while the wall derived it from
+// the day's stays — so the two could disagree about the same morning. Both now
+// read one `buildWall`, which makes that disagreement impossible rather than
+// merely unlikely.
+//
 // The geometry comes from RoomZone / Room, never from a traced picture of the
 // maker's drawing: these cabinets are still being built, and a traced elevation
 // would freeze the layout behind a deploy the first time one moves.
 export default async function BoardingWallPage({ searchParams }: {
-  searchParams: Promise<{ date?: string }>
+  searchParams: Promise<{ date?: string; q?: string }>
 }) {
   await requireAuth()
-  const { date } = await searchParams
+  const { date, q } = await searchParams
+  const query = (q ?? '').trim()
 
   const [wall, days] = await Promise.all([buildWall(date), wallDays(14)])
-  const to = (d: string) => (d === wall.todayKey ? '/rooms' : `/rooms?date=${d}`)
+  // Changing the day keeps the search: losing it would silently widen a result
+  // somebody was reading.
+  const to = (d: string) => {
+    const p = new URLSearchParams()
+    if (d !== wall.todayKey) p.set('date', d)
+    if (query) p.set('q', query)
+    const s = p.toString()
+    return s ? `/rooms?${s}` : '/rooms'
+  }
   const roomHref = (id: string) => (wall.isToday ? `/rooms/${id}` : `/rooms/${id}?date=${wall.dayKey}`)
 
   const tiles = [
@@ -30,6 +48,31 @@ export default async function BoardingWallPage({ searchParams }: {
   ]
 
   const empty = wall.zones.length === 0
+
+  // Setting a room's standing flag — the one thing the old list page could do
+  // that nothing else non-manager could (room settings are manager-only).
+  //
+  // `Occupied` is deliberately not offered even though it is a valid value in
+  // ROOM_STATUSES. Occupancy is derived from the day's stays, so writing the
+  // flag by hand changes nothing the wall reads — a control that appears to
+  // work and does nothing is worse than no control.
+  async function setRoomStatus(data: FormData) {
+    'use server'
+    const roomId = data.get('roomId') as string
+    const status = data.get('status') as string
+    if (!SETTABLE.includes(status as (typeof SETTABLE)[number])) return
+    await db.room.update({ where: { id: roomId }, data: { status } })
+    revalidatePath('/rooms')
+    revalidatePath(`/rooms/${roomId}`)
+  }
+
+  const matches = (r: WallRoom) => {
+    if (!query) return true
+    const hay = `${r.name} ${r.type} ${r.occupant ?? ''} ${r.description ?? ''}`.toLowerCase()
+    return hay.includes(query.toLowerCase())
+  }
+  const listed = wall.rooms.filter(matches)
+  const byType = groupByType(listed)
 
   return (
     <div className="max-w-6xl mx-auto space-y-4">
@@ -157,10 +200,136 @@ export default async function BoardingWallPage({ searchParams }: {
           </div>
         ))}
         <span className="flex-grow" />
-        <Link href="/rooms/list" className="cd-link text-xs">List view</Link>
         <Link href="/rooms/calendar" className="cd-link text-xs">Room calendar</Link>
         <Link href="/rooms/arrange" className="cd-link text-xs">Arrange</Link>
       </div>
+
+      {/* The list, folded in from what used to be its own tab. Kept because it
+          is faster to search than a picture, it is what a screen reader reads,
+          and it is the fallback when the wall looks wrong. Closed by default so
+          the landing page stays the wall; a search opens it. */}
+      <details id="all-rooms" open={!!query} className="cd-card">
+        <summary className="px-4 py-3 cursor-pointer select-none flex items-baseline gap-2 flex-wrap">
+          <span className="text-sm font-semibold" style={{ color: '#2D1907' }}>All rooms</span>
+          <span className="text-xs cd-muted">
+            {wall.rooms.length} room{wall.rooms.length === 1 ? '' : 's'} · {wall.totals.available} free
+            {wall.totals.maintenance > 0 && ` · ${wall.totals.maintenance} out of service`}
+          </span>
+          <span className="flex-grow" />
+          <span className="text-xs cd-muted">search, set cleaning, add a room</span>
+        </summary>
+
+        <div className="px-4 pb-4 space-y-4" style={{ borderTop: '1px solid rgba(45,25,7,0.08)', paddingTop: '0.9rem' }}>
+          <div className="flex items-end justify-between gap-3 flex-wrap">
+            {/* Plain GET, so a search is a link somebody can keep. The day rides
+                along or searching would silently drop them back to today. */}
+            <form method="get" action="/rooms" className="flex gap-2 items-center">
+              {!wall.isToday && <input type="hidden" name="date" value={wall.dayKey} />}
+              <input name="q" defaultValue={query} placeholder="Room, type, or cat"
+                className="cd-input" style={{ width: 220, padding: '0.4rem 0.7rem', fontSize: '0.8rem' }} />
+              <button type="submit" className="cd-btn-sec text-xs">Search</button>
+              {query && <Link href={wall.isToday ? '/rooms' : `/rooms?date=${wall.dayKey}`} className="cd-link text-xs">Clear</Link>}
+            </form>
+            <Link href="/rooms/new" className="cd-btn text-xs">+ Add Room</Link>
+          </div>
+
+          {listed.length === 0 ? (
+            <p className="text-sm cd-muted py-6 text-center">
+              {wall.rooms.length === 0 ? 'No rooms set up yet.' : `Nothing matches “${query}”.`}
+            </p>
+          ) : (
+            byType.map(([type, group]) => (
+              <section key={type} className="space-y-1.5">
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-xs font-semibold uppercase" style={{ color: '#2D1907', letterSpacing: '0.08em' }}>
+                    {TYPE_LABEL[type] ?? type}
+                  </h3>
+                  <span className="text-xs cd-muted">
+                    {group.filter(r => r.status === 'Available').length}/{group.length} free
+                  </span>
+                </div>
+                <div className="overflow-x-auto rounded-lg" style={{ border: '1px solid rgba(45,25,7,0.1)' }}>
+                  <table className="w-full text-sm">
+                    <thead><tr className="cd-thead">
+                      <th>Room</th>
+                      <th>{wall.isToday ? 'In today' : `In on ${wall.dayKey}`}</th>
+                      <th>State</th>
+                      <th>Set</th>
+                    </tr></thead>
+                    <tbody className="cd-tbody">
+                      {group.map(r => {
+                        const g = GLASS[r.status] ?? GLASS.Available
+                        return (
+                          <tr key={r.id}>
+                            <td className="px-4 py-2">
+                              <div className="whitespace-nowrap">
+                                <Link href={roomHref(r.id)} className="font-medium cd-link">{r.name}</Link>
+                                <span className="cd-muted text-xs"> · {r.capacity} cat{r.capacity === 1 ? '' : 's'}</span>
+                                {!r.zoneId && <span className="cd-muted text-xs"> · unplaced</span>}
+                              </div>
+                              {/* The only place a room's own notes are readable.
+                                  Settings can edit them, but that is manager-only. */}
+                              {r.description && <div className="text-xs cd-muted">{r.description}</div>}
+                            </td>
+                            <td className="px-4 py-2" style={{ color: '#2D1907' }}>
+                              {r.occupant ?? <span className="cd-muted">—</span>}
+                            </td>
+                            <td className="px-4 py-2">
+                              <span className="cd-pill" style={{ background: g.chip, color: g.pill }}>{r.status}</span>
+                            </td>
+                            <td className="px-4 py-2">
+                              {/* Occupancy is not a flag, so a room with a cat
+                                  in it has nothing to set — say why rather than
+                                  showing buttons that would not take. */}
+                              {r.status === 'Occupied' ? (
+                                <span className="text-xs cd-muted">occupied — set from the stay</span>
+                              ) : (
+                                <form action={setRoomStatus} className="flex gap-1 flex-wrap">
+                                  <input type="hidden" name="roomId" value={r.id} />
+                                  {SETTABLE.map(s => (
+                                    <button key={s} name="status" value={s} type="submit"
+                                      disabled={r.roomStatus === s}
+                                      className="text-xs px-2 py-1 rounded"
+                                      style={r.roomStatus === s
+                                        ? { background: 'rgba(45,25,7,0.08)', color: 'rgba(45,25,7,0.35)', cursor: 'default', border: '1px solid rgba(45,25,7,0.08)' }
+                                        : { background: '#F2EDE0', color: '#2D1907', border: '1px solid rgba(45,25,7,0.2)' }}>
+                                      {SETTABLE_LABEL[s]}
+                                    </button>
+                                  ))}
+                                </form>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            ))
+          )}
+        </div>
+      </details>
     </div>
+  )
+}
+
+/** The statuses that are actually a standing flag somebody sets by hand. */
+const SETTABLE = ['Available', 'Cleaning', 'Maintenance'] as const
+const SETTABLE_LABEL: Record<string, string> = {
+  Available: 'Ready', Cleaning: 'Cleaning', Maintenance: 'Out of service',
+}
+
+const TYPE_ORDER = ['Suite', 'Standard', 'DayStay']
+const TYPE_LABEL: Record<string, string> = { Suite: 'Suites', Standard: 'Standard Rooms', DayStay: 'Day Stay' }
+
+function groupByType(rooms: WallRoom[]): [string, WallRoom[]][] {
+  const map = new Map<string, WallRoom[]>()
+  for (const r of rooms) {
+    if (!map.has(r.type)) map.set(r.type, [])
+    map.get(r.type)!.push(r)
+  }
+  return [...map.entries()].sort(
+    (a, b) => (TYPE_ORDER.indexOf(a[0]) + 1 || 99) - (TYPE_ORDER.indexOf(b[0]) + 1 || 99),
   )
 }

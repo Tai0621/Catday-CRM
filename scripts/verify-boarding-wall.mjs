@@ -163,9 +163,30 @@ try {
   check('every active room appears on the wall', missing.length === 0,
     `${missing.length} missing: ${missing.slice(0, 5).join(', ')}`)
 
-  const countOf = n => (wall.match(new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) ?? []).length
-  check('no room is drawn twice', names.every(n => countOf(n) === 1),
-    names.filter(n => countOf(n) !== 1).slice(0, 4).join(', '))
+  // The claim: one unit never hides another. This used to count each room's
+  // name in the stripped page, which cannot work here for two reasons — the
+  // "All rooms" list now names every room a second time by design, and an
+  // OCCUPIED unit renders its contents into a streamed `<template>` hole that
+  // React appends at the END of the document, so no positional marker can
+  // separate wall from list. Slicing the page was measuring the stream, not the
+  // wall.
+  //
+  // Two rooms in one cell is a fact about the data, so assert it there. It is
+  // also the exact invariant `placeRoom` enforces, checked below from the
+  // other side.
+  const clashes = await rows(
+    `SELECT zoneId, gridCol, gridRow, COUNT(*) c FROM Room
+     WHERE isActive = 1 AND zoneId IS NOT NULL AND gridCol > 0 AND gridRow > 0
+     GROUP BY zoneId, gridCol, gridRow HAVING c > 1`)
+  check('no two rooms occupy the same cell', clashes.length === 0,
+    `${clashes.length} cell(s) hold more than one room`)
+
+  // And every room really is a link somebody can press — the render half of
+  // "no room is missed", counted on hrefs because they survive the stream.
+  const linked = await rows(`SELECT id FROM Room WHERE isActive = 1`)
+  const unlinked = linked.map(r => r[0].value).filter(id => !wallHtml.includes(`/rooms/${id}`))
+  check('every active room is a link on the page', unlinked.length === 0,
+    `${unlinked.length} not linked`)
 
   check('the seeded bank renders', wall.includes(`${MARK} bank`))
   check('an unplaced room still appears', wall.includes(`${MARK} Orphan`))
@@ -240,6 +261,80 @@ try {
     const stillThere = await scalar(`SELECT gridCol FROM Room WHERE id = ?`, [t(roomB)])
     check('…and room B did not move', String(stillThere) === '2', String(stillThere))
   }
+
+  // ── the old /rooms/list, folded into the wall ──
+  //
+  // Two tabs for one set of rooms made a reader choose between them, and the
+  // list counted occupancy off `Room.status` while the wall derived it from the
+  // day's stays. The assertions below are about the merge, not the decoration:
+  // the list's capabilities survived, the counts come from one source, and the
+  // old URL still lands somewhere real.
+  // Re-fetched rather than reusing the earlier `wallHtml`: rooms have been
+  // created since, and a stale page against a live count would fail on the
+  // fixture rather than on the claim.
+  const mergedHtml = await get('/rooms')
+  const mergedText = strip(mergedHtml)
+  check('the list is on the wall, not a second tab', mergedText.includes('All rooms'))
+  check('…the add-room entry point survived the merge', mergedHtml.includes('href="/rooms/new"'))
+  check('…so did the search', mergedHtml.includes('name="q"'))
+  check('…and the status control', /value="Cleaning"/.test(mergedHtml) && /value="Maintenance"/.test(mergedHtml))
+  check('the nav no longer offers a separate rooms tab', !mergedHtml.includes('href="/rooms/list"'))
+
+  // `Occupied` is not a flag anybody sets — the wall reads it from the stay. A
+  // button writing it would be a control that appears to work and changes
+  // nothing, which is worse than no button.
+  check('setting a room "Occupied" by hand is not offered', !/name="status" value="Occupied"/.test(mergedHtml))
+
+  const oldList = await fetch(`${BASE}/rooms/list`, { headers: { Cookie: cookie }, redirect: 'manual' })
+  check('the old list URL redirects rather than 404ing',
+    [301, 307, 308].includes(oldList.status) && (oldList.headers.get('location') ?? '').endsWith('/rooms'),
+    `HTTP ${oldList.status} → ${oldList.headers.get('location')}`)
+
+  // The point of one source: the summary must count every active room, seeded
+  // rooms included, without a second query that could drift from the wall's.
+  const activeRooms = await scalar(`SELECT COUNT(*) FROM Room WHERE isActive = 1`)
+  check(`the list summary counts every active room (${activeRooms})`,
+    mergedText.includes(`${activeRooms} rooms`),
+    mergedText.match(/All rooms.{0,80}/)?.[0] ?? 'summary not found')
+
+  // The capability that actually moved: a carer marking a room for cleaning.
+  // Rendering the buttons proves nothing — drive the real form and read the row
+  // back. Room B is placed but free today (its stay is three days out), so it
+  // is the one that carries a control.
+  const statusForm = findForm(mergedHtml, `value="${roomB}"`)
+  check('a free room carries a status form', !!statusForm)
+  if (statusForm) {
+    await submitForm(`${BASE}/rooms`, statusForm, { status: 'Cleaning' }, cookie)
+    check('setting a room to Cleaning writes it',
+      String(await scalar(`SELECT status FROM Room WHERE id = ?`, [t(roomB)])) === 'Cleaning',
+      String(await scalar(`SELECT status FROM Room WHERE id = ?`, [t(roomB)])))
+
+    check('…and the wall repaints from it',
+      strip(await get('/rooms')).includes('Cleaning'))
+
+    // A status outside the settable set must not write, or the control would be
+    // a way to set the flag the wall ignores through a hand-made request.
+    await submitForm(`${BASE}/rooms`, statusForm, { status: 'Occupied' }, cookie)
+    check('a status outside the offered set is refused, not written',
+      String(await scalar(`SELECT status FROM Room WHERE id = ?`, [t(roomB)])) === 'Cleaning',
+      String(await scalar(`SELECT status FROM Room WHERE id = ?`, [t(roomB)])))
+
+    await submitForm(`${BASE}/rooms`, statusForm, { status: 'Available' }, cookie)
+    check('…and it can be set back',
+      String(await scalar(`SELECT status FROM Room WHERE id = ?`, [t(roomB)])) === 'Available')
+  }
+
+  // Room A has a cat in it today, so there is nothing to set: occupancy comes
+  // from the stay, not from a flag.
+  check('an occupied room offers no status buttons, and says why',
+    strip(mergedHtml).includes('occupied — set from the stay'))
+
+  const searched = strip(await get(`/rooms?q=${MARK}`))
+  check('searching finds a room by name', searched.includes(`${MARK} A`))
+  check('…and excludes the ones that do not match', !searched.includes('Nothing matches'))
+  const noHits = strip(await get('/rooms?q=zzzznotaroomanywhere'))
+  check('a search with no hits says so rather than silently showing everything',
+    noHits.includes('Nothing matches'))
 
   console.log(`\n${pass}/${total} checks passed`)
 } finally {

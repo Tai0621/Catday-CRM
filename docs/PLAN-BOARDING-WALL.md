@@ -343,7 +343,7 @@ build assumed an answer — each one reversible, each one still open:
 | `/rooms` | the wall — the boarding landing page |
 | `/rooms/[id]` | the **stay**: who is in it, today's care tickable in place, feeding and medication, the balance |
 | `/rooms/[id]/settings` | the old edit form, manager-only |
-| `/rooms/list` | the old table, kept — faster to search, and the fallback when the wall looks wrong |
+| `/rooms/list` | **redirects to `/rooms`.** The table is now an "All rooms" section at the bottom of the wall — same job, one tab, and one source for the counts |
 | `/rooms/arrange` | new, manager-only: banks and unit positions |
 | `/rooms/calendar`, `/runsheet` | unchanged |
 

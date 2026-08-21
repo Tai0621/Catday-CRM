@@ -25,6 +25,18 @@ export interface WallRoom {
   rowSpan: number
   unitKind: string
   status: WallStatus
+  /**
+   * The room's own stored flag, before the day's occupancy overrides it.
+   *
+   * The list needs this and `status` separately: `status` answers "what is
+   * true today", the flag answers "what was this room set to". They differ on
+   * a cat sitting in a room somebody marked Cleaning, and the status buttons
+   * have to reflect the flag or they would offer to set what is already set.
+   */
+  roomStatus: string
+  type: string
+  capacity: number
+  description: string | null
   occupant: string | null
   catId: string | null
   appointmentId: string | null
@@ -51,6 +63,15 @@ export interface Wall {
   zones: WallZone[]
   /** Rooms with no place on the wall. Shown, never hidden — see the schema comment. */
   unplaced: WallRoom[]
+  /**
+   * Every active room, flat, in sort order — the wall's plain-text twin.
+   *
+   * Deliberately the SAME objects the zones hold rather than a second query.
+   * The old /rooms/list counted occupancy from `Room.status` while the wall
+   * derived it from the day's stays, so the two screens could report different
+   * numbers for the same morning. One source removes that by construction.
+   */
+  rooms: WallRoom[]
   totals: { occupied: number; available: number; cleaning: number; maintenance: number; leaving: number }
 }
 
@@ -85,7 +106,7 @@ export async function buildWall(dayKeyInput?: string): Promise<Wall> {
     db.room.findMany({
       where: { isActive: true },
       select: {
-        id: true, name: true, status: true, zoneId: true,
+        id: true, name: true, status: true, zoneId: true, type: true, capacity: true, description: true,
         gridCol: true, gridRow: true, colSpan: true, rowSpan: true, unitKind: true, sortOrder: true,
       },
       orderBy: { sortOrder: 'asc' },
@@ -162,6 +183,10 @@ export async function buildWall(dayKeyInput?: string): Promise<Wall> {
       rowSpan: r.rowSpan ?? 1,
       unitKind: r.unitKind ?? 'arch',
       status,
+      roomStatus: r.status,
+      type: r.type,
+      capacity: r.capacity,
+      description: r.description,
       occupant: stay?.cat.name ?? null,
       catId: stay?.catId ?? null,
       appointmentId: stay?.id ?? null,
@@ -181,8 +206,10 @@ export async function buildWall(dayKeyInput?: string): Promise<Wall> {
 
   const byZone = new Map<string, WallRoom[]>()
   const unplaced: WallRoom[] = []
+  const all: WallRoom[] = []
   for (const r of rooms) {
     const w = toWallRoom(r)
+    all.push(w)
     // A room only has a place if it has BOTH a zone and a cell. Half-placed is
     // unplaced — it must still appear somewhere.
     if (w.zoneId && w.col > 0 && w.row > 0) {
@@ -217,7 +244,7 @@ export async function buildWall(dayKeyInput?: string): Promise<Wall> {
     else totals.available++
   }
 
-  return { dayKey, todayKey, isToday, zones: wallZones, unplaced, totals }
+  return { dayKey, todayKey, isToday, zones: wallZones, unplaced, rooms: all, totals }
 }
 
 /** The next `count` days from today, for the date strip. */
