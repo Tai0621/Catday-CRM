@@ -40,6 +40,18 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // The receipt PDF reads the logo off disk at request time. On Vercel `public/`
+  // is uploaded as CDN assets and is NOT automatically inside the function
+  // bundle, so without this the file is missing in production only — the logo
+  // would quietly vanish from every customer receipt while looking perfect
+  // locally. renderReceiptPdf falls back to a text wordmark rather than failing,
+  // which is exactly the kind of silent downgrade nobody would notice.
+  // Every raster in public/, not one named file: the receipt logo comes from the
+  // `brand.logoUrl` SETTING, so which file it needs is decided by the owner at
+  // runtime and cannot be listed at build time.
+  outputFileTracingIncludes: {
+    '/r/[token]': ['./public/**/*.png', './public/**/*.jpg', './public/**/*.jpeg'],
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

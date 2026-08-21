@@ -104,11 +104,22 @@ try {
   check('receipt renders line + total', rp.includes(`${MARK} Full groom`) && rp.includes('RM 90.00'))
 
   // ── Public receipt WITHOUT auth ──
+  //
+  // This link now serves a PDF, not an HTML page: a page is a door into the app
+  // and the customer has no business being handed one. The old assertions here
+  // read the rendered HTML for the line and total, which is why they had to
+  // change — the contract did, deliberately. What the sale actually SAYS is
+  // asserted against the PDF's own text in verify-receipt-pdf.mjs, which can
+  // read it properly; this suite keeps the access claims.
   const pubRes = await fetch(`${BASE}/r/${token}`, { redirect: 'manual' })
-  const pubBody = strip(await pubRes.text())
   check('public /r/<token> serves 200 (no login redirect)', pubRes.status === 200, `status ${pubRes.status}`)
-  check('public receipt renders the sale', pubBody.includes(`${MARK} Full groom`) && pubBody.includes('RM 90.00'))
-  check('public receipt has no app nav (Service Board link)', !pubBody.includes('Service Board'))
+  check('public receipt is a PDF, not a page',
+    (pubRes.headers.get('content-type') ?? '').includes('application/pdf'),
+    pubRes.headers.get('content-type') ?? 'no content-type')
+  const pubBytes = Buffer.from(await pubRes.arrayBuffer())
+  check('…and the body really is one', pubBytes.subarray(0, 5).toString() === '%PDF-')
+  check('…with no app nav, because there is no page to put it on',
+    !pubBytes.toString('latin1').includes('Service Board'))
 
   // ── Sent status ──
   const sp = await getHtml(`/pos/receipt/${sentTxn}`)

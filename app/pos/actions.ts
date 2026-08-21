@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 import { awardPoints } from '@/lib/loyalty'
 import { generateReceiptToken } from '@/lib/receipt'
+import { CHECKOUT_METHODS, type CheckoutMethod } from '@/lib/constants'
 
 export interface CheckoutItem {
   // 'cat' sells an animal out of inventory; refId is the CatStock id, not the
@@ -24,7 +25,7 @@ export interface CheckoutPayload {
   customerId: string | null
   items: CheckoutItem[]
   walletAmount: number // portion paid from stored value
-  method: 'Cash' | 'Card' | 'QR' // method for the remainder
+  method: CheckoutMethod // method for the remainder
   note?: string
 }
 
@@ -48,6 +49,12 @@ export async function checkout(payloadJson: string): Promise<CheckoutResult> {
 
   const total = Math.round(items.reduce((s, i) => s + i.qty * i.unitPrice, 0) * 100) / 100
   if (total <= 0) return { ok: false, error: 'Total must be above zero.' }
+
+  // The method arrives as client JSON and is written into the ledger, where the
+  // cash-up groups by it. An unrecognised string would silently land in "no
+  // method recorded" and quietly widen the till variance, so it is checked
+  // against the allowed list here rather than trusted.
+  if (!CHECKOUT_METHODS.includes(p.method)) return { ok: false, error: 'Unknown payment method.' }
 
   // Wallet portion — validated against the live balance
   let walletAmount = Math.max(0, Math.min(p.walletAmount ?? 0, total))

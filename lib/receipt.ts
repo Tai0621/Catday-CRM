@@ -35,7 +35,7 @@ async function toView(primary: TxnWithLines): Promise<ReceiptView> {
     : []
   const grandTotal = Math.round((primary.total + siblings.reduce((s, t) => s + t.total, 0)) * 100) / 100
   const payments = [primary, ...siblings]
-    .map(t => ({ method: t.method ?? '—', amount: t.total }))
+    .map(t => ({ method: t.method ?? 'Unrecorded', amount: t.total }))
     .filter(p => p.amount > 0)
   const pts = primary.customerId && primary.reference
     ? await db.loyaltyEntry.findFirst({ where: { customerId: primary.customerId, note: primary.reference } })
@@ -80,14 +80,25 @@ export function generateReceiptToken(): string {
   return newToken()
 }
 
+/**
+ * The WhatsApp message that carries the receipt.
+ *
+ * `url` points at the PDF (/r/<token>), so the wording says so: a customer who
+ * is told "view your receipt" and gets a file download feels tricked, and one
+ * who expects a web page will not think to save it.
+ *
+ * No em-dashes anywhere, including in the line descriptions, which carry them
+ * in from service names in the database.
+ */
 export function receiptWhatsappText(v: ReceiptView, businessName: string, url: string): string {
+  const clean = (s: string) => s.replace(/\s*[—–]\s*/g, ' - ')
   return [
     `Thank you for visiting ${businessName}! 🐾`,
     `Receipt ${v.reference ?? v.id}`,
-    ...v.lines.map(l => `· ${l.description}${l.quantity > 1 ? ` ×${l.quantity}` : ''} — RM ${l.subtotal.toFixed(2)}`),
+    ...v.lines.map(l => `· ${clean(l.description)}${l.quantity > 1 ? ` ×${l.quantity}` : ''}: RM ${l.subtotal.toFixed(2)}`),
     `Total: RM ${v.grandTotal.toFixed(2)}`,
     v.points ? `Points earned: ${v.points} 🌟` : '',
-    `View your receipt: ${url}`,
+    `Your receipt (PDF): ${url}`,
     `See you and your cat again soon!`,
   ].filter(Boolean).join('\n')
 }

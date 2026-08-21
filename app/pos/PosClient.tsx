@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { checkout, type CheckoutItem } from './actions'
+import { CHECKOUT_METHODS, type CheckoutMethod } from '@/lib/constants'
 
 interface CustomerOpt {
   id: string; name: string | null; phone: string
@@ -68,7 +69,7 @@ export function PosClient({ preselectCustomerId, preselectCatStockId, customers,
     return preCat ? [...seeded, catToItem(preCat)] : seeded
   })
   const [walletInput, setWalletInput] = useState<string>('0')
-  const [method, setMethod] = useState<'Cash' | 'Card' | 'QR'>('Cash')
+  const [method, setMethod] = useState<CheckoutMethod>('Cash')
   const [customLabel, setCustomLabel] = useState('')
   const [customPrice, setCustomPrice] = useState('')
   const [busy, setBusy] = useState(false)
@@ -326,10 +327,14 @@ export function PosClient({ preselectCustomerId, preselectCatStockId, customers,
                 <div className="text-xs cd-muted mb-1.5">
                   {walletAmount > 0 ? `RM ${walletAmount.toFixed(2)} from wallet · remaining RM ${remainder.toFixed(2)} by:` : 'Payment method:'}
                 </div>
-                <div className="flex gap-2">
-                  {(['Cash', 'Card', 'QR'] as const).map(m => (
+                {/* A grid, not a row: "Bank Transfer" does not fit a quarter of
+                    the width without truncating, and a payment method a cashier
+                    has to guess at from three letters is the wrong thing to
+                    make small. */}
+                <div className="grid grid-cols-2 gap-2">
+                  {CHECKOUT_METHODS.map(m => (
                     <button key={m} onClick={() => setMethod(m)}
-                      className="flex-1 text-sm py-2 rounded-lg font-medium"
+                      className="text-sm py-2 rounded-lg font-medium"
                       style={method === m
                         ? { background: '#2D1907', color: '#ECDBB6' }
                         : { background: 'rgba(45,25,7,0.07)', color: 'rgba(45,25,7,0.6)' }}>

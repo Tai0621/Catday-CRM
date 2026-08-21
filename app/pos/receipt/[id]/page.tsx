@@ -40,17 +40,19 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           </div>
         ) : (
           <div className="text-xs cd-muted">
-            {canWhatsapp ? 'Not sent yet — tap “WhatsApp receipt” to share.' : 'Add a phone number to the customer to WhatsApp the receipt.'}
+            {canWhatsapp ? 'Not sent yet. Tap “WhatsApp receipt” to share.' : 'Add a phone number to the customer to WhatsApp the receipt.'}
           </div>
         )}
         <div className="flex items-center gap-2">
           <input readOnly value={publicUrl} className="cd-input text-xs" style={{ flex: 1 }} />
-          <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="cd-btn-sec text-xs whitespace-nowrap">Open link</a>
+          <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="cd-btn-sec text-xs whitespace-nowrap">Open PDF</a>
         </div>
-        <p className="text-xs cd-muted">Anyone with this link can view the receipt — no login needed.</p>
+        <p className="text-xs cd-muted">
+          This link serves the receipt as a PDF. No login, and no way into the rest of the system.
+        </p>
       </div>
 
-      <ReceiptCard view={view} business={config.business} />
+      <ReceiptCard view={view} business={config.business} logoUrl={config.brand.logoUrl} />
     </div>
   )
 }

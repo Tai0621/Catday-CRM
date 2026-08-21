@@ -348,8 +348,14 @@ export const CLOSE_HOUR = 19
 export const SLOT_STEP_MIN = 30
 
 // ── Payment methods (drives the daily cash-up) ──
-export const PAY_METHODS = ['Cash', 'Card', 'QR', 'Wallet'] as const
+export const PAY_METHODS = ['Cash', 'Card', 'QR', 'Bank Transfer', 'Wallet'] as const
 export type PayMethod = typeof PAY_METHODS[number]
+
+// What a cashier can choose at checkout. `Wallet` is absent on purpose: it is
+// not picked, it is the stored-value portion of a split, and the checkout
+// writes it on its own sibling row.
+export const CHECKOUT_METHODS = ['Cash', 'Card', 'QR', 'Bank Transfer'] as const
+export type CheckoutMethod = typeof CHECKOUT_METHODS[number]
 
 // ── Boarding run-sheet standard tasks (generated daily per occupied room) ──
 // Boarding check-in / check-out condition (visual chips for low-literacy staff)
