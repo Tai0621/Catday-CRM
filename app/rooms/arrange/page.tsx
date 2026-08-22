@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import Link from 'next/link'
 import { UNIT_KINDS, UNIT_KIND_LABELS, ZONE_KINDS } from '@/lib/constants'
 import { saveZone, deleteZone, placeRoom } from './actions'
-import { SubmitButton } from '@/app/components/Pending'
+import { SubmitButton, ConfirmSubmit } from '@/app/components/Pending'
 
 // Arrange the wall — where each unit physically sits.
 //
@@ -78,7 +78,8 @@ export default async function ArrangeWallPage({ searchParams }: {
         {zones.map(z => z._count.rooms === 0 && (
           <form key={`del-${z.id}`} action={deleteZone}>
             <input type="hidden" name="id" value={z.id} />
-            <SubmitButton className="text-xs cd-link" busyLabel="Working…">Remove empty bank {z.code}</SubmitButton>
+            <ConfirmSubmit className="text-xs cd-link" busyLabel="Working…"
+              message={`Remove cabinet bank ${z.code} (${z.name})? Any room still placed in it returns to Unplaced.`}>Remove empty bank {z.code}</ConfirmSubmit>
           </form>
         ))}
 

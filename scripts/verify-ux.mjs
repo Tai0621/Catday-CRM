@@ -160,7 +160,44 @@ check('capture opens the camera directly on a phone', /capture: 'environment'/.t
 check('…but is not forced for documents, or a supplier’s emailed PDF could not be attached',
   /accept === 'document' \? \{\} :/.test(upload))
 
-// ══ 7. Live: the landing actually lands there ══
+// ══ 7. Destructive actions ask first ══
+//
+// 35 delete/remove actions existed and five confirmed anything. The unguarded
+// ones included deleting an expense (income statement), a fixed asset (balance
+// sheet) and a whole cabinet bank — one click, no question, no undo.
+//
+// Only HARD deletes of things with financial or structural consequence are
+// listed. Soft/restorable removals (hiding a statement row, withdrawing a
+// pending leave request) deliberately stay one click: ceremony on a reversible
+// action just teaches people to click through the dialog.
+const MUST_CONFIRM = [
+  ['app/finance/expenses/page.tsx', 'deleting an expense'],
+  ['app/admin/assets/page.tsx', 'removing a fixed asset'],
+  ['app/rooms/arrange/page.tsx', 'deleting a cabinet bank'],
+  ['app/admin/licenses/page.tsx', 'deleting a licence'],
+  ['app/inventory/cats/[id]/page.tsx', 'removing a cat cost'],
+]
+const unconfirmed = MUST_CONFIRM.filter(([f]) => !/ConfirmSubmit/.test(fs.readFileSync(f, 'utf8')))
+check('destructive deletes ask before they fire',
+  unconfirmed.length === 0, unconfirmed.map(([, what]) => what).join(', '))
+
+// The message has to say WHAT goes. "Are you sure?" tells nobody anything.
+const vagueConfirm = MUST_CONFIRM.filter(([f]) =>
+  /message=\{?["'`]\s*(Are you sure|Confirm)\b/i.test(fs.readFileSync(f, 'utf8')))
+check('…and say what is being destroyed, not just "are you sure"',
+  vagueConfirm.length === 0, vagueConfirm.map(([f]) => f).join(', '))
+
+// The dialog is a guard against a slip, NOT authorisation — it is client-side
+// and a form still posts without JavaScript. Anything that must not happen is
+// refused server-side, and these two already are.
+const roleSrc = fs.readFileSync('app/hr/roles/actions.ts', 'utf8')
+check('a role still holding staff is refused on the SERVER, not by a dialog',
+  /holders > 0/.test(roleSrc))
+const roomSrc = fs.readFileSync('app/rooms/[id]/settings/page.tsx', 'utf8')
+check('a room with booking history is refused on the SERVER',
+  /has-bookings/.test(roomSrc))
+
+// ══ 8. Live: the landing actually lands there ══
 if (process.env.SKIP_LIVE !== '1') {
   const login = await fetch(`${BASE}/api/login`, {
     method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

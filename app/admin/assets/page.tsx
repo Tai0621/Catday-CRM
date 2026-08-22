@@ -6,7 +6,7 @@ import {
   ASSET_CATEGORIES, monthlyDepreciation, accumulatedDepreciation, netBookValue,
 } from '@/lib/assets'
 import { SEGMENTS } from '@/lib/segments'
-import { SubmitButton } from '@/app/components/Pending'
+import { SubmitButton, ConfirmSubmit } from '@/app/components/Pending'
 
 // Fixed Asset Register (Administrative). Records feed the three statements:
 // net book value → balance-sheet fixed assets, monthly charge → income-statement
@@ -144,7 +144,8 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                   <td className="px-4 py-2.5 text-right">
                     <form action={remove}>
                       <input type="hidden" name="id" value={a.id} />
-                      <SubmitButton className="text-xs cd-link" style={{ color: '#B14919' }} busyLabel="Working…">Remove</SubmitButton>
+                      <ConfirmSubmit className="text-xs cd-link" style={{ color: '#B14919' }} busyLabel="Working…"
+                        message={`Remove the fixed asset "${a.name}"? Its net book value comes off the balance sheet and its monthly charge off the income statement.`}>Remove</ConfirmSubmit>
                     </form>
                   </td>
                 </tr>

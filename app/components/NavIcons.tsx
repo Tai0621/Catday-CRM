@@ -2,6 +2,14 @@ import type { ReactNode } from 'react'
 
 // Monochrome line icons for the sidebar. All use currentColor so they take the
 // same cream tone as the nav text — no emoji, one consistent stroke weight.
+//
+// Drawn here rather than pulled from an icon library on purpose. An audit found
+// the set had no GAPS — all 29 names the catalogue asks for exist — but ten
+// glyphs were doing three or four jobs each, which only shows when the sidebar
+// is collapsed and the label disappears. Three HR tabs shared one figure, and
+// Content Studio was a cat. That is a drawing problem, not a library problem;
+// importing a second set would have fixed the duplicates by introducing a
+// second drawing style, which reads worse than the duplicates did.
 const ICONS: Record<string, ReactNode> = {
   dashboard: (<><rect x="3" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" /></>),
   inbox: (<><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z" /></>),
@@ -16,6 +24,14 @@ const ICONS: Record<string, ReactNode> = {
   box: (<><path d="M21 8l-9-5-9 5 9 5 9-5z" /><path d="M3 8v8l9 5 9-5V8" /><path d="M12 13v8" /></>),
   wallet: (<><rect x="3" y="6" width="18" height="13" rx="2.5" /><path d="M3 10.5h18" /><circle cx="16.5" cy="14.5" r="1.2" /></>),
   staff: (<><circle cx="12" cy="8" r="4" /><path d="M4.5 20.5c0-4 3.5-6 7.5-6s7.5 2 7.5 6" /></>),
+  // Access control: a shield with a tick, not a third person-shape.
+  shield: (<><path d="M12 3l7.5 3v6c0 4.4-3 8.1-7.5 9.5C7.5 20.1 4.5 16.4 4.5 12V6z" /><path d="M9 12l2.2 2.2L15.5 10" /></>),
+  // Job applications: a document arriving, distinct from the staff register.
+  application: (<><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M9 13h6M9 17h4" /></>),
+  // Writing, for the content studio — which was using the cat.
+  pen: (<><path d="M4 20.5l1-4.2L16.3 5a2.1 2.1 0 0 1 3 3L8 19.5z" /><path d="M14.5 6.8l2.7 2.7" /></>),
+  // The brand palette, for colour settings.
+  palette: (<><path d="M12 3a9 9 0 1 0 0 18c1.2 0 2-.8 2-1.8 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.3 0-1 .8-1.7 1.8-1.7H16a5 5 0 0 0 5-5c0-3.9-4-7-9-7z" /><circle cx="7.8" cy="12" r="1.1" /><circle cx="9.8" cy="7.9" r="1.1" /><circle cx="14.4" cy="7.6" r="1.1" /></>),
   report: (<><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></>),
   scale: (<><path d="M12 3.5v17M6.5 7.5h11M4 20.5h16" /><path d="M6.5 7.5 3.5 14a3 3 0 0 0 6 0zM17.5 7.5 14.5 14a3 3 0 0 0 6 0z" /></>),
   trend: (<><path d="M3 17l6-6 4 4 8-8" /><path d="M17 7h4v4" /></>),

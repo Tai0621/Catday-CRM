@@ -6,7 +6,7 @@ import { SEGMENTS } from '@/lib/segments'
 import { addExpenseForm, togglePaid, removeExpense } from './actions'
 import { MediaUpload } from '@/app/components/MediaUpload'
 import { isMediaConfigured } from '@/lib/media'
-import { SubmitButton } from '@/app/components/Pending'
+import { SubmitButton, ConfirmSubmit } from '@/app/components/Pending'
 
 // Cost entry for the income statement: variable costs (cost of services)
 // and fixed operating expenses, per the owner's Excel model.
@@ -168,7 +168,8 @@ export default async function ExpensesPage() {
                             </form>
                             <form action={removeExpense} className="inline">
                               <input type="hidden" name="id" value={e.id} />
-                              <SubmitButton className="text-xs cd-muted hover:underline" busyLabel="Working…">remove</SubmitButton>
+                              <ConfirmSubmit className="text-xs cd-muted hover:underline" busyLabel="Working…"
+                                message={`Delete the RM ${e.amount.toFixed(2)} ${e.category} expense${e.vendor ? ` from ${e.vendor}` : ''}? It will come off the income statement.`}>remove</ConfirmSubmit>
                             </form>
                           </td>
                         </tr>

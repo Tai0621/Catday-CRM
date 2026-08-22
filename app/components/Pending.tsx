@@ -127,3 +127,46 @@ export function SavedAnnouncer({ label = 'Saved' }: { label?: string }) {
     <span role="status" aria-live="polite" className="sr-only">{message}</span>
   )
 }
+
+/**
+ * A submit button that asks first.
+ *
+ * There are 35 destructive actions in the OS and five of them confirmed
+ * anything. The unguarded ones included deleting an expense (which feeds the
+ * income statement), a fixed asset (the balance sheet) and a whole cabinet bank
+ * (which unplaces every room in it) — each one click, no question, no undo.
+ *
+ * `confirm()` rather than a modal system because three places already use it
+ * and one blocking dialog everybody recognises beats a second vocabulary. The
+ * honest limitation: with JavaScript off the form still submits, so this is a
+ * guard against the accidental click, not an authorisation check. Anything that
+ * must not happen has to be refused on the SERVER — as deleting a room with
+ * bookings and narrowing a system role already are.
+ */
+export function ConfirmSubmit({
+  message, children, busyLabel, className, style, name, value,
+}: {
+  /** Say what will be destroyed, specifically. "Are you sure?" tells nobody anything. */
+  message: string
+  children: React.ReactNode
+  busyLabel?: React.ReactNode
+  className?: string
+  style?: React.CSSProperties
+  name?: string
+  value?: string
+}) {
+  const { pending } = useFormStatus()
+  return (
+    <button
+      type="submit"
+      name={name}
+      value={value}
+      disabled={pending}
+      aria-busy={pending || undefined}
+      onClick={e => { if (!window.confirm(message)) e.preventDefault() }}
+      className={className}
+      style={{ ...style, ...(pending ? { opacity: 0.6, cursor: 'progress' } : null) }}>
+      {pending ? (busyLabel ?? children) : children}
+    </button>
+  )
+}

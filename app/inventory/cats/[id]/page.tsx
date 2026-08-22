@@ -11,7 +11,7 @@ import {
   updateStock, reserveCat, releaseReservation, exitCat, undoExit,
   addCost, deleteCost, assignRoom, setLitter,
 } from '../actions'
-import { SubmitButton } from '@/app/components/Pending'
+import { SubmitButton, ConfirmSubmit } from '@/app/components/Pending'
 
 const rm = (n: number | null | undefined) => (n == null ? '—' : `RM ${n.toLocaleString('en-MY', { maximumFractionDigits: 0 })}`)
 const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '')
@@ -211,7 +211,8 @@ export default async function CatStockPage({ params, searchParams }: {
                     <td className="px-4 py-2 text-right">
                       <form action={deleteCost}>
                         <input type="hidden" name="id" value={c.id} />
-                        <SubmitButton className="text-xs cd-link" busyLabel="Working…">Remove</SubmitButton>
+                        <ConfirmSubmit className="text-xs cd-link" busyLabel="Working…"
+                          message={`Remove the ${rm(c.amountRM)} ${c.category.toLowerCase()} cost? It comes off this cat's cost to date.`}>Remove</ConfirmSubmit>
                       </form>
                     </td>
                   </tr>

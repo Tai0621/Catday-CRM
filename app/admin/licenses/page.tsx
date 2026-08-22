@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { LICENSE_CATEGORIES, LICENSE_DEFAULT_REMINDER_DAYS } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
-import { SubmitButton } from '@/app/components/Pending'
+import { SubmitButton, ConfirmSubmit } from '@/app/components/Pending'
 
 // Licenses & Renewals (Administrative). Compliance items with an expiry; each
 // surfaces in the Action Inbox `reminderDays` ahead of its renewal date.
@@ -236,7 +236,8 @@ export default async function LicensesPage({ searchParams }: { searchParams: Pro
                   </form>
                   <form action={remove} className="inline">
                     <input type="hidden" name="id" value={l.id} />
-                    <SubmitButton className="text-xs cd-link" style={{ color: '#B14919' }} busyLabel="Working…">Delete</SubmitButton>
+                    <ConfirmSubmit className="text-xs cd-link" style={{ color: '#B14919' }} busyLabel="Working…"
+                      message={`Delete the licence "${l.name}"? Its renewal reminders go with it.`}>Delete</ConfirmSubmit>
                   </form>
                 </span>
               </div>
