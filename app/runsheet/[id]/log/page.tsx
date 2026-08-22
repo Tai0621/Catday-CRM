@@ -8,6 +8,7 @@ import {
 import { SEGMENTS } from '@/lib/segments'
 import { MediaSection } from '@/app/components/MediaSection'
 import { saveCareLog } from './actions'
+import { SubmitButton } from '@/app/components/Pending'
 
 const dateKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const seg = SEGMENTS.boarding
@@ -91,7 +92,7 @@ export default async function DailyLogPage({
         </div>
 
         <div className="flex items-center gap-3">
-          <button type="submit" className="cd-btn">Save {period} log</button>
+          <SubmitButton className="cd-btn" busyLabel="Saving…">Save {period} log</SubmitButton>
           <Link href="/runsheet" className="cd-btn-sec text-sm">Cancel</Link>
         </div>
       </form>

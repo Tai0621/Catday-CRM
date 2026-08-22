@@ -7,6 +7,7 @@ import { buildPlanProjection, defaultDrivers, DRIVER_GROUPS, ALL_DRIVER_KEYS, ty
 import { buildIncomeStatement } from '@/lib/finance'
 import { SEGMENTS } from '@/lib/segments'
 import { ScenarioAnalysis } from './ScenarioAnalysis'
+import { SubmitButton } from '@/app/components/Pending'
 
 export default async function PlanPage() {
   await requireManager()
@@ -136,7 +137,7 @@ export default async function PlanPage() {
         <div className="cd-card p-5 space-y-5">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold" style={{ color: '#2D1907' }}>Assumptions</h2>
-            <button type="submit" className="cd-btn text-sm">Save &amp; recalculate</button>
+            <SubmitButton className="cd-btn text-sm" busyLabel="Working…">Save &amp; recalculate</SubmitButton>
           </div>
           {DRIVER_GROUPS.map(group => (
             <div key={group.title}>

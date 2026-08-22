@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ROOM_TYPES, ROOM_STATUSES } from '@/lib/constants'
+import { SubmitButton } from '@/app/components/Pending'
 
 export default async function RoomSettingsPage({
   params,
@@ -122,7 +123,7 @@ export default async function RoomSettingsPage({
           Active — show in the tracker, calendar and booking form
         </label>
         <div className="flex gap-3 pt-1">
-          <button type="submit" className="cd-btn">Save changes</button>
+          <SubmitButton className="cd-btn" busyLabel="Working…">Save changes</SubmitButton>
           <Link href={`/rooms/${id}`} className="cd-btn-sec text-sm">Cancel</Link>
         </div>
       </form>
@@ -133,13 +134,11 @@ export default async function RoomSettingsPage({
             ? `Has ${bookingCount} booking${bookingCount === 1 ? '' : 's'} — deactivate above to retire it.`
             : 'No bookings on record — safe to delete permanently.'}
         </div>
-        <button type="submit" disabled={bookingCount > 0}
+        <SubmitButton disabled={bookingCount > 0}
           className="text-sm px-3 py-1.5 rounded-lg whitespace-nowrap"
           style={bookingCount > 0
             ? { background: 'rgba(45,25,7,0.06)', color: 'rgba(45,25,7,0.35)', cursor: 'not-allowed', border: '1px solid rgba(45,25,7,0.1)' }
-            : { background: 'rgba(177,73,25,0.1)', color: '#B14919', border: '1px solid rgba(177,73,25,0.3)' }}>
-          Delete room
-        </button>
+            : { background: 'rgba(177,73,25,0.1)', color: '#B14919', border: '1px solid rgba(177,73,25,0.3)' }} busyLabel="Working…">Delete room</SubmitButton>
       </form>
     </div>
   )

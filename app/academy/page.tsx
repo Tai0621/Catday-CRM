@@ -7,6 +7,7 @@ import { whatsappUrl } from '@/lib/phone'
 import { SEGMENTS } from '@/lib/segments'
 import { enroll, relinkAttendees } from './actions'
 import Link from 'next/link'
+import { SubmitButton } from '@/app/components/Pending'
 
 // M7 · The Academy as a funnel.
 //
@@ -43,7 +44,7 @@ export default async function AcademyPage({ searchParams }: { searchParams: Prom
         <div className="cd-section-header">
           <h2 className="font-semibold text-sm" style={{ color: '#2D1907' }}>Attendee → customer</h2>
           <form action={relinkAttendees}>
-            <button type="submit" className="text-xs cd-link">Re-match attendees</button>
+            <SubmitButton className="text-xs cd-link" busyLabel="Working…">Re-match attendees</SubmitButton>
           </form>
         </div>
         <div className="px-5 py-4 flex flex-wrap gap-6">
@@ -114,36 +115,38 @@ export default async function AcademyPage({ searchParams }: { searchParams: Prom
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 cd-card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead><tr className="cd-thead">
-              <th className="px-4 py-2 text-left">Student</th>
-              <th className="px-4 py-2 text-left">Course</th>
-              <th className="px-4 py-2 text-left">Enrolled</th>
-              <th className="px-4 py-2 text-left">Since</th>
-            </tr></thead>
-            <tbody className="cd-tbody">
-              {shown.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-8 text-center cd-muted">No enrollments yet</td></tr>
-              )}
-              {shown.map(a => (
-                <tr key={a.id}>
-                  <td className="px-4 py-3">
-                    <div className="font-medium" style={{ color: '#2D1907' }}>
-                      {a.customerId
-                        ? <Link href={`/customers/${a.customerId}`} className="cd-link">{a.studentName}</Link>
-                        : a.studentName}
-                    </div>
-                    <div className="text-xs cd-muted">{a.email}</div>
-                  </td>
-                  <td className="px-4 py-3 cd-muted">{a.course}</td>
-                  <td className="px-4 py-3 cd-muted">{a.enrolledAt.toLocaleDateString('en-MY')}</td>
-                  <td className="px-4 py-3">
-                    <Outcome attendee={a} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="cd-thead">
+                <th className="px-4 py-2 text-left">Student</th>
+                <th className="px-4 py-2 text-left">Course</th>
+                <th className="px-4 py-2 text-left">Enrolled</th>
+                <th className="px-4 py-2 text-left">Since</th>
+              </tr></thead>
+              <tbody className="cd-tbody">
+                {shown.length === 0 && (
+                  <tr><td colSpan={4} className="px-4 py-8 text-center cd-muted">No enrollments yet</td></tr>
+                )}
+                {shown.map(a => (
+                  <tr key={a.id}>
+                    <td className="px-4 py-3">
+                      <div className="font-medium" style={{ color: '#2D1907' }}>
+                        {a.customerId
+                          ? <Link href={`/customers/${a.customerId}`} className="cd-link">{a.studentName}</Link>
+                          : a.studentName}
+                      </div>
+                      <div className="text-xs cd-muted">{a.email}</div>
+                    </td>
+                    <td className="px-4 py-3 cd-muted">{a.course}</td>
+                    <td className="px-4 py-3 cd-muted">{a.enrolledAt.toLocaleDateString('en-MY')}</td>
+                    <td className="px-4 py-3">
+                      <Outcome attendee={a} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="cd-card p-5">
@@ -169,7 +172,7 @@ export default async function AcademyPage({ searchParams }: { searchParams: Prom
               <label className="cd-label">Notes</label>
               <textarea name="notes" rows={2} placeholder="Optional…" className="cd-input" style={{ resize: 'none' }} />
             </div>
-            <button type="submit" className="cd-btn w-full text-center">Enroll Student</button>
+            <SubmitButton className="cd-btn w-full text-center" busyLabel="Working…">Enroll Student</SubmitButton>
             <p className="text-xs cd-muted">
               Matched to an existing customer by phone, then email — that link is what the funnel counts.
             </p>

@@ -4,6 +4,7 @@ import { SEGMENTS } from '@/lib/segments'
 import { aiConfigured } from '@/lib/ai/provider'
 import { generateMonthNow, renarrateDepartment } from './actions'
 import Link from 'next/link'
+import { SubmitButton } from '@/app/components/Pending'
 
 // C9 · The monthly record. Six departments, one closed month at a time.
 //
@@ -41,7 +42,7 @@ export default async function ReportsPage({
         {reports.length === 0 && (
           <form action={generateMonthNow}>
             <input type="hidden" name="month" value={month} />
-            <button type="submit" className="cd-btn text-sm whitespace-nowrap">Generate {month}</button>
+            <SubmitButton className="cd-btn text-sm whitespace-nowrap" busyLabel="Working…">Generate {month}</SubmitButton>
           </form>
         )}
       </div>
@@ -90,7 +91,7 @@ export default async function ReportsPage({
                     <form action={renarrateDepartment}>
                       <input type="hidden" name="month" value={r.month} />
                       <input type="hidden" name="department" value={r.department} />
-                      <button type="submit" className="text-xs cd-btn-sec">Rewrite from the same figures</button>
+                      <SubmitButton className="text-xs cd-btn-sec" busyLabel="Working…">Rewrite from the same figures</SubmitButton>
                     </form>
                   </div>
                 )}

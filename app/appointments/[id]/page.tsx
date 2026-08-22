@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { APPOINTMENT_STATUSES } from '@/lib/constants'
 import { isChangeable } from '@/lib/appointments/schedule'
 import { AppointmentActions } from '../AppointmentActions'
+import { SubmitButton } from '@/app/components/Pending'
 
 export default async function AppointmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAuth()
@@ -76,9 +77,9 @@ export default async function AppointmentDetailPage({ params }: { params: Promis
           </p>
         </div>
         <form action={togglePaid}>
-          <button type="submit" className={appt.paid ? 'cd-btn-sec' : 'cd-btn'}>
+          <SubmitButton className={appt.paid ? 'cd-btn-sec' : 'cd-btn'} busyLabel="Working…">
             {appt.paid ? 'Mark unpaid' : 'Mark paid'}
-          </button>
+          </SubmitButton>
         </form>
       </section>
 
@@ -148,7 +149,7 @@ export default async function AppointmentDetailPage({ params }: { params: Promis
         <form action={addNote} className="space-y-2">
           <textarea name="staffNotes" rows={3} defaultValue={appt.staffNotes ?? ''}
             placeholder="Grooming notes, observations…" className="cd-input" style={{ resize: 'none' }} />
-          <button type="submit" className="cd-btn-sec">Save Notes</button>
+          <SubmitButton className="cd-btn-sec" busyLabel="Working…">Save Notes</SubmitButton>
         </form>
       </section>
 

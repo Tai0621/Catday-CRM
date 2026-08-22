@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ROOM_TYPES } from '@/lib/constants'
+import { SubmitButton } from '@/app/components/Pending'
 
 export default async function NewRoomPage() {
   await requireAuth()
@@ -58,7 +59,7 @@ export default async function NewRoomPage() {
           <input name="description" placeholder="Optional notes about this room" className="cd-input" />
         </div>
         <div className="flex gap-3 pt-1 items-center">
-          <button type="submit" className="cd-btn">Add Room</button>
+          <SubmitButton className="cd-btn" busyLabel="Working…">Add Room</SubmitButton>
           <Link href="/rooms" className="cd-link text-sm">Cancel</Link>
         </div>
       </form>

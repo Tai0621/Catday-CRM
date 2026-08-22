@@ -96,41 +96,43 @@ export default async function TierDetailPage({
 
       {/* Members table */}
       <div className="cd-card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead><tr className="cd-thead">
-            <th>Member</th>
-            <th>Card No.</th>
-            <th>Phone</th>
-            <th>Start</th>
-            <th>Expiry</th>
-            <th>Status</th>
-            <th></th>
-          </tr></thead>
-          <tbody className="cd-tbody">
-            {tier.memberships.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center cd-muted">No members in this tier{status ? ` with status “${status}”` : ''}</td></tr>
-            )}
-            {tier.memberships.map(m => (
-              <tr key={m.id}>
-                <td className="px-4 py-3 font-medium">
-                  <Link href={`/customers/${m.customerId}`} className="cd-link">
-                    {m.customer.name ?? m.customer.phone}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 cd-muted">{m.memberNumber ? `#${String(m.memberNumber).padStart(3, '0')}` : '—'}</td>
-                <td className="px-4 py-3 cd-muted">{m.customer.phone}</td>
-                <td className="px-4 py-3 cd-muted">{m.startDate.toLocaleDateString('en-MY')}</td>
-                <td className="px-4 py-3 cd-muted">{m.expiryDate.toLocaleDateString('en-MY')}</td>
-                <td className="px-4 py-3">
-                  <span className="cd-pill" style={membershipStatusStyle(m.status)}>{m.status}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <Link href={`/memberships/${m.id}`} className="text-xs cd-link">Manage</Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="cd-thead">
+              <th>Member</th>
+              <th>Card No.</th>
+              <th>Phone</th>
+              <th>Start</th>
+              <th>Expiry</th>
+              <th>Status</th>
+              <th></th>
+            </tr></thead>
+            <tbody className="cd-tbody">
+              {tier.memberships.length === 0 && (
+                <tr><td colSpan={7} className="px-4 py-8 text-center cd-muted">No members in this tier{status ? ` with status “${status}”` : ''}</td></tr>
+              )}
+              {tier.memberships.map(m => (
+                <tr key={m.id}>
+                  <td className="px-4 py-3 font-medium">
+                    <Link href={`/customers/${m.customerId}`} className="cd-link">
+                      {m.customer.name ?? m.customer.phone}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 cd-muted">{m.memberNumber ? `#${String(m.memberNumber).padStart(3, '0')}` : '—'}</td>
+                  <td className="px-4 py-3 cd-muted">{m.customer.phone}</td>
+                  <td className="px-4 py-3 cd-muted">{m.startDate.toLocaleDateString('en-MY')}</td>
+                  <td className="px-4 py-3 cd-muted">{m.expiryDate.toLocaleDateString('en-MY')}</td>
+                  <td className="px-4 py-3">
+                    <span className="cd-pill" style={membershipStatusStyle(m.status)}>{m.status}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link href={`/memberships/${m.id}`} className="text-xs cd-link">Manage</Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

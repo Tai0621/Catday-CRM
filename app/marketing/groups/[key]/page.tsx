@@ -9,6 +9,7 @@ import { MARKETING_FREQUENCY_CAP_DAYS } from '@/lib/constants'
 import { revalidatePath } from 'next/cache'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { SubmitButton } from '@/app/components/Pending'
 
 // M10 · One audience, and the worklist for actually reaching it.
 //
@@ -116,9 +117,7 @@ export default async function GroupPage({ params }: { params: Promise<{ key: str
                     <form action={markSent}>
                       <input type="hidden" name="customerId" value={m.id} />
                       <input type="hidden" name="groupKey" value={group.key} />
-                      <button type="submit" className="text-xs px-3 py-1.5 rounded-lg cd-btn-sec">
-                        Mark as sent
-                      </button>
+                      <SubmitButton className="text-xs px-3 py-1.5 rounded-lg cd-btn-sec" busyLabel="Working…">Mark as sent</SubmitButton>
                     </form>
                   </div>
                 </div>

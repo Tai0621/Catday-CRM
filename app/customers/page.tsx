@@ -82,56 +82,58 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       </div>
 
       <div className="cd-card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead><tr className="cd-thead">
-            <th>Name</th>
-            <th>Segment</th>
-            <th>Phone</th>
-            <th>Cats</th>
-            <th>Lifetime (RM)</th>
-            <th>Last Visit</th>
-            <th>Membership</th>
-            <th></th>
-          </tr></thead>
-          <tbody className="cd-tbody">
-            {rows.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-8 text-center cd-muted">No customers found</td></tr>
-            )}
-            {rows.map(({ c, intel }) => (
-              <tr key={c.id}>
-                <td className="px-4 py-3 font-medium" style={{ color: '#2D1907' }}>
-                  {c.name ?? <span className="cd-muted italic">No name</span>}
-                  {owing.get(c.id) && (
-                    <span className="ml-2 cd-pill" style={{ background: 'rgba(177,73,25,0.15)', color: '#B14919', fontWeight: 600 }}>
-                      owes RM {owing.get(c.id)!.toLocaleString('en-MY', { maximumFractionDigits: 0 })}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <span className="cd-pill" style={segmentStyle(intel.segment)}>{intel.segment}</span>
-                </td>
-                <td className="px-4 py-3 cd-muted">{displayPhone(c.phone)}</td>
-                <td className="px-4 py-3 cd-muted">{c.cats.length}</td>
-                <td className="px-4 py-3 font-medium" style={{ color: '#2D1907' }}>{intel.ltv > 0 ? intel.ltv.toFixed(0) : '—'}</td>
-                <td className="px-4 py-3 cd-muted">
-                  {intel.daysSinceLastVisit === null ? 'Never' : intel.daysSinceLastVisit === 0 ? 'Today' : `${intel.daysSinceLastVisit}d ago`}
-                </td>
-                <td className="px-4 py-3">
-                  {c.memberships[0] ? (
-                    <span className="cd-pill" style={{ background: 'rgba(177,73,25,0.15)', color: '#B14919' }}>
-                      {c.memberships[0].tier.name}
-                    </span>
-                  ) : (
-                    <span className="cd-muted text-xs">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <Link href={`/customers/${c.id}`} className="text-xs cd-link">View</Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="cd-thead">
+              <th>Name</th>
+              <th>Segment</th>
+              <th>Phone</th>
+              <th>Cats</th>
+              <th>Lifetime (RM)</th>
+              <th>Last Visit</th>
+              <th>Membership</th>
+              <th></th>
+            </tr></thead>
+            <tbody className="cd-tbody">
+              {rows.length === 0 && (
+                <tr><td colSpan={8} className="px-4 py-8 text-center cd-muted">No customers found</td></tr>
+              )}
+              {rows.map(({ c, intel }) => (
+                <tr key={c.id}>
+                  <td className="px-4 py-3 font-medium" style={{ color: '#2D1907' }}>
+                    {c.name ?? <span className="cd-muted italic">No name</span>}
+                    {owing.get(c.id) && (
+                      <span className="ml-2 cd-pill" style={{ background: 'rgba(177,73,25,0.15)', color: '#B14919', fontWeight: 600 }}>
+                        owes RM {owing.get(c.id)!.toLocaleString('en-MY', { maximumFractionDigits: 0 })}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="cd-pill" style={segmentStyle(intel.segment)}>{intel.segment}</span>
+                  </td>
+                  <td className="px-4 py-3 cd-muted">{displayPhone(c.phone)}</td>
+                  <td className="px-4 py-3 cd-muted">{c.cats.length}</td>
+                  <td className="px-4 py-3 font-medium" style={{ color: '#2D1907' }}>{intel.ltv > 0 ? intel.ltv.toFixed(0) : '—'}</td>
+                  <td className="px-4 py-3 cd-muted">
+                    {intel.daysSinceLastVisit === null ? 'Never' : intel.daysSinceLastVisit === 0 ? 'Today' : `${intel.daysSinceLastVisit}d ago`}
+                  </td>
+                  <td className="px-4 py-3">
+                    {c.memberships[0] ? (
+                      <span className="cd-pill" style={{ background: 'rgba(177,73,25,0.15)', color: '#B14919' }}>
+                        {c.memberships[0].tier.name}
+                      </span>
+                    ) : (
+                      <span className="cd-muted text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link href={`/customers/${c.id}`} className="text-xs cd-link">View</Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {totalPages > 1 && (

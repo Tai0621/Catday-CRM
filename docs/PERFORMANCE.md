@@ -122,3 +122,78 @@ In rough order of payoff, none of it done yet:
   That one is index and aggregate work, not round trips.
 - Server actions could return only what changed instead of revalidating the
   whole route.
+
+## Round 2 (2026-08-21) — the relation fan-out
+
+Same laptop, same demo database, so these are comparable with the numbers above.
+
+### What was found
+
+The first round deduped the reads the dashboard's two aggregators shared. It did
+not touch the thing underneath: **Prisma issues one statement per relation**, so
+
+```ts
+include: { customer: { include: { memberships: { include: { tier } } } },
+           cat: true, room: true }
+```
+
+is not one query, it is six. Five aggregates each carrying their own `include`
+is how a page reads `Customer` five times.
+
+A probe of the role landing pages also found a second slow page that the first
+round missed, because the earlier probe did not cover it:
+
+| page | before | who lands here |
+|---|---|---|
+| `/` | 5952 ms / 63 q | the owner, once a day |
+| **`/actions`** | **5211 ms / 47 q** | **Front Desk, every sign-in** |
+
+`/actions` is the worse of the two in practice.
+
+### What changed
+
+`lib/shared-reads.ts` now reads each entity table **once** into a `Map` and
+stitches the relations in memory. The returned shapes are identical to what the
+`include`s produced, so no caller changed.
+
+```
+                  before          after
+/                 5952ms / 63q    4632ms / 54q     -22%
+/actions          5211ms / 47q    3297ms / 38q     -37%
+/actions summed   46.3s           21.0s            -55%
+
+dashboard stream  shell    108ms      102ms
+                  content 3645ms     2646ms
+                  complete 6277ms    5310ms
+```
+
+Per table on `/actions`: Customer 5→2, Cat 5→3, Membership 2→1, Tier 2→1.
+
+`must()` guards each stitch. `Appointment.customerId` and `.catId` are NOT NULL
+foreign keys and the indexes are unfiltered whole-table reads, so a miss is a
+dangling foreign key rather than a "maybe" — it throws with the offending id
+instead of rendering a card that says `undefined`.
+
+### What was NOT done, and why
+
+**The seven remaining `Appointment` reads are close to optimal.** They are seven
+genuinely different filters and aggregates (today, check-outs today, unpaid,
+whole-table visit history, `_max` last visit, `_count` visits, future bookings).
+Collapsing them into one read means loading every appointment row with every
+column and deriving in memory — which trades away the scaling property the first
+round deliberately bought (cost growing with customer count, not with the length
+of the business's history). Not worth ~300 ms.
+
+**`revalidateTag` does not apply here.** Ticking a checkbox still costs 14
+queries: 2 to write and 12 to redraw. Those twelve are not a stale cache being
+refilled — they are the route rendering again, because these pages read the
+database directly rather than through a cache that could carry a tag. There is
+nothing to invalidate more narrowly. Making that button cheaper means making
+`/runsheet` cheaper, which is the same work as above, not a revalidation change.
+
+### Still open
+
+- The dashboard's dead zone is 102 ms → 2646 ms. Each panel needs its own
+  Suspense boundary and its own read; today they all wait on one
+  `getDashboardData()`.
+- `/finance/income-statement` remains index and aggregate work, not round trips.

@@ -5,6 +5,7 @@ import {
   evaluateBrand, nearestAccessible, parseHex, toHex, rgbToHsl,
   type ContrastCheck,
 } from '@/lib/brand/contrast'
+import { SubmitButton } from '@/app/components/Pending'
 
 // ── C7 · Brand autopilot ─────────────────────────────────────────────────────
 //
@@ -188,7 +189,7 @@ export function BrandStudio({ logoUrl, currentPrimary, currentInk, action }: Pro
           </label>
         )}
 
-        <button type="submit" className="cd-btn text-sm">Save colours</button>
+        <SubmitButton className="cd-btn text-sm" busyLabel="Working…">Save colours</SubmitButton>
       </form>
     </div>
   )

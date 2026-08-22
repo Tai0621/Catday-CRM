@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { buildWall, wallDays, type WallRoom } from '@/lib/boarding-wall'
 import { CabinetUnit, GLASS } from '@/app/components/CabinetUnit'
+import { SubmitButton, SavedAnnouncer } from '@/app/components/Pending'
 
 // The Boarding Wall — the boarding landing page, and now the only rooms tab.
 //
@@ -284,18 +285,20 @@ export default async function BoardingWallPage({ searchParams }: {
                               {r.status === 'Occupied' ? (
                                 <span className="text-xs cd-muted">occupied — set from the stay</span>
                               ) : (
-                                <form action={setRoomStatus} className="flex gap-1 flex-wrap">
+                                <form action={setRoomStatus} className="flex gap-1 flex-wrap items-center">
                                   <input type="hidden" name="roomId" value={r.id} />
                                   {SETTABLE.map(s => (
-                                    <button key={s} name="status" value={s} type="submit"
+                                    <SubmitButton key={s} name="status" value={s}
                                       disabled={r.roomStatus === s}
+                                      aria-label={`Set ${r.name} to ${SETTABLE_LABEL[s]}`}
                                       className="text-xs px-2 py-1 rounded"
                                       style={r.roomStatus === s
                                         ? { background: 'rgba(45,25,7,0.08)', color: 'rgba(45,25,7,0.35)', cursor: 'default', border: '1px solid rgba(45,25,7,0.08)' }
                                         : { background: '#F2EDE0', color: '#2D1907', border: '1px solid rgba(45,25,7,0.2)' }}>
                                       {SETTABLE_LABEL[s]}
-                                    </button>
+                                    </SubmitButton>
                                   ))}
+                                  <SavedAnnouncer label={`${r.name} updated`} />
                                 </form>
                               )}
                             </td>

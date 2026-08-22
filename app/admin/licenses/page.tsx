@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { LICENSE_CATEGORIES, LICENSE_DEFAULT_REMINDER_DAYS } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
+import { SubmitButton } from '@/app/components/Pending'
 
 // Licenses & Renewals (Administrative). Compliance items with an expiry; each
 // surfaces in the Action Inbox `reminderDays` ahead of its renewal date.
@@ -153,14 +154,14 @@ export default async function LicensesPage({ searchParams }: { searchParams: Pro
                     <form action={renew} className="flex items-center gap-1.5">
                       <input type="hidden" name="id" value={l.id} />
                       <input type="date" name="renewalDate" defaultValue={isoDay(plusYear(l.renewalDate))} className="cd-input !py-1 !w-auto text-xs" />
-                      <button type="submit" className="text-xs cd-btn-sec !py-1 !px-2">Renew</button>
+                      <SubmitButton className="text-xs cd-btn-sec !py-1 !px-2" busyLabel="Working…">Renew</SubmitButton>
                     </form>
                   </td>
                   <td className="px-4 py-2.5 text-right whitespace-nowrap">
                     <form action={setArchived} className="inline">
                       <input type="hidden" name="id" value={l.id} />
                       <input type="hidden" name="archived" value="1" />
-                      <button type="submit" className="text-xs cd-link">Archive</button>
+                      <SubmitButton className="text-xs cd-link" busyLabel="Working…">Archive</SubmitButton>
                     </form>
                   </td>
                 </tr>
@@ -214,7 +215,7 @@ export default async function LicensesPage({ searchParams }: { searchParams: Pro
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button type="submit" className="cd-btn">Add licence</button>
+          <SubmitButton className="cd-btn" busyLabel="Working…">Add licence</SubmitButton>
           <span className="text-xs cd-muted">Tip: set a longer lead time for permits that take weeks to process.</span>
         </div>
       </form>
@@ -231,11 +232,11 @@ export default async function LicensesPage({ searchParams }: { searchParams: Pro
                   <form action={setArchived} className="inline">
                     <input type="hidden" name="id" value={l.id} />
                     <input type="hidden" name="archived" value="0" />
-                    <button type="submit" className="text-xs cd-link">Restore</button>
+                    <SubmitButton className="text-xs cd-link" busyLabel="Working…">Restore</SubmitButton>
                   </form>
                   <form action={remove} className="inline">
                     <input type="hidden" name="id" value={l.id} />
-                    <button type="submit" className="text-xs cd-link" style={{ color: '#B14919' }}>Delete</button>
+                    <SubmitButton className="text-xs cd-link" style={{ color: '#B14919' }} busyLabel="Working…">Delete</SubmitButton>
                   </form>
                 </span>
               </div>

@@ -6,6 +6,7 @@ import { recordAudit } from '@/lib/audit'
 import { absoluteUrl } from '@/lib/base-url'
 import { displayPhone, whatsappUrl } from '@/lib/phone'
 import { SEGMENTS } from '@/lib/segments'
+import { SubmitButton } from '@/app/components/Pending'
 
 const OPEN = ['New', 'Reviewing', 'Interview']
 
@@ -94,7 +95,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
                   </select>
                 </div>
                 <input name="notes" defaultValue={a.notes ?? ''} className="cd-input" style={{ flex: 1, minWidth: '10rem' }} placeholder="Internal notes" />
-                <button type="submit" className="cd-btn text-sm">Save</button>
+                <SubmitButton className="cd-btn text-sm" busyLabel="Working…">Save</SubmitButton>
               </form>
             </div>
           ))}

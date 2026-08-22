@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { normalisePhone, displayPhone } from '@/lib/phone'
 import { CUSTOMER_SOURCES } from '@/lib/constants'
 import { consentUpdate } from '@/lib/consent'
+import { SubmitButton } from '@/app/components/Pending'
 
 export default async function NewCustomerPage({
   searchParams,
@@ -91,9 +92,7 @@ export default async function NewCustomerPage({
           Marketing consent given
         </label>
         <div className="flex gap-3 pt-2">
-          <button type="submit" className="bg-rose-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-rose-700">
-            Create Customer
-          </button>
+          <SubmitButton className="bg-rose-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-rose-700" busyLabel="Working…">Create Customer</SubmitButton>
           <a href="/customers" className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">Cancel</a>
         </div>
       </form>

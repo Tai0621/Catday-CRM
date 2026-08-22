@@ -7,6 +7,7 @@ import { ROOM_CONDITIONS, CAT_CONDITIONS, BOARDING_TREATMENT_CHARGE } from '@/li
 import { boardingHealthGate } from '@/lib/health'
 import { SEGMENTS } from '@/lib/segments'
 import { MediaSection } from '@/app/components/MediaSection'
+import { SubmitButton } from '@/app/components/Pending'
 
 // Guided boarding check-in (SOP): confirm health, record room + cat condition,
 // log the belongings the owner brought (photographed), and admit the cat. If
@@ -162,7 +163,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="flex items-center gap-3">
-          <button type="submit" className="cd-btn">Complete check-in</button>
+          <SubmitButton className="cd-btn" busyLabel="Working…">Complete check-in</SubmitButton>
           <Link href="/runsheet" className="cd-btn-sec text-sm">Cancel</Link>
         </div>
       </form>

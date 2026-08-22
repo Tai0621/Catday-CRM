@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ageInDays, saleGate } from '@/lib/cat-stock'
 import { MIN_SALE_AGE_DAYS } from '@/lib/constants'
 import { addLitter } from '../cats/actions'
+import { SubmitButton } from '@/app/components/Pending'
 
 const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '—')
 
@@ -140,7 +141,7 @@ export default async function LittersPage() {
           <div><label className="cd-label">Born</label><input name="bornCount" type="number" min="0" className="cd-input" /></div>
           <div><label className="cd-label">Surviving</label><input name="survivingCount" type="number" min="0" className="cd-input" /></div>
           <div><label className="cd-label">Notes</label><input name="notes" className="cd-input" /></div>
-          <div className="md:col-span-3"><button type="submit" className="cd-btn">Record litter</button></div>
+          <div className="md:col-span-3"><SubmitButton className="cd-btn" busyLabel="Working…">Record litter</SubmitButton></div>
         </form>
       </details>
     </div>

@@ -63,23 +63,25 @@ export default async function TimeClockPage() {
           <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider cd-muted" style={{ borderBottom: '1px solid rgba(45,25,7,0.08)' }}>
             Today
           </div>
-          <table className="w-full text-sm">
-            <tbody className="cd-tbody">
-              {todays.map(e => (
-                <tr key={e.id}>
-                  <td className="px-4 py-2.5" style={{ color: '#2D1907' }}>
-                    {t(e.clockInAt)} → {e.clockOutAt ? t(e.clockOutAt) : <span style={{ color: '#4d6330' }}>now</span>}
-                  </td>
-                  <td className="px-4 py-2.5 text-right cd-muted">{fmtDuration(entryMinutes(e.clockInAt, e.clockOutAt))}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    {e.onPremiseIn === false && (
-                      <span className="cd-pill" style={{ background: 'rgba(177,73,25,0.12)', color: '#B14919' }}>off-site</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <tbody className="cd-tbody">
+                {todays.map(e => (
+                  <tr key={e.id}>
+                    <td className="px-4 py-2.5" style={{ color: '#2D1907' }}>
+                      {t(e.clockInAt)} → {e.clockOutAt ? t(e.clockOutAt) : <span style={{ color: '#4d6330' }}>now</span>}
+                    </td>
+                    <td className="px-4 py-2.5 text-right cd-muted">{fmtDuration(entryMinutes(e.clockInAt, e.clockOutAt))}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      {e.onPremiseIn === false && (
+                        <span className="cd-pill" style={{ background: 'rgba(177,73,25,0.12)', color: '#B14919' }}>off-site</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

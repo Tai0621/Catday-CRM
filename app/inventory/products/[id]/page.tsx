@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { recordStockMovement, isLow, STOCK_REASON_LABELS } from '@/lib/inventory'
 import { recordAudit } from '@/lib/audit'
 import { SEGMENTS } from '@/lib/segments'
+import { SubmitButton } from '@/app/components/Pending'
 
 const rm = (n: number) => `RM ${n.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const intOr = (v: FormDataEntryValue | null, d = 0) => { const n = parseInt((v as string) || '', 10); return Number.isFinite(n) ? n : d }
@@ -78,7 +79,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         </div>
         <div><label className="cd-label">Qty</label><input name="qty" type="number" min="0" defaultValue={0} className="cd-input" style={{ width: '5rem' }} /></div>
         <div className="flex-1" style={{ minWidth: '8rem' }}><label className="cd-label">Note</label><input name="note" className="cd-input" placeholder="e.g. supplier delivery" /></div>
-        <button type="submit" className="cd-btn">Apply</button>
+        <SubmitButton className="cd-btn" busyLabel="Working…">Apply</SubmitButton>
       </form>
 
       {/* Movement history */}
@@ -88,19 +89,21 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           {movements.length === 0 ? (
             <p className="px-4 py-6 text-sm cd-muted text-center">No stock movements yet.</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead><tr className="cd-thead"><th>When</th><th>Change</th><th>Reason</th><th>Ref / note</th></tr></thead>
-              <tbody className="cd-tbody">
-                {movements.map(m => (
-                  <tr key={m.id}>
-                    <td className="px-4 py-2 cd-muted whitespace-nowrap">{m.createdAt.toLocaleDateString('en-MY', { day: '2-digit', month: 'short' })} {m.createdAt.toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}</td>
-                    <td className="px-4 py-2 font-semibold" style={{ color: m.delta >= 0 ? '#4d6330' : '#B14919' }}>{m.delta > 0 ? `+${m.delta}` : m.delta}</td>
-                    <td className="px-4 py-2" style={{ color: '#2D1907' }}>{STOCK_REASON_LABELS[m.reason] ?? m.reason}</td>
-                    <td className="px-4 py-2 cd-muted">{m.reference ?? m.note ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="cd-thead"><th>When</th><th>Change</th><th>Reason</th><th>Ref / note</th></tr></thead>
+                <tbody className="cd-tbody">
+                  {movements.map(m => (
+                    <tr key={m.id}>
+                      <td className="px-4 py-2 cd-muted whitespace-nowrap">{m.createdAt.toLocaleDateString('en-MY', { day: '2-digit', month: 'short' })} {m.createdAt.toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}</td>
+                      <td className="px-4 py-2 font-semibold" style={{ color: m.delta >= 0 ? '#4d6330' : '#B14919' }}>{m.delta > 0 ? `+${m.delta}` : m.delta}</td>
+                      <td className="px-4 py-2" style={{ color: '#2D1907' }}>{STOCK_REASON_LABELS[m.reason] ?? m.reason}</td>
+                      <td className="px-4 py-2 cd-muted">{m.reference ?? m.note ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </section>

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { LEAVE_TYPES } from '@/lib/constants'
 import { leaveDays, isoDay, LEAVE_STATUS_STYLE } from '@/lib/leave'
+import { SubmitButton } from '@/app/components/Pending'
 
 const TEAL = '#729094'
 
@@ -80,7 +81,7 @@ export default async function LeavePage() {
         </div>
         <p className="text-xs cd-muted">Leave “To” blank for a single day.</p>
         <div className="flex justify-end">
-          <button type="submit" className="cd-btn text-sm">Request leave</button>
+          <SubmitButton className="cd-btn text-sm" busyLabel="Working…">Request leave</SubmitButton>
         </div>
       </form>
 
@@ -89,29 +90,31 @@ export default async function LeavePage() {
         {requests.length === 0 ? (
           <p className="px-4 py-6 text-sm cd-muted text-center">No leave requests yet.</p>
         ) : (
-          <table className="w-full text-sm">
-            <tbody className="cd-tbody">
-              {requests.map(r => (
-                <tr key={r.id}>
-                  <td className="px-4 py-2.5" style={{ color: '#2D1907' }}>
-                    <span className="font-medium">{r.type}</span>
-                    <span className="cd-muted"> · {r.startDate}{r.endDate !== r.startDate ? ` → ${r.endDate}` : ''} ({r.days}d)</span>
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    <span className="cd-pill" style={LEAVE_STATUS_STYLE[r.status]}>{r.status}</span>
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    {r.status === 'Pending' && (
-                      <form action={cancelLeave}>
-                        <input type="hidden" name="id" value={r.id} />
-                        <button type="submit" className="text-xs cd-link">Cancel</button>
-                      </form>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <tbody className="cd-tbody">
+                {requests.map(r => (
+                  <tr key={r.id}>
+                    <td className="px-4 py-2.5" style={{ color: '#2D1907' }}>
+                      <span className="font-medium">{r.type}</span>
+                      <span className="cd-muted"> · {r.startDate}{r.endDate !== r.startDate ? ` → ${r.endDate}` : ''} ({r.days}d)</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className="cd-pill" style={LEAVE_STATUS_STYLE[r.status]}>{r.status}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      {r.status === 'Pending' && (
+                        <form action={cancelLeave}>
+                          <input type="hidden" name="id" value={r.id} />
+                          <SubmitButton className="text-xs cd-link" busyLabel="Working…">Cancel</SubmitButton>
+                        </form>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

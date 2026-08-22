@@ -28,6 +28,11 @@ export async function POST(req: Request) {
   const appPassword = process.env.APP_PASSWORD ?? ''
   if (provided && appPassword && safeEqual(provided, appPassword)) {
     token = makeSessionToken({ kind: 'manager', name: 'Owner' })
+    // Read from the Manager role rather than hardcoding, so the owner's landing
+    // and every staff role's come from one place. The dashboard was the landing
+    // and is the slowest page in the OS (5.9s); the brief costs 400ms and is
+    // what the owner actually wants to read first.
+    landing = await homeFor('Manager')
   } else if (provided) {
     // PINs are salted now, so we can't look up by a deterministic hash — verify
     // the PIN against each active staff member's stored hash.

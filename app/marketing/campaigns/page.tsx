@@ -6,6 +6,7 @@ import { SEGMENTS } from '@/lib/segments'
 import { aiConfigured } from '@/lib/ai/provider'
 import { propose, approve, discard, end } from './actions'
 import Link from 'next/link'
+import { SubmitButton } from '@/app/components/Pending'
 
 const iso = (d: Date) => d.toISOString().slice(0, 10)
 
@@ -58,7 +59,7 @@ export default async function CampaignsPage() {
               <input name="to" type="date" required defaultValue={iso(inFourWeeks)} className="cd-input" />
             </div>
           </div>
-          <button type="submit" className="cd-btn text-sm">Propose offers</button>
+          <SubmitButton className="cd-btn text-sm" busyLabel="Working…">Propose offers</SubmitButton>
           <p className="text-xs cd-muted">
             Discounts are capped at {MAX_PROPOSED_DISCOUNT_PCT}%, and an offer aimed at days that are
             already busy is flagged rather than proposed. No revenue forecast is produced — nobody has
@@ -156,13 +157,11 @@ function Card({ campaign, config }: { campaign: Awaited<ReturnType<typeof listCa
             <>
               <form action={approve}>
                 <input type="hidden" name="id" value={campaign.id} />
-                <button type="submit" className="cd-btn text-sm" disabled={!campaign.targetGroupKey}>
-                  Approve
-                </button>
+                <SubmitButton className="cd-btn text-sm" disabled={!campaign.targetGroupKey} busyLabel="Working…">Approve</SubmitButton>
               </form>
               <form action={discard}>
                 <input type="hidden" name="id" value={campaign.id} />
-                <button type="submit" className="text-xs cd-muted hover:underline">Discard</button>
+                <SubmitButton className="text-xs cd-muted hover:underline" busyLabel="Working…">Discard</SubmitButton>
               </form>
               {!campaign.targetGroupKey && (
                 <span className="text-xs" style={{ color: '#B14919' }}>No audience — cannot be approved.</span>
@@ -176,7 +175,7 @@ function Card({ campaign, config }: { campaign: Awaited<ReturnType<typeof listCa
               </Link>
               <form action={end}>
                 <input type="hidden" name="id" value={campaign.id} />
-                <button type="submit" className="text-xs cd-muted hover:underline">End</button>
+                <SubmitButton className="text-xs cd-muted hover:underline" busyLabel="Working…">End</SubmitButton>
               </form>
             </>
           )}

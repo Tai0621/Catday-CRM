@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import { PAY_METHODS } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
+import { SubmitButton } from '@/app/components/Pending'
 
 const DAY = 24 * 60 * 60 * 1000
 const dateKey = (d: Date) =>
@@ -110,7 +111,7 @@ export default async function CashUpPage() {
             <label className="cd-label">Note (explain any variance)</label>
             <input name="note" className="cd-input" defaultValue={existing?.note ?? ''} />
           </div>
-          <button type="submit" className="cd-btn">{existing ? 'Update cash-up' : 'Confirm cash-up'}</button>
+          <SubmitButton className="cd-btn" busyLabel="Saving…">{existing ? 'Update cash-up' : 'Confirm cash-up'}</SubmitButton>
         </div>
         {existing && (
           <p className="text-xs" style={{ color: Math.abs(existing.variance) < 0.01 ? '#5c6b3c' : '#B14919' }}>
@@ -128,22 +129,24 @@ export default async function CashUpPage() {
           {history.length === 0 ? (
             <p className="px-4 py-6 text-sm cd-muted text-center">No cash-ups recorded yet</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead><tr className="cd-thead"><th>Date</th><th>Expected</th><th>Counted</th><th>Variance</th><th>By</th></tr></thead>
-              <tbody className="cd-tbody">
-                {history.map(c => (
-                  <tr key={c.id}>
-                    <td className="px-4 py-2" style={{ color: '#2D1907' }}>{c.date}</td>
-                    <td className="px-4 py-2 cd-muted">RM {c.expectedRM.toFixed(2)}</td>
-                    <td className="px-4 py-2 cd-muted">RM {c.countedRM.toFixed(2)}</td>
-                    <td className="px-4 py-2 font-semibold" style={{ color: Math.abs(c.variance) < 0.01 ? '#5c6b3c' : '#B14919' }}>
-                      {c.variance >= 0 ? '+' : ''}RM {c.variance.toFixed(2)}
-                    </td>
-                    <td className="px-4 py-2 cd-muted">{c.staffName ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="cd-thead"><th>Date</th><th>Expected</th><th>Counted</th><th>Variance</th><th>By</th></tr></thead>
+                <tbody className="cd-tbody">
+                  {history.map(c => (
+                    <tr key={c.id}>
+                      <td className="px-4 py-2" style={{ color: '#2D1907' }}>{c.date}</td>
+                      <td className="px-4 py-2 cd-muted">RM {c.expectedRM.toFixed(2)}</td>
+                      <td className="px-4 py-2 cd-muted">RM {c.countedRM.toFixed(2)}</td>
+                      <td className="px-4 py-2 font-semibold" style={{ color: Math.abs(c.variance) < 0.01 ? '#5c6b3c' : '#B14919' }}>
+                        {c.variance >= 0 ? '+' : ''}RM {c.variance.toFixed(2)}
+                      </td>
+                      <td className="px-4 py-2 cd-muted">{c.staffName ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </section>

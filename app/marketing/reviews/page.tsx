@@ -8,6 +8,7 @@ import { MARKETING_FREQUENCY_CAP_DAYS } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
 import { createReviewRequest } from './actions'
 import Link from 'next/link'
+import { SubmitButton } from '@/app/components/Pending'
 
 const DAY = 24 * 60 * 60 * 1000
 const pct = (n: number) => `${Math.round(n * 100)}%`
@@ -118,7 +119,7 @@ export default async function ReviewsPage() {
                 <form action={createReviewRequest}>
                   <input type="hidden" name="customerId" value={a.customer.id} />
                   <input type="hidden" name="appointmentId" value={a.id} />
-                  <button type="submit" className="text-xs px-3 py-1.5 rounded-lg cd-btn">Create request</button>
+                  <SubmitButton className="text-xs px-3 py-1.5 rounded-lg cd-btn" busyLabel="Working…">Create request</SubmitButton>
                 </form>
               </div>
             ))}

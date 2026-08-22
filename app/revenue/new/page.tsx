@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import { REVENUE_CATEGORIES } from '@/lib/constants'
 import { NOT_HOUSE } from '@/lib/cat-stock'
+import { SubmitButton } from '@/app/components/Pending'
 
 export default async function NewTransactionPage() {
   await requireAuth()
@@ -61,7 +62,7 @@ export default async function NewTransactionPage() {
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
         </div>
         <div className="flex gap-3 pt-2">
-          <button type="submit" className="bg-rose-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-rose-700">Save</button>
+          <SubmitButton className="bg-rose-600 text-white px-5 py-2 rounded-lg text-sm hover:bg-rose-700" busyLabel="Working…">Save</SubmitButton>
           <a href="/revenue" className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">Cancel</a>
         </div>
       </form>

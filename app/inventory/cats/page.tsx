@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { stockList, saleGate, ageLabel, lifeStageFor, desexLabel, CAT_BREEDS } from '@/lib/cat-stock'
 import { CAT_STOCK_ROLES, CAT_STOCK_STATUSES, CAT_STOCK_STATUS_LABELS, CAT_STOCK_ROLE_HINTS, CAT_COST_CATEGORIES, GENDERS } from '@/lib/constants'
 import { addStockCat, addCostBatch } from './actions'
+import { SubmitButton } from '@/app/components/Pending'
 
 const rm = (n: number | null) => (n == null ? '—' : `RM ${n.toLocaleString('en-MY', { maximumFractionDigits: 0 })}`)
 
@@ -95,7 +96,7 @@ export default async function CatInventoryPage({ searchParams }: {
           <input type="checkbox" name="ready" value="1" defaultChecked={ready === '1'} />
           Ready to sell
         </label>
-        <button type="submit" className="cd-btn-sec">Filter</button>
+        <SubmitButton className="cd-btn-sec" busyLabel="Working…">Filter</SubmitButton>
       </form>
 
       <div className="cd-card overflow-hidden">
@@ -178,7 +179,7 @@ export default async function CatInventoryPage({ searchParams }: {
           <div><label className="cd-label">Next vaccine due</label><input name="vaccinationExpiry" type="date" className="cd-input" /></div>
           <div><label className="cd-label">Desexed on</label><input name="desexedAt" type="date" className="cd-input" /></div>
           <div className="md:col-span-3"><label className="cd-label">Notes</label><input name="notes" className="cd-input" /></div>
-          <div className="md:col-span-3"><button type="submit" className="cd-btn">Add to inventory</button></div>
+          <div className="md:col-span-3"><SubmitButton className="cd-btn" busyLabel="Working…">Add to inventory</SubmitButton></div>
         </form>
       </details>
 
@@ -221,7 +222,7 @@ export default async function CatInventoryPage({ searchParams }: {
               ))}
             </div>
           </div>
-          <button type="submit" className="cd-btn">Record against the ticked cats</button>
+          <SubmitButton className="cd-btn" busyLabel="Working…">Record against the ticked cats</SubmitButton>
         </form>
       </details>
 

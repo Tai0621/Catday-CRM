@@ -11,6 +11,7 @@ import {
   updateStock, reserveCat, releaseReservation, exitCat, undoExit,
   addCost, deleteCost, assignRoom, setLitter,
 } from '../actions'
+import { SubmitButton } from '@/app/components/Pending'
 
 const rm = (n: number | null | undefined) => (n == null ? '—' : `RM ${n.toLocaleString('en-MY', { maximumFractionDigits: 0 })}`)
 const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '')
@@ -126,7 +127,7 @@ export default async function CatStockPage({ params, searchParams }: {
         <div><label className="cd-label">Microchip no.</label><input name="microchipNo" defaultValue={stock.microchipNo ?? ''} className="cd-input" /></div>
         <div><label className="cd-label">Registration no.</label><input name="registrationNo" defaultValue={stock.registrationNo ?? ''} className="cd-input" /></div>
         <div className="md:col-span-3"><label className="cd-label">Notes</label><input name="notes" defaultValue={stock.notes ?? ''} className="cd-input" /></div>
-        <div className="md:col-span-3"><button type="submit" className="cd-btn-sec">Save</button></div>
+        <div className="md:col-span-3"><SubmitButton className="cd-btn-sec" busyLabel="Working…">Save</SubmitButton></div>
       </form>
 
       {/* Where it lives */}
@@ -146,7 +147,7 @@ export default async function CatStockPage({ params, searchParams }: {
               {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
-          <button type="submit" className="cd-btn-sec">Set room</button>
+          <SubmitButton className="cd-btn-sec" busyLabel="Working…">Set room</SubmitButton>
         </form>
       </div>
 
@@ -166,7 +167,7 @@ export default async function CatStockPage({ params, searchParams }: {
               </p>
               <form action={releaseReservation}>
                 <input type="hidden" name="id" value={stock.id} />
-                <button type="submit" className="cd-btn-sec">Release hold</button>
+                <SubmitButton className="cd-btn-sec" busyLabel="Working…">Release hold</SubmitButton>
               </form>
             </>
           ) : (
@@ -181,7 +182,7 @@ export default async function CatStockPage({ params, searchParams }: {
               </div>
               <div><label className="cd-label">Deposit (RM)</label><input name="depositRM" type="number" min="0" step="1" className="cd-input" style={{ width: '6rem' }} /></div>
               <div><label className="cd-label">Until</label><input name="reservedUntil" type="date" className="cd-input" style={{ width: 'auto' }} /></div>
-              <button type="submit" className="cd-btn-sec">Reserve</button>
+              <SubmitButton className="cd-btn-sec" busyLabel="Working…">Reserve</SubmitButton>
             </form>
           )}
         </div>
@@ -197,25 +198,27 @@ export default async function CatStockPage({ params, searchParams }: {
           </p>
         </div>
         {stock.costs.length > 0 && (
-          <table className="w-full text-sm">
-            <thead><tr className="cd-thead"><th>Date</th><th>Category</th><th>Vendor</th><th>Amount</th><th></th></tr></thead>
-            <tbody className="cd-tbody">
-              {stock.costs.map(c => (
-                <tr key={c.id}>
-                  <td className="px-4 py-2 cd-muted whitespace-nowrap">{day(c.date)}</td>
-                  <td className="px-4 py-2">{c.category}{c.batchId && <span className="cd-muted text-xs"> · batch</span>}</td>
-                  <td className="px-4 py-2 cd-muted">{c.vendor ?? '—'}</td>
-                  <td className="px-4 py-2 whitespace-nowrap">{rm(c.amountRM)}</td>
-                  <td className="px-4 py-2 text-right">
-                    <form action={deleteCost}>
-                      <input type="hidden" name="id" value={c.id} />
-                      <button type="submit" className="text-xs cd-link">Remove</button>
-                    </form>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="cd-thead"><th>Date</th><th>Category</th><th>Vendor</th><th>Amount</th><th></th></tr></thead>
+              <tbody className="cd-tbody">
+                {stock.costs.map(c => (
+                  <tr key={c.id}>
+                    <td className="px-4 py-2 cd-muted whitespace-nowrap">{day(c.date)}</td>
+                    <td className="px-4 py-2">{c.category}{c.batchId && <span className="cd-muted text-xs"> · batch</span>}</td>
+                    <td className="px-4 py-2 cd-muted">{c.vendor ?? '—'}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">{rm(c.amountRM)}</td>
+                    <td className="px-4 py-2 text-right">
+                      <form action={deleteCost}>
+                        <input type="hidden" name="id" value={c.id} />
+                        <SubmitButton className="text-xs cd-link" busyLabel="Working…">Remove</SubmitButton>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
         <form action={addCost} className="flex flex-wrap items-end gap-2">
           <input type="hidden" name="catStockId" value={stock.id} />
@@ -228,7 +231,7 @@ export default async function CatStockPage({ params, searchParams }: {
           </div>
           <div><label className="cd-label">Amount (RM)</label><input name="amountRM" type="number" min="0" step="0.5" className="cd-input" style={{ width: '6rem' }} /></div>
           <div><label className="cd-label">Vendor</label><input name="vendor" className="cd-input" style={{ width: '9rem' }} /></div>
-          <button type="submit" className="cd-btn-sec">Add cost</button>
+          <SubmitButton className="cd-btn-sec" busyLabel="Working…">Add cost</SubmitButton>
         </form>
       </div>
 
@@ -242,7 +245,7 @@ export default async function CatStockPage({ params, searchParams }: {
             {litters.map(l => <option key={l.id} value={l.id}>{l.code}</option>)}
           </select>
         </div>
-        <button type="submit" className="cd-btn-sec">Save litter</button>
+        <SubmitButton className="cd-btn-sec" busyLabel="Working…">Save litter</SubmitButton>
         <Link href="/inventory/litters" className="cd-link text-sm pb-2">Manage litters →</Link>
       </form>
 
@@ -259,7 +262,7 @@ export default async function CatStockPage({ params, searchParams }: {
             {stock.status !== 'Sold' && (
               <form action={undoExit}>
                 <input type="hidden" name="id" value={stock.id} />
-                <button type="submit" className="cd-btn-sec">Undo — return to stock</button>
+                <SubmitButton className="cd-btn-sec" busyLabel="Working…">Undo — return to stock</SubmitButton>
               </form>
             )}
             {stock.status === 'Sold' && (
@@ -291,7 +294,7 @@ export default async function CatStockPage({ params, searchParams }: {
               </div>
               <div><label className="cd-label">Fee (RM)</label><input name="saleRM" type="number" min="0" step="1" className="cd-input" style={{ width: '5.5rem' }} /></div>
               <div className="flex-1" style={{ minWidth: '10rem' }}><label className="cd-label">Reason</label><input name="exitReason" className="cd-input" /></div>
-              <button type="submit" className="cd-btn-sec">Record</button>
+              <SubmitButton className="cd-btn-sec" busyLabel="Working…">Record</SubmitButton>
             </form>
           </>
         )}

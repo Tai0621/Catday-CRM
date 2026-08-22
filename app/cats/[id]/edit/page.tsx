@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { LIFE_STAGES, GENDERS, DIET_TYPES } from '@/lib/constants'
 import { NOT_HOUSE } from '@/lib/cat-stock'
+import { SubmitButton } from '@/app/components/Pending'
 
 const COAT_TYPES = ['Short', 'Long']
 const asDate = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '')
@@ -175,7 +176,7 @@ export default async function EditCatPage({ params }: { params: Promise<{ id: st
           <textarea name="healthNotes" rows={2} defaultValue={cat.healthNotes ?? ''} placeholder="Allergies, conditions…" className="cd-input" />
         </div>
         <div className="flex gap-3 pt-1">
-          <button type="submit" className="cd-btn">Save changes</button>
+          <SubmitButton className="cd-btn" busyLabel="Working…">Save changes</SubmitButton>
           <Link href={`/cats/${id}`} className="cd-btn-sec text-sm">Cancel</Link>
         </div>
       </form>

@@ -132,62 +132,64 @@ export default async function AppointmentsPage({
         <section key={group.dayKey} className="space-y-1.5">
           <DayHeading dayKey={group.dayKey} todayKey={todayKey} count={group.items.length} timezone={timezone} />
           <div className="cd-card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead><tr className="cd-thead">
-                <th>Time</th><th>Cat</th><th>Customer</th><th>Type</th>
-                <th>Room</th><th>Status</th><th>Price</th><th></th>
-              </tr></thead>
-              <tbody className="cd-tbody">
-                {group.items.map(a => (
-                  <tr key={a.id}>
-                    <td className="px-4 py-3 font-medium whitespace-nowrap" style={{ color: '#2D1907' }}>
-                      {zonedTime(a.scheduledAt, timezone)}
-                      {a.type === 'Boarding' && a.endsAt && (
-                        <span className="cd-muted font-normal"> → {zonedDayKey(a.endsAt, timezone).slice(5)}</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3" style={{ color: '#2D1907' }}>{a.cat.name}</td>
-                    <td className="px-4 py-3 cd-muted">{a.customer.name ?? a.customer.phone}</td>
-                    <td className="px-4 py-3">
-                      <span className="cd-pill" style={apptTypeStyle(a.type)}>{a.type}</span>
-                    </td>
-                    <td className="px-4 py-3 cd-muted">{a.room?.name ?? '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className="cd-pill" style={apptStatusStyle(a.status)}>{a.status}</span>
-                      {a.rescheduledAt && (
-                        <span className="text-xs cd-muted block mt-0.5">moved</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 cd-muted whitespace-nowrap">
-                      {a.price != null ? `RM ${a.price.toFixed(2)}` : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2 justify-end">
-                        <Link href={`/appointments/${a.id}`} className="text-xs cd-link">View</Link>
-                        {isChangeable(a.status) && (
-                          <AppointmentActions
-                            appointment={{
-                              id: a.id,
-                              type: a.type,
-                              catName: a.cat.name,
-                              status: a.status,
-                              scheduledAt: a.scheduledAt.toISOString(),
-                              endsAt: a.endsAt?.toISOString() ?? null,
-                              price: a.price,
-                              roomId: a.roomId,
-                              depositRM: a.depositRM,
-                              serviceName: a.service?.name ?? null,
-                              durationMin: a.service?.durationMin ?? null,
-                              unitPrice: a.service?.price ?? null,
-                            }}
-                          />
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="cd-thead">
+                  <th>Time</th><th>Cat</th><th>Customer</th><th>Type</th>
+                  <th>Room</th><th>Status</th><th>Price</th><th></th>
+                </tr></thead>
+                <tbody className="cd-tbody">
+                  {group.items.map(a => (
+                    <tr key={a.id}>
+                      <td className="px-4 py-3 font-medium whitespace-nowrap" style={{ color: '#2D1907' }}>
+                        {zonedTime(a.scheduledAt, timezone)}
+                        {a.type === 'Boarding' && a.endsAt && (
+                          <span className="cd-muted font-normal"> → {zonedDayKey(a.endsAt, timezone).slice(5)}</span>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </td>
+                      <td className="px-4 py-3" style={{ color: '#2D1907' }}>{a.cat.name}</td>
+                      <td className="px-4 py-3 cd-muted">{a.customer.name ?? a.customer.phone}</td>
+                      <td className="px-4 py-3">
+                        <span className="cd-pill" style={apptTypeStyle(a.type)}>{a.type}</span>
+                      </td>
+                      <td className="px-4 py-3 cd-muted">{a.room?.name ?? '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className="cd-pill" style={apptStatusStyle(a.status)}>{a.status}</span>
+                        {a.rescheduledAt && (
+                          <span className="text-xs cd-muted block mt-0.5">moved</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 cd-muted whitespace-nowrap">
+                        {a.price != null ? `RM ${a.price.toFixed(2)}` : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 justify-end">
+                          <Link href={`/appointments/${a.id}`} className="text-xs cd-link">View</Link>
+                          {isChangeable(a.status) && (
+                            <AppointmentActions
+                              appointment={{
+                                id: a.id,
+                                type: a.type,
+                                catName: a.cat.name,
+                                status: a.status,
+                                scheduledAt: a.scheduledAt.toISOString(),
+                                endsAt: a.endsAt?.toISOString() ?? null,
+                                price: a.price,
+                                roomId: a.roomId,
+                                depositRM: a.depositRM,
+                                serviceName: a.service?.name ?? null,
+                                durationMin: a.service?.durationMin ?? null,
+                                unitPrice: a.service?.price ?? null,
+                              }}
+                            />
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       ))}

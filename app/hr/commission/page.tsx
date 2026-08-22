@@ -6,6 +6,7 @@ import { computeCommission, setCommissionDefault } from '@/lib/commission'
 import { recordAudit } from '@/lib/audit'
 import { GROOMING_APPT_TYPES } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
+import { SubmitButton } from '@/app/components/Pending'
 
 const rm = (n: number) => `RM ${n.toFixed(2)}`
 const monthLabel = (m: string) => { const [y, mo] = m.split('-').map(Number); return new Date(y, mo - 1, 1).toLocaleDateString('en-MY', { month: 'long', year: 'numeric' }) }
@@ -155,7 +156,7 @@ export default async function CommissionPage({ searchParams }: { searchParams: P
             </div>
           </div>
           <div className="flex justify-end">
-            <button type="submit" className="cd-btn text-sm">Save rates</button>
+            <SubmitButton className="cd-btn text-sm" busyLabel="Working…">Save rates</SubmitButton>
           </div>
         </form>
       </section>

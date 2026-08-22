@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { normalisePhone } from '@/lib/phone'
 import { CUSTOMER_SOURCES, CUSTOMER_LANGUAGES } from '@/lib/constants'
 import { consentUpdate } from '@/lib/consent'
+import { SubmitButton } from '@/app/components/Pending'
 
 export default async function EditCustomerPage({
   params, searchParams,
@@ -101,7 +102,7 @@ export default async function EditCustomerPage({
           Marketing consent given
         </label>
         <div className="flex gap-3 pt-1">
-          <button type="submit" className="cd-btn">Save changes</button>
+          <SubmitButton className="cd-btn" busyLabel="Working…">Save changes</SubmitButton>
           <Link href={`/customers/${id}`} className="cd-btn-sec text-sm">Cancel</Link>
         </div>
       </form>

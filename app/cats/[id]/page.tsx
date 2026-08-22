@@ -10,6 +10,7 @@ import { MediaSection } from '@/app/components/MediaSection'
 import { listMediaFor } from '@/lib/media'
 import { GROOM_MEDIA_TAGS, GROOMING_APPT_TYPES } from '@/lib/constants'
 import { boardingHealthGate, mealsPerDayFor, type HealthStatus } from '@/lib/health'
+import { SubmitButton } from '@/app/components/Pending'
 
 export default async function CatDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAuth()
@@ -224,7 +225,7 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
             <input name="vaccinationExpiry" type="date"
               defaultValue={cat.vaccinationExpiry ? cat.vaccinationExpiry.toISOString().split('T')[0] : ''}
               className="cd-input" style={{ width: 'auto' }} />
-            <button type="submit" className="cd-btn-sec text-sm">Save</button>
+            <SubmitButton className="cd-btn-sec text-sm" busyLabel="Working…">Save</SubmitButton>
           </form>
         </div>
 
@@ -237,7 +238,7 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
               <div className="text-xs cd-muted">{cat.lastDewormAt ? `Last ${cat.lastDewormAt.toLocaleDateString('en-MY')}` : 'Not recorded'}</div>
             </div>
           </div>
-          <form action={markDeworm}><button type="submit" className="cd-btn-sec text-sm">Mark done today</button></form>
+          <form action={markDeworm}><SubmitButton className="cd-btn-sec text-sm" busyLabel="Working…">Mark done today</SubmitButton></form>
         </div>
 
         {/* Deflea — last done + monthly interval */}
@@ -249,7 +250,7 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
               <div className="text-xs cd-muted">{cat.lastDefleaAt ? `Last ${cat.lastDefleaAt.toLocaleDateString('en-MY')}` : 'Not recorded'}</div>
             </div>
           </div>
-          <form action={markDeflea}><button type="submit" className="cd-btn-sec text-sm">Mark done today</button></form>
+          <form action={markDeflea}><SubmitButton className="cd-btn-sec text-sm" busyLabel="Working…">Mark done today</SubmitButton></form>
         </div>
 
         {/* Feeding profile (edited on the Edit page) */}
@@ -280,7 +281,7 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
           <input name="foundingNumber" type="number" min="1" max={FOUNDER_CIRCLE_LIMIT}
             defaultValue={cat.foundingNumber ?? nextFounding ?? ''}
             className="cd-input" style={{ width: '6rem' }} />
-          <button type="submit" className="cd-btn-sec text-sm">Save</button>
+          <SubmitButton className="cd-btn-sec text-sm" busyLabel="Working…">Save</SubmitButton>
         </form>
       </div>
 
@@ -339,23 +340,25 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
             {/* Older ones as a compact table */}
             {cat.assessments.length > 1 && (
               <div className="cd-card overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead><tr className="cd-thead">
-                    <th>Date</th><th>Skin</th><th>Coat</th><th>Stress</th><th>Weight</th><th>Cycle</th>
-                  </tr></thead>
-                  <tbody className="cd-tbody">
-                    {cat.assessments.slice(1).map(a => (
-                      <tr key={a.id}>
-                        <td className="px-4 py-2" style={{ color: '#2D1907' }}>{a.createdAt.toLocaleDateString('en-MY')}</td>
-                        <td className="px-4 py-2 cd-muted">{a.skinCondition ?? '—'}</td>
-                        <td className="px-4 py-2 cd-muted">{a.coatCondition ?? '—'}</td>
-                        <td className="px-4 py-2 cd-muted">{a.stressLevel ?? '—'}</td>
-                        <td className="px-4 py-2 cd-muted">{a.weightKg ? `${a.weightKg} kg` : '—'}</td>
-                        <td className="px-4 py-2 cd-muted">{a.rebookDays ? `${a.rebookDays}d` : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr className="cd-thead">
+                      <th>Date</th><th>Skin</th><th>Coat</th><th>Stress</th><th>Weight</th><th>Cycle</th>
+                    </tr></thead>
+                    <tbody className="cd-tbody">
+                      {cat.assessments.slice(1).map(a => (
+                        <tr key={a.id}>
+                          <td className="px-4 py-2" style={{ color: '#2D1907' }}>{a.createdAt.toLocaleDateString('en-MY')}</td>
+                          <td className="px-4 py-2 cd-muted">{a.skinCondition ?? '—'}</td>
+                          <td className="px-4 py-2 cd-muted">{a.coatCondition ?? '—'}</td>
+                          <td className="px-4 py-2 cd-muted">{a.stressLevel ?? '—'}</td>
+                          <td className="px-4 py-2 cd-muted">{a.weightKg ? `${a.weightKg} kg` : '—'}</td>
+                          <td className="px-4 py-2 cd-muted">{a.rebookDays ? `${a.rebookDays}d` : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>
@@ -369,28 +372,30 @@ export default async function CatDetailPage({ params }: { params: Promise<{ id: 
           {cat.appointments.length === 0 ? (
             <p className="px-4 py-6 text-sm cd-muted text-center">No appointments yet</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead><tr className="cd-thead">
-                <th>Date</th>
-                <th>Type</th>
-                <th>Room</th>
-                <th>Status</th>
-                <th>Price</th>
-              </tr></thead>
-              <tbody className="cd-tbody">
-                {cat.appointments.map(a => (
-                  <tr key={a.id}>
-                    <td className="px-4 py-2" style={{ color: '#2D1907' }}>{a.scheduledAt.toLocaleDateString('en-MY')}</td>
-                    <td className="px-4 py-2 cd-muted">{a.type}</td>
-                    <td className="px-4 py-2 cd-muted">{a.room?.name ?? '—'}</td>
-                    <td className="px-4 py-2">
-                      <span className="cd-pill" style={apptStatusStyle(a.status)}>{a.status}</span>
-                    </td>
-                    <td className="px-4 py-2 cd-muted">{a.price != null ? `RM ${a.price.toFixed(2)}` : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="cd-thead">
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Room</th>
+                  <th>Status</th>
+                  <th>Price</th>
+                </tr></thead>
+                <tbody className="cd-tbody">
+                  {cat.appointments.map(a => (
+                    <tr key={a.id}>
+                      <td className="px-4 py-2" style={{ color: '#2D1907' }}>{a.scheduledAt.toLocaleDateString('en-MY')}</td>
+                      <td className="px-4 py-2 cd-muted">{a.type}</td>
+                      <td className="px-4 py-2 cd-muted">{a.room?.name ?? '—'}</td>
+                      <td className="px-4 py-2">
+                        <span className="cd-pill" style={apptStatusStyle(a.status)}>{a.status}</span>
+                      </td>
+                      <td className="px-4 py-2 cd-muted">{a.price != null ? `RM ${a.price.toFixed(2)}` : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </section>

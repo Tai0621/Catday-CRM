@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 import { SERVICE_CATEGORIES } from '@/lib/constants'
 import { apptTypeStyle } from '@/lib/segments'
+import { SubmitButton } from '@/app/components/Pending'
 
 // The service menu is the single source of truth for prices and durations —
 // bookings, the slot engine and billing all read from here.
@@ -76,41 +77,43 @@ export default async function ServicesPage() {
           <label className="cd-label">Price (RM)</label>
           <input name="price" type="number" min="0" step="1" defaultValue="100" className="cd-input" style={{ width: '6rem' }} />
         </div>
-        <button type="submit" className="cd-btn">Add</button>
+        <SubmitButton className="cd-btn" busyLabel="Working…">Add</SubmitButton>
       </form>
 
       <div className="cd-card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead><tr className="cd-thead">
-            <th>Service</th><th>Category</th><th>Duration</th><th>Price</th><th></th><th></th>
-          </tr></thead>
-          <tbody className="cd-tbody">
-            {services.map(s => (
-              <tr key={s.id} style={s.active ? undefined : { opacity: 0.45 }}>
-                <td className="px-4 py-2.5 font-medium" style={{ color: '#2D1907' }}>{s.name}</td>
-                <td className="px-4 py-2.5">
-                  <span className="cd-pill" style={apptTypeStyle(s.category)}>{s.category}</span>
-                </td>
-                <td className="px-4 py-2.5" colSpan={2}>
-                  <form action={updateService} className="flex items-center gap-1.5">
-                    <input type="hidden" name="id" value={s.id} />
-                    <input name="durationMin" type="number" min="0" step="15" defaultValue={s.durationMin} className="cd-input" style={{ width: '5rem' }} />
-                    <span className="cd-muted text-xs">min · RM</span>
-                    <input name="price" type="number" min="0" step="1" defaultValue={s.price} className="cd-input" style={{ width: '5.5rem' }} />
-                    <button type="submit" className="cd-btn-sec text-xs">Save</button>
-                  </form>
-                </td>
-                <td className="px-4 py-2.5"></td>
-                <td className="px-4 py-2.5 text-right">
-                  <form action={toggleService}>
-                    <input type="hidden" name="id" value={s.id} />
-                    <button type="submit" className="text-xs cd-link">{s.active ? 'Retire' : 'Restore'}</button>
-                  </form>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="cd-thead">
+              <th>Service</th><th>Category</th><th>Duration</th><th>Price</th><th></th><th></th>
+            </tr></thead>
+            <tbody className="cd-tbody">
+              {services.map(s => (
+                <tr key={s.id} style={s.active ? undefined : { opacity: 0.45 }}>
+                  <td className="px-4 py-2.5 font-medium" style={{ color: '#2D1907' }}>{s.name}</td>
+                  <td className="px-4 py-2.5">
+                    <span className="cd-pill" style={apptTypeStyle(s.category)}>{s.category}</span>
+                  </td>
+                  <td className="px-4 py-2.5" colSpan={2}>
+                    <form action={updateService} className="flex items-center gap-1.5">
+                      <input type="hidden" name="id" value={s.id} />
+                      <input name="durationMin" type="number" min="0" step="15" defaultValue={s.durationMin} className="cd-input" style={{ width: '5rem' }} />
+                      <span className="cd-muted text-xs">min · RM</span>
+                      <input name="price" type="number" min="0" step="1" defaultValue={s.price} className="cd-input" style={{ width: '5.5rem' }} />
+                      <SubmitButton className="cd-btn-sec text-xs" busyLabel="Working…">Save</SubmitButton>
+                    </form>
+                  </td>
+                  <td className="px-4 py-2.5"></td>
+                  <td className="px-4 py-2.5 text-right">
+                    <form action={toggleService}>
+                      <input type="hidden" name="id" value={s.id} />
+                      <SubmitButton className="text-xs cd-link" busyLabel="…">{s.active ? 'Retire' : 'Restore'}</SubmitButton>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { isoDay, coversDay, LEAVE_STATUS_STYLE } from '@/lib/leave'
 import { recordAudit } from '@/lib/audit'
 import { SEGMENTS } from '@/lib/segments'
+import { SubmitButton } from '@/app/components/Pending'
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -72,8 +73,8 @@ export default async function LeaveAdminPage() {
                   <div className="text-xs cd-muted">{r.startDate}{r.endDate !== r.startDate ? ` → ${r.endDate}` : ''} ({r.days} day{r.days === 1 ? '' : 's'}){r.reason ? ` · ${r.reason}` : ''}</div>
                 </div>
                 <div className="flex gap-2">
-                  <form action={review}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="Approved" /><button className="cd-btn text-sm">Approve</button></form>
-                  <form action={review}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="Rejected" /><button className="cd-btn-sec text-sm">Reject</button></form>
+                  <form action={review}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="Approved" /><SubmitButton className="cd-btn text-sm" busyLabel="Working…">Approve</SubmitButton></form>
+                  <form action={review}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="Rejected" /><SubmitButton className="cd-btn-sec text-sm" busyLabel="Working…">Reject</SubmitButton></form>
                 </div>
               </div>
             ))}
@@ -115,18 +116,20 @@ export default async function LeaveAdminPage() {
       <section>
         <h2 className="font-semibold mb-3" style={{ color: '#2D1907' }}>Recent requests</h2>
         <div className="cd-card overflow-hidden">
-          <table className="w-full text-sm">
-            <tbody className="cd-tbody">
-              {recent.map(r => (
-                <tr key={r.id}>
-                  <td className="px-4 py-2.5" style={{ color: '#2D1907' }}>{r.staff.name}</td>
-                  <td className="px-4 py-2.5 cd-muted">{r.type} · {r.startDate}{r.endDate !== r.startDate ? ` → ${r.endDate}` : ''}</td>
-                  <td className="px-4 py-2.5 text-right"><span className="cd-pill" style={LEAVE_STATUS_STYLE[r.status]}>{r.status}</span></td>
-                </tr>
-              ))}
-              {recent.length === 0 && <tr><td className="px-4 py-6 text-sm cd-muted text-center" colSpan={3}>No requests yet.</td></tr>}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <tbody className="cd-tbody">
+                {recent.map(r => (
+                  <tr key={r.id}>
+                    <td className="px-4 py-2.5" style={{ color: '#2D1907' }}>{r.staff.name}</td>
+                    <td className="px-4 py-2.5 cd-muted">{r.type} · {r.startDate}{r.endDate !== r.startDate ? ` → ${r.endDate}` : ''}</td>
+                    <td className="px-4 py-2.5 text-right"><span className="cd-pill" style={LEAVE_STATUS_STYLE[r.status]}>{r.status}</span></td>
+                  </tr>
+                ))}
+                {recent.length === 0 && <tr><td className="px-4 py-6 text-sm cd-muted text-center" colSpan={3}>No requests yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </div>

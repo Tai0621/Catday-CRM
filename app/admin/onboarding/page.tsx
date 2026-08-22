@@ -5,6 +5,7 @@ import { EXPENSE_CATEGORIES } from '@/lib/finance-categories'
 import { SEGMENTS } from '@/lib/segments'
 import { aiConfigured } from '@/lib/ai/provider'
 import { generate, commit } from './actions'
+import { SubmitButton } from '@/app/components/Pending'
 
 // C6 · Generative onboarding.
 //
@@ -64,9 +65,9 @@ export default async function OnboardingPage() {
               The more specific the prices, room count and opening hours, the less there is to correct.
             </p>
           </div>
-          <button type="submit" className="cd-btn text-sm">
+          <SubmitButton className="cd-btn text-sm" busyLabel="Working…">
             {stored ? 'Generate a new plan' : 'Generate the starting configuration'}
-          </button>
+          </SubmitButton>
         </form>
       )}
 
@@ -228,9 +229,9 @@ function Group({
         {children}
         <p className="text-xs cd-muted">{note}</p>
         <div className="flex items-center gap-3">
-          <button type="submit" className="cd-btn text-sm">
+          <SubmitButton className="cd-btn text-sm" busyLabel="Working…">
             {committed ? 'Commit again' : 'Commit this section'}
-          </button>
+          </SubmitButton>
           {needsConfirm && (
             <label className="text-xs flex items-center gap-1.5" style={{ color: '#B14919' }}>
               <input type="checkbox" name="confirm" value="yes" />

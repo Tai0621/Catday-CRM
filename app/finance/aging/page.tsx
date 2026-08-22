@@ -6,6 +6,7 @@ import { buildReceivables, buildPayables, BUCKET_LABELS, type AgingBucket } from
 import { whatsappUrl } from '@/lib/phone'
 import { SEGMENTS } from '@/lib/segments'
 import { getConfig } from '@/lib/config'
+import { SubmitButton } from '@/app/components/Pending'
 
 // Accounts Receivable & Payable — who owes us, and what we owe, aged.
 export default async function AgingPage() {
@@ -107,7 +108,7 @@ export default async function AgingPage() {
                   <td className="px-3 py-2 text-right">
                     <form action={markPaid}>
                       <input type="hidden" name="id" value={i.expenseId} />
-                      <button type="submit" className="text-xs px-2 py-1 rounded" style={{ background: '#7A8A4F', color: '#F2EDE0' }}>Mark paid</button>
+                      <SubmitButton className="text-xs px-2 py-1 rounded" style={{ background: '#7A8A4F', color: '#F2EDE0' }} busyLabel="Working…">Mark paid</SubmitButton>
                     </form>
                   </td>
                 </tr>

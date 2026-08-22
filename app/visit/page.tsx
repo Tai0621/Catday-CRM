@@ -77,19 +77,21 @@ export default async function VisitPage({
           <section className="space-y-3">
             <h2 className="text-xl font-bold">Services</h2>
             <div className="cd-card overflow-hidden">
-              <table className="w-full text-sm">
-                <tbody className="cd-tbody">
-                  {services.map(s => (
-                    <tr key={s.name}>
-                      <td className="px-4 py-2.5 font-medium">{s.name}</td>
-                      <td className="px-4 py-2.5 text-right whitespace-nowrap" style={{ color: 'rgba(45,25,7,0.55)' }}>
-                        {s.durationMin} min
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-semibold whitespace-nowrap tabular-nums">{money(s.price)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <tbody className="cd-tbody">
+                    {services.map(s => (
+                      <tr key={s.name}>
+                        <td className="px-4 py-2.5 font-medium">{s.name}</td>
+                        <td className="px-4 py-2.5 text-right whitespace-nowrap" style={{ color: 'rgba(45,25,7,0.55)' }}>
+                          {s.durationMin} min
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-semibold whitespace-nowrap tabular-nums">{money(s.price)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
             {rooms > 0 && (
               <p className="text-xs" style={{ color: 'rgba(45,25,7,0.55)' }}>

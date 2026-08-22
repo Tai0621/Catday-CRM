@@ -6,6 +6,7 @@ import { whatsappUrl } from '@/lib/phone'
 import { SEGMENTS } from '@/lib/segments'
 import { setRequestStatus, linkAppointment } from './actions'
 import Link from 'next/link'
+import { SubmitButton } from '@/app/components/Pending'
 
 // M6 · Enquiries from the public page, and the funnel they feed.
 //
@@ -107,7 +108,7 @@ export default async function RequestsPage() {
                   <form key={s} action={setRequestStatus} className="inline">
                     <input type="hidden" name="id" value={r.id} />
                     <input type="hidden" name="status" value={s} />
-                    <button type="submit" className="text-xs cd-btn-sec">Mark {s.toLowerCase()}</button>
+                    <SubmitButton className="text-xs cd-btn-sec" busyLabel="Working…">Mark {s.toLowerCase()}</SubmitButton>
                   </form>
                 ))}
               </div>
@@ -121,7 +122,7 @@ export default async function RequestsPage() {
                   <input type="hidden" name="id" value={r.id} />
                   <input name="appointmentId" placeholder="appointment id once booked"
                     className="cd-input text-xs" style={{ maxWidth: '18rem' }} />
-                  <button type="submit" className="text-xs cd-btn-sec">Link booking</button>
+                  <SubmitButton className="text-xs cd-btn-sec" busyLabel="Working…">Link booking</SubmitButton>
                 </form>
               )}
             </div>

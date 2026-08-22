@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ASSESSMENT_OPTIONS, COAT_TYPES, COAT_CYCLE_DAYS, GROOM_MEDIA_TAGS, GROOMING_APPT_TYPES } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
 import { MediaSection } from '@/app/components/MediaSection'
+import { SubmitButton } from '@/app/components/Pending'
 
 // Groomer diagnosis & profiling (建档) — fill after the hands-on check, per SOP:
 // record everything, explain objectively, no upselling.
@@ -179,7 +180,7 @@ export default async function AssessCatPage({
 
         <div className="flex items-center justify-between pt-1">
           <Link href={doneHref} className="cd-btn-sec text-sm">Cancel</Link>
-          <button type="submit" className="cd-btn">Save assessment</button>
+          <SubmitButton className="cd-btn" busyLabel="Working…">Save assessment</SubmitButton>
         </div>
       </form>
     </div>

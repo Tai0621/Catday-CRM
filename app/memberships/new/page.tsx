@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import { nextMemberNumber } from '@/lib/loyalty'
 import { NOT_HOUSE } from '@/lib/cat-stock'
+import { SubmitButton } from '@/app/components/Pending'
 
 export default async function NewMembershipPage() {
   await requireAuth()
@@ -81,7 +82,7 @@ export default async function NewMembershipPage() {
           <input name="notes" placeholder="Optional notes…" className="cd-input" />
         </div>
         <div className="flex gap-3 pt-2">
-          <button type="submit" className="cd-btn">Create</button>
+          <SubmitButton className="cd-btn" busyLabel="Working…">Create</SubmitButton>
           <a href="/memberships" className="text-sm cd-muted hover:underline px-3 py-2">Cancel</a>
         </div>
       </form>

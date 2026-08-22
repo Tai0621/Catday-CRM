@@ -144,26 +144,30 @@ export function BalanceSheetTable({ sheet }: { sheet: BalanceSheet }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="cd-card overflow-hidden">
-          <table className="text-sm w-full" style={{ borderCollapse: 'collapse' }}>
-            <tbody className="cd-tbody">
-              {sectionHead('Assets')}
-              {sheet.assets.map(s => <FragmentSection key={s.title} s={s} lineRow={lineRow} subtotalRow={subtotalRow} />)}
-              {totalRow('Total Assets', totals.A)}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="text-sm w-full" style={{ borderCollapse: 'collapse' }}>
+              <tbody className="cd-tbody">
+                {sectionHead('Assets')}
+                {sheet.assets.map(s => <FragmentSection key={s.title} s={s} lineRow={lineRow} subtotalRow={subtotalRow} />)}
+                {totalRow('Total Assets', totals.A)}
+              </tbody>
+            </table>
+          </div>
         </div>
         <div className="cd-card overflow-hidden">
-          <table className="text-sm w-full" style={{ borderCollapse: 'collapse' }}>
-            <tbody className="cd-tbody">
-              {sectionHead('Liabilities')}
-              {sheet.liabilities.map(s => <FragmentSection key={s.title} s={s} lineRow={lineRow} subtotalRow={subtotalRow} />)}
-              {totalRow('Total Liabilities', totals.L)}
-              {sectionHead('Equity')}
-              {sheet.equity.map(s => <FragmentSection key={s.title} s={s} lineRow={lineRow} subtotalRow={subtotalRow} />)}
-              {totalRow('Total Equity', totals.E)}
-              {totalRow('Liabilities + Equity', totals.L + totals.E)}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="text-sm w-full" style={{ borderCollapse: 'collapse' }}>
+              <tbody className="cd-tbody">
+                {sectionHead('Liabilities')}
+                {sheet.liabilities.map(s => <FragmentSection key={s.title} s={s} lineRow={lineRow} subtotalRow={subtotalRow} />)}
+                {totalRow('Total Liabilities', totals.L)}
+                {sectionHead('Equity')}
+                {sheet.equity.map(s => <FragmentSection key={s.title} s={s} lineRow={lineRow} subtotalRow={subtotalRow} />)}
+                {totalRow('Total Equity', totals.E)}
+                {totalRow('Liabilities + Equity', totals.L + totals.E)}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </>

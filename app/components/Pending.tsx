@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 
 // Acknowledging the click.
@@ -19,20 +20,45 @@ import { useFormStatus } from 'react-dom'
 // second one. Neither makes the server faster; both are why it stops feeling
 // slow.
 
-/** A submit button that shows it is working and cannot be pressed twice. */
+/**
+ * A submit button that shows it is working and cannot be pressed twice.
+ *
+ * `name`/`value` are passed through because a great many forms here are a ROW
+ * of submit buttons that differ only by the value they post — the room state
+ * control (Ready / Cleaning / Out of service), the statement period picker.
+ * Without them those forms cannot use this component at all, which is most of
+ * why the rollout stalled at four files.
+ *
+ * `disabled` is separate from `pending`: a button can be off because it is
+ * already the current state, which is not the same as off because a save is in
+ * flight, and they should not look identical.
+ */
 export function SubmitButton({
-  children, busyLabel, className, style,
+  children, busyLabel, className, style, name, value, disabled, title, 'aria-label': ariaLabel,
 }: {
   children: React.ReactNode
-  busyLabel?: string
+  busyLabel?: React.ReactNode
   className?: string
   style?: React.CSSProperties
+  name?: string
+  value?: string
+  disabled?: boolean
+  title?: string
+  'aria-label'?: string
 }) {
   const { pending } = useFormStatus()
   return (
-    <button type="submit" disabled={pending} className={className}
-      style={{ ...style, ...(pending ? { opacity: 0.6, cursor: 'progress' } : null) }}>
-      {pending ? (busyLabel ?? children) : children}
+    <button
+      type="submit"
+      name={name}
+      value={value}
+      disabled={disabled || pending}
+      title={title}
+      aria-label={ariaLabel}
+      aria-busy={pending || undefined}
+      className={className}
+      style={{ ...style, ...(pending && !disabled ? { opacity: 0.6, cursor: 'progress' } : null) }}>
+      {pending && !disabled ? (busyLabel ?? children) : children}
     </button>
   )
 }
@@ -61,5 +87,43 @@ export function TaskCheck({ done, color }: { done: boolean; color: string }) {
       }}>
       ✓
     </button>
+  )
+}
+
+/**
+ * Says out loud that a save finished.
+ *
+ * There are no `aria-live` regions anywhere in this OS, which means every
+ * state change is communicated by the page silently redrawing. A sighted user
+ * infers it from the row changing; a screen-reader user gets nothing at all,
+ * and anyone glancing away misses it entirely.
+ *
+ * Deliberately announces only what it KNOWS. It watches this form's own
+ * pending flag go true then false, so the honest claim is "the save finished",
+ * not "the save succeeded" — the component cannot see the result, and an
+ * action that redirected with an error would make a success message a lie.
+ * Where a page needs to report an outcome it should render it from its own
+ * state, which several already do via `?error=`.
+ *
+ * Drop inside any <form action={...}> and it announces on completion.
+ */
+export function SavedAnnouncer({ label = 'Saved' }: { label?: string }) {
+  const { pending } = useFormStatus()
+  const was = useRef(false)
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    if (pending) { was.current = true; return }
+    if (!was.current) return
+    was.current = false
+    setMessage(label)
+    // Cleared so a later identical announcement is re-read rather than being
+    // treated as unchanged text and skipped.
+    const t = setTimeout(() => setMessage(''), 3000)
+    return () => clearTimeout(t)
+  }, [pending, label])
+
+  return (
+    <span role="status" aria-live="polite" className="sr-only">{message}</span>
   )
 }

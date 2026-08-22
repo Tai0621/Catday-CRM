@@ -120,7 +120,17 @@ try {
 
   // ── Manager (owner password) keeps full access ──
   const m = await loginPin(process.env.APP_PASSWORD ?? '')
-  check('Manager lands on /', m.landing === '/', m.landing)
+  // The owner lands on the brief, not the dashboard. The dashboard cost ~5.9s
+  // and 63 queries and was the first thing seen after signing in; the brief
+  // costs ~400ms. Asserted as "not the dashboard, and a page the owner can
+  // actually open", so re-pointing the landing later is a one-line change here
+  // rather than a puzzle.
+  check('Manager lands on the brief, not the 6-second dashboard',
+    m.landing === '/brief', m.landing)
+  check('…and that landing actually opens for them',
+    (await visit(m.cookie, m.landing)).code === 200)
+  check('the dashboard is still reachable, just not the landing',
+    (await visit(m.cookie, '/')).code === 200)
   check('Manager opens /finance', (await visit(m.cookie, '/finance/income-statement')).code === 200)
   check('Manager opens /staff', (await visit(m.cookie, '/staff')).code === 200)
   check('Manager opens /admin/settings', (await visit(m.cookie, '/admin/settings')).code === 200)

@@ -6,6 +6,7 @@ import {
   ASSET_CATEGORIES, monthlyDepreciation, accumulatedDepreciation, netBookValue,
 } from '@/lib/assets'
 import { SEGMENTS } from '@/lib/segments'
+import { SubmitButton } from '@/app/components/Pending'
 
 // Fixed Asset Register (Administrative). Records feed the three statements:
 // net book value → balance-sheet fixed assets, monthly charge → income-statement
@@ -143,7 +144,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
                   <td className="px-4 py-2.5 text-right">
                     <form action={remove}>
                       <input type="hidden" name="id" value={a.id} />
-                      <button type="submit" className="text-xs cd-link" style={{ color: '#B14919' }}>Remove</button>
+                      <SubmitButton className="text-xs cd-link" style={{ color: '#B14919' }} busyLabel="Working…">Remove</SubmitButton>
                     </form>
                   </td>
                 </tr>
@@ -189,7 +190,7 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button type="submit" className="cd-btn">Add asset</button>
+          <SubmitButton className="cd-btn" busyLabel="Working…">Add asset</SubmitButton>
           <span className="text-xs cd-muted">A common life: equipment 3–5 yrs (36–60 mo), fit-out 5–10 yrs, IT 3 yrs.</span>
         </div>
       </form>

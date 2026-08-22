@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { STAFF_ROLE_LABELS } from '@/lib/constants'
 import { listRoles } from '@/lib/roles-store'
 import { SEGMENTS } from '@/lib/segments'
+import { SubmitButton } from '@/app/components/Pending'
 
 export default async function StaffPage({ searchParams }: { searchParams: Promise<{ err?: string }> }) {
   await requireManager()
@@ -94,7 +95,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
           <label className="cd-label">PIN (min 4 digits)</label>
           <input name="pin" required minLength={4} className="cd-input" style={{ width: '8rem' }} placeholder="e.g. 4821" />
         </div>
-        <button type="submit" className="cd-btn">Add staff</button>
+        <SubmitButton className="cd-btn" busyLabel="Working…">Add staff</SubmitButton>
       </form>
 
       {/* Staff list */}
@@ -102,43 +103,45 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
         {staff.length === 0 ? (
           <p className="px-4 py-8 text-sm cd-muted text-center">No staff yet — add your team above. They log in with their PIN.</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead><tr className="cd-thead">
-              <th>Name</th><th>Role</th><th>Status</th><th>Reset PIN</th><th></th>
-            </tr></thead>
-            <tbody className="cd-tbody">
-              {staff.map(s => (
-                <tr key={s.id} style={s.active ? undefined : { opacity: 0.5 }}>
-                  <td className="px-4 py-2.5 font-medium" style={{ color: '#2D1907' }}>{s.name}</td>
-                  <td className="px-4 py-2.5">
-                    <span className="cd-pill" style={s.role === 'Manager'
-                      ? { background: SEGMENTS.business.bg, color: SEGMENTS.business.text }
-                      : s.role === 'Groomer'
-                      ? { background: SEGMENTS.grooming.bg, color: SEGMENTS.grooming.text }
-                      : s.role === 'Boarding'
-                      ? { background: SEGMENTS.boarding.bg, color: SEGMENTS.boarding.text }
-                      : { background: SEGMENTS.community.bg, color: SEGMENTS.community.text }}>
-                      {labelFor.get(s.role) ?? STAFF_ROLE_LABELS[s.role] ?? s.role}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 cd-muted">{s.active ? 'Active' : 'Disabled'}</td>
-                  <td className="px-4 py-2.5">
-                    <form action={resetPin} className="flex items-center gap-1.5">
-                      <input type="hidden" name="id" value={s.id} />
-                      <input name="pin" minLength={4} className="cd-input" style={{ width: '6.5rem' }} placeholder="New PIN" />
-                      <button type="submit" className="cd-btn-sec text-xs">Set</button>
-                    </form>
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    <form action={toggleActive}>
-                      <input type="hidden" name="id" value={s.id} />
-                      <button type="submit" className="text-xs cd-link">{s.active ? 'Disable' : 'Enable'}</button>
-                    </form>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="cd-thead">
+                <th>Name</th><th>Role</th><th>Status</th><th>Reset PIN</th><th></th>
+              </tr></thead>
+              <tbody className="cd-tbody">
+                {staff.map(s => (
+                  <tr key={s.id} style={s.active ? undefined : { opacity: 0.5 }}>
+                    <td className="px-4 py-2.5 font-medium" style={{ color: '#2D1907' }}>{s.name}</td>
+                    <td className="px-4 py-2.5">
+                      <span className="cd-pill" style={s.role === 'Manager'
+                        ? { background: SEGMENTS.business.bg, color: SEGMENTS.business.text }
+                        : s.role === 'Groomer'
+                        ? { background: SEGMENTS.grooming.bg, color: SEGMENTS.grooming.text }
+                        : s.role === 'Boarding'
+                        ? { background: SEGMENTS.boarding.bg, color: SEGMENTS.boarding.text }
+                        : { background: SEGMENTS.community.bg, color: SEGMENTS.community.text }}>
+                        {labelFor.get(s.role) ?? STAFF_ROLE_LABELS[s.role] ?? s.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 cd-muted">{s.active ? 'Active' : 'Disabled'}</td>
+                    <td className="px-4 py-2.5">
+                      <form action={resetPin} className="flex items-center gap-1.5">
+                        <input type="hidden" name="id" value={s.id} />
+                        <input name="pin" minLength={4} className="cd-input" style={{ width: '6.5rem' }} placeholder="New PIN" />
+                        <SubmitButton className="cd-btn-sec text-xs" busyLabel="Working…">Set</SubmitButton>
+                      </form>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <form action={toggleActive}>
+                        <input type="hidden" name="id" value={s.id} />
+                        <SubmitButton className="text-xs cd-link" busyLabel="…">{s.active ? 'Disable' : 'Enable'}</SubmitButton>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

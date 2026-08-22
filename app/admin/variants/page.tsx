@@ -6,6 +6,7 @@ import { buildVariantStats, recommendedWinner, type VariantStats } from '@/lib/a
 import { buildAttribution, type VariantRevenue } from '@/lib/attribution'
 import { getConfig, fmtMoney, type AppConfig } from '@/lib/config'
 import { SEGMENTS, ACTION_SEGMENT } from '@/lib/segments'
+import { SubmitButton } from '@/app/components/Pending'
 
 // C4 · Message variants. Every win-back message this business sent was the same
 // sentence and nobody knew whether it worked. Competing copy is assigned
@@ -128,18 +129,16 @@ export default async function VariantsPage() {
                     <form action={setActive}>
                       <input type="hidden" name="id" value={v.id} />
                       <input type="hidden" name="active" value={String(!v.isActive)} />
-                      <button type="submit" className="text-xs px-2.5 py-1 rounded-lg cd-btn-sec">
+                      <SubmitButton className="text-xs px-2.5 py-1 rounded-lg cd-btn-sec" busyLabel="Working…">
                         {v.isActive ? 'Retire' : 'Put back in rotation'}
-                      </button>
+                      </SubmitButton>
                     </form>
                     {isWinner && (
                       <form action={promote}>
                         <input type="hidden" name="id" value={v.id} />
                         <input type="hidden" name="type" value={type} />
-                        <button type="submit" className="text-xs px-2.5 py-1 rounded-lg font-medium"
-                          style={{ background: seg.color, color: '#F2EDE0' }}>
-                          Promote — best converting
-                        </button>
+                        <SubmitButton className="text-xs px-2.5 py-1 rounded-lg font-medium"
+                          style={{ background: seg.color, color: '#F2EDE0' }} busyLabel="Working…">Promote — best converting</SubmitButton>
                       </form>
                     )}
                   </div>
@@ -180,7 +179,7 @@ export default async function VariantsPage() {
                     versions still compete with each other — so copy testing and localisation do not fight.
                   </p>
                 </div>
-                <button type="submit" className="cd-btn text-sm">Add version</button>
+                <SubmitButton className="cd-btn text-sm" busyLabel="Working…">Add version</SubmitButton>
               </form>
             </details>
           </section>

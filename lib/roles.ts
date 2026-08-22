@@ -33,7 +33,11 @@ export function isManagerOnly(pathname: string): boolean {
 
 // Where each role lands after login, and where a disallowed page bounces them.
 export const ROLE_HOME: Record<string, string> = {
-  Manager: '/',
+  // The brief, not the dashboard. The dashboard costs ~5.9s and 63 queries and
+  // was the first screen after login; the brief costs ~400ms and 3, and is the
+  // thing the owner opens the morning to read. The dashboard is still there,
+  // it is just no longer what "signed in" means.
+  Manager: '/brief',
   FrontDesk: '/actions',
   Groomer: '/board',
   Boarding: '/runsheet',

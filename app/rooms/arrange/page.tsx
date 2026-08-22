@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import Link from 'next/link'
 import { UNIT_KINDS, UNIT_KIND_LABELS, ZONE_KINDS } from '@/lib/constants'
 import { saveZone, deleteZone, placeRoom } from './actions'
+import { SubmitButton } from '@/app/components/Pending'
 
 // Arrange the wall — where each unit physically sits.
 //
@@ -70,14 +71,14 @@ export default async function ArrangeWallPage({ searchParams }: {
             <div><label className="cd-label">Cols</label><input name="cols" type="number" min="1" max="12" defaultValue={z.cols} className="cd-input" style={{ width: '4rem' }} /></div>
             <div><label className="cd-label">Rows</label><input name="rows" type="number" min="1" max="12" defaultValue={z.rows} className="cd-input" style={{ width: '4rem' }} /></div>
             <div><label className="cd-label">Order</label><input name="sortOrder" type="number" defaultValue={z.sortOrder} className="cd-input" style={{ width: '4rem' }} /></div>
-            <button type="submit" className="cd-btn-sec">Save</button>
+            <SubmitButton className="cd-btn-sec" busyLabel="Working…">Save</SubmitButton>
             <span className="text-xs cd-muted pb-2">{z._count.rooms} room{z._count.rooms === 1 ? '' : 's'}</span>
           </form>
         ))}
         {zones.map(z => z._count.rooms === 0 && (
           <form key={`del-${z.id}`} action={deleteZone}>
             <input type="hidden" name="id" value={z.id} />
-            <button type="submit" className="text-xs cd-link">Remove empty bank {z.code}</button>
+            <SubmitButton className="text-xs cd-link" busyLabel="Working…">Remove empty bank {z.code}</SubmitButton>
           </form>
         ))}
 
@@ -95,7 +96,7 @@ export default async function ArrangeWallPage({ searchParams }: {
             <div><label className="cd-label">Cols</label><input name="cols" type="number" min="1" max="12" defaultValue={3} className="cd-input" style={{ width: '4rem' }} /></div>
             <div><label className="cd-label">Rows</label><input name="rows" type="number" min="1" max="12" defaultValue={3} className="cd-input" style={{ width: '4rem' }} /></div>
             <div><label className="cd-label">Order</label><input name="sortOrder" type="number" defaultValue={zones.length} className="cd-input" style={{ width: '4rem' }} /></div>
-            <button type="submit" className="cd-btn">Add bank</button>
+            <SubmitButton className="cd-btn" busyLabel="Working…">Add bank</SubmitButton>
           </form>
         </details>
       </section>
@@ -130,7 +131,7 @@ export default async function ArrangeWallPage({ searchParams }: {
                       <select name="unitKind" defaultValue={r.unitKind} className="cd-input text-xs" style={{ width: '8rem', padding: '0.25rem 0.4rem' }}>
                         {UNIT_KINDS.map(k => <option key={k} value={k} title={UNIT_KIND_LABELS[k]}>{k}</option>)}
                       </select>
-                      <button type="submit" className="cd-btn-sec text-xs">Place</button>
+                      <SubmitButton className="cd-btn-sec text-xs" busyLabel="Working…">Place</SubmitButton>
                     </form>
                   </td>
                 </tr>

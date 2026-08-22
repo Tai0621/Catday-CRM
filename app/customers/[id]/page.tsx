@@ -18,6 +18,7 @@ import { customerReceivable } from '@/lib/aging'
 import { SEGMENTS } from '@/lib/segments'
 import { AwardPointsForm } from './AwardPointsForm'
 import { EraseCustomer } from './EraseCustomer'
+import { SubmitButton } from '@/app/components/Pending'
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth()
@@ -220,22 +221,22 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               <form key={p.pay} action={walletTopUp}>
                 <input type="hidden" name="amount" value={p.pay} />
                 <input type="hidden" name="bonus" value={p.bonus} />
-                <button type="submit" className="text-xs px-3 py-1.5 rounded-lg font-medium"
-                  style={{ background: SEGMENTS.membership.bg, color: SEGMENTS.membership.text, border: `1px solid ${SEGMENTS.membership.color}55` }}>
+                <SubmitButton className="text-xs px-3 py-1.5 rounded-lg font-medium"
+                  style={{ background: SEGMENTS.membership.bg, color: SEGMENTS.membership.text, border: `1px solid ${SEGMENTS.membership.color}55` }} busyLabel="Working…">
                   Top up RM {p.pay} <span style={{ opacity: 0.75 }}>+{p.bonus} free</span>
-                </button>
+                </SubmitButton>
               </form>
             ))}
             <form action={walletTopUp} className="flex items-center gap-1.5">
               <input name="amount" type="number" min="1" step="0.01" placeholder="Custom RM" className="cd-input" style={{ width: '7rem' }} />
               <input type="hidden" name="bonus" value="0" />
-              <button type="submit" className="cd-btn-sec text-xs">Top up</button>
+              <SubmitButton className="cd-btn-sec text-xs" busyLabel="Working…">Top up</SubmitButton>
             </form>
           </div>
           <form action={walletSpend} className="flex flex-wrap items-center gap-1.5 pt-1" style={{ borderTop: '1px solid rgba(45,25,7,0.08)' }}>
             <input name="amount" type="number" min="0.01" step="0.01" placeholder="Charge RM" className="cd-input" style={{ width: '7rem' }} />
             <input name="note" placeholder="What for? e.g. Grooming — Mochi" className="cd-input" style={{ width: '14rem' }} />
-            <button type="submit" className="cd-btn text-xs">Pay from wallet</button>
+            <SubmitButton className="cd-btn text-xs" busyLabel="Working…">Pay from wallet</SubmitButton>
             <span className="text-xs cd-muted">Charges are declined if the balance is too low.</span>
           </form>
           {customer.walletEntries.length > 0 && (
@@ -372,25 +373,27 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           {customer.appointments.length === 0 ? (
             <p className="px-4 py-6 text-sm cd-muted text-center">No appointments yet</p>
           ) : (
-            <table className="w-full text-sm">
-              <tbody className="cd-tbody">
-                {customer.appointments.map(a => (
-                  <tr key={a.id}>
-                    <td className="px-4 py-2 cd-muted">{a.scheduledAt.toLocaleDateString('en-MY')}</td>
-                    <td className="px-4 py-2 font-medium">
-                      <Link href={`/cats/${a.catId}`} className="cd-link">{a.cat.name}</Link>
-                    </td>
-                    <td className="px-4 py-2 cd-muted">{a.type}{a.room && ` · ${a.room.name}`}</td>
-                    <td className="px-4 py-2">
-                      <span className="cd-pill" style={apptStatusStyle(a.status)}>{a.status}</span>
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      <Link href={`/appointments/${a.id}`} className="text-xs cd-link">View</Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <tbody className="cd-tbody">
+                  {customer.appointments.map(a => (
+                    <tr key={a.id}>
+                      <td className="px-4 py-2 cd-muted">{a.scheduledAt.toLocaleDateString('en-MY')}</td>
+                      <td className="px-4 py-2 font-medium">
+                        <Link href={`/cats/${a.catId}`} className="cd-link">{a.cat.name}</Link>
+                      </td>
+                      <td className="px-4 py-2 cd-muted">{a.type}{a.room && ` · ${a.room.name}`}</td>
+                      <td className="px-4 py-2">
+                        <span className="cd-pill" style={apptStatusStyle(a.status)}>{a.status}</span>
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        <Link href={`/appointments/${a.id}`} className="text-xs cd-link">View</Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </section>
@@ -402,22 +405,24 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           {customer.loyaltyEntries.length === 0 ? (
             <p className="px-4 py-6 text-sm cd-muted text-center">No points activity yet</p>
           ) : (
-            <table className="w-full text-sm">
-              <tbody className="cd-tbody">
-                {customer.loyaltyEntries.map(e => (
-                  <tr key={e.id}>
-                    <td className="px-4 py-2 cd-muted">{e.createdAt.toLocaleDateString('en-MY')}</td>
-                    <td className="px-4 py-2" style={{ color: '#2D1907' }}>
-                      {POINTS_REASON_LABELS[e.reason] ?? e.reason}
-                      {e.note && <span className="cd-muted"> · {e.note}</span>}
-                    </td>
-                    <td className="px-4 py-2 text-right font-semibold" style={{ color: e.points >= 0 ? '#729094' : '#B14919' }}>
-                      {e.points >= 0 ? '+' : ''}{e.points}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <tbody className="cd-tbody">
+                  {customer.loyaltyEntries.map(e => (
+                    <tr key={e.id}>
+                      <td className="px-4 py-2 cd-muted">{e.createdAt.toLocaleDateString('en-MY')}</td>
+                      <td className="px-4 py-2" style={{ color: '#2D1907' }}>
+                        {POINTS_REASON_LABELS[e.reason] ?? e.reason}
+                        {e.note && <span className="cd-muted"> · {e.note}</span>}
+                      </td>
+                      <td className="px-4 py-2 text-right font-semibold" style={{ color: e.points >= 0 ? '#729094' : '#B14919' }}>
+                        {e.points >= 0 ? '+' : ''}{e.points}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </section>

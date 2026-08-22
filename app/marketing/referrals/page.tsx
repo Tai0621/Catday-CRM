@@ -5,6 +5,7 @@ import { pendingReferrals, referralStats } from '@/lib/referrals'
 import { SEGMENTS } from '@/lib/segments'
 import { creditReferralAction, linkReferralAction, issueCodeAction } from './actions'
 import Link from 'next/link'
+import { SubmitButton } from '@/app/components/Pending'
 
 // M5 · Referrals — link one, then pay both sides once the new customer shows up.
 //
@@ -80,9 +81,9 @@ export default async function ReferralsPage({ searchParams }: { searchParams: Pr
                 {r.eligible ? (
                   <form action={creditReferralAction}>
                     <input type="hidden" name="id" value={r.id} />
-                    <button type="submit" className="text-xs px-3 py-1.5 rounded-lg cd-btn">
+                    <SubmitButton className="text-xs px-3 py-1.5 rounded-lg cd-btn" busyLabel="Working…">
                       Credit {fmtMoney(config.marketing.referrerCreditRM, config)} each
-                    </button>
+                    </SubmitButton>
                   </form>
                 ) : (
                   <span className="text-xs cd-muted">waiting</span>
@@ -97,14 +98,14 @@ export default async function ReferralsPage({ searchParams }: { searchParams: Pr
         <h2 className="text-sm font-semibold" style={{ color: '#2D1907' }}>Record a referral</h2>
         <form className="flex gap-2">
           <input name="q" defaultValue={q} className="cd-input flex-1" placeholder="Find the new customer by name or phone…" />
-          <button type="submit" className="cd-btn-sec">Search</button>
+          <SubmitButton className="cd-btn-sec" busyLabel="Working…">Search</SubmitButton>
         </form>
         {searched.map(c => (
           <form key={c.id} action={linkReferralAction} className="flex flex-wrap items-center gap-2">
             <span className="text-sm flex-1" style={{ color: '#2D1907' }}>{c.name ?? c.phone}</span>
             <input type="hidden" name="referredId" value={c.id} />
             <input name="code" className="cd-input" style={{ width: 140 }} placeholder="Referrer code" maxLength={12} required />
-            <button type="submit" className="cd-btn text-sm">Link</button>
+            <SubmitButton className="cd-btn text-sm" busyLabel="Working…">Link</SubmitButton>
           </form>
         ))}
       </section>
@@ -136,7 +137,7 @@ export default async function ReferralsPage({ searchParams }: { searchParams: Pr
               <form key={c.id} action={issueCodeAction} className="flex items-center gap-2">
                 <span className="text-xs cd-muted flex-1">{c.name ?? c.phone} has no code</span>
                 <input type="hidden" name="customerId" value={c.id} />
-                <button type="submit" className="text-xs px-2.5 py-1 rounded-lg cd-btn-sec">Issue code</button>
+                <SubmitButton className="text-xs px-2.5 py-1 rounded-lg cd-btn-sec" busyLabel="Working…">Issue code</SubmitButton>
               </form>
             ))}
           </div>

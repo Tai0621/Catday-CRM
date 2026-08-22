@@ -84,14 +84,16 @@ export default async function CashFlowPage({
       </div>
 
       <div className="cd-card overflow-hidden">
-        <table className="text-sm w-full" style={{ borderCollapse: 'collapse' }}>
-          <tbody className="cd-tbody">
-            {[cf.operating, cf.investing, cf.financing].map(s => <Section key={s.title} s={s} fmt={fmt} />)}
-            <Total label="Net change in cash" value={cf.netChange} fmt={fmt} strong />
-            <Simple label={`Opening cash (end ${cf.fromLabel})`} value={cf.openingCash} fmt={fmt} />
-            <Total label={`Closing cash (end ${cf.toLabel})`} value={cf.computedClosingCash} fmt={fmt} strong />
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="text-sm w-full" style={{ borderCollapse: 'collapse' }}>
+            <tbody className="cd-tbody">
+              {[cf.operating, cf.investing, cf.financing].map(s => <Section key={s.title} s={s} fmt={fmt} />)}
+              <Total label="Net change in cash" value={cf.netChange} fmt={fmt} strong />
+              <Simple label={`Opening cash (end ${cf.fromLabel})`} value={cf.openingCash} fmt={fmt} />
+              <Total label={`Closing cash (end ${cf.toLabel})`} value={cf.computedClosingCash} fmt={fmt} strong />
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <p className="text-xs cd-muted">

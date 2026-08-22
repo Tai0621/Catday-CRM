@@ -6,6 +6,7 @@ import { SEGMENTS } from '@/lib/segments'
 import { markSent } from '../actions'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { SubmitButton } from '@/app/components/Pending'
 
 // M1 · The send worklist.
 //
@@ -82,7 +83,7 @@ export default async function CampaignSendPage({ params }: { params: Promise<{ i
                 <form action={markSent}>
                   <input type="hidden" name="campaignId" value={campaign.id} />
                   <input type="hidden" name="customerId" value={e.customerId} />
-                  <button type="submit" className="text-xs cd-btn-sec">Mark as sent</button>
+                  <SubmitButton className="text-xs cd-btn-sec" busyLabel="Working…">Mark as sent</SubmitButton>
                 </form>
               </div>
             </div>

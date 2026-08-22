@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { POINTS_REASONS } from '@/lib/constants'
+import { SubmitButton } from '@/app/components/Pending'
 
 export function AwardPointsForm({ action }: { action: (fd: FormData) => Promise<void> }) {
   const [points, setPoints] = useState(POINTS_REASONS[0].points)
@@ -34,7 +35,7 @@ export function AwardPointsForm({ action }: { action: (fd: FormData) => Promise<
         />
         <input name="note" placeholder="Note (optional)" className="cd-input flex-1" />
       </div>
-      <button type="submit" className="cd-btn w-full text-center">Award Points</button>
+      <SubmitButton className="cd-btn w-full text-center" busyLabel="Working…">Award Points</SubmitButton>
       <p className="text-xs cd-muted">Tip: enter a negative number to redeem points.</p>
     </form>
   )

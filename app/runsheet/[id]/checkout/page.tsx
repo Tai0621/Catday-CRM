@@ -6,6 +6,7 @@ import { displayPhone } from '@/lib/phone'
 import { ROOM_CONDITIONS, CAT_CONDITIONS } from '@/lib/constants'
 import { SEGMENTS } from '@/lib/segments'
 import { MediaSection } from '@/app/components/MediaSection'
+import { SubmitButton } from '@/app/components/Pending'
 
 // Guided boarding check-out (SOP mirror of check-in): record room + cat
 // condition, tick off every belonging as returned, then send to POS for
@@ -122,7 +123,7 @@ export default async function CheckOutPage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="flex items-center gap-3">
-          <button type="submit" className="cd-btn">Complete check-out → payment</button>
+          <SubmitButton className="cd-btn" busyLabel="Working…">Complete check-out → payment</SubmitButton>
           <Link href="/runsheet" className="cd-btn-sec text-sm">Cancel</Link>
         </div>
       </form>

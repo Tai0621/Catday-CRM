@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import { getConfig } from '@/lib/config'
 import { answerReview, goToReview } from './actions'
 import { notFound } from 'next/navigation'
+import { SubmitButton } from '@/app/components/Pending'
 
 // M4 · The public review page. No login — the customer opens this from a
 // WhatsApp link, so the token is the only credential and the route is in
@@ -52,7 +53,7 @@ export default async function ReviewPage({
             <form action={answerReview} className="space-y-3">
               <input type="hidden" name="token" value={token} />
               <input type="hidden" name="sentiment" value="Positive" />
-              <button type="submit" className="cd-btn w-full py-3">It went well</button>
+              <SubmitButton className="cd-btn w-full py-3" busyLabel="Working…">It went well</SubmitButton>
             </form>
 
             <details className="space-y-3">
@@ -62,7 +63,7 @@ export default async function ReviewPage({
                 <input type="hidden" name="sentiment" value="Negative" />
                 <label className="cd-label">What happened?</label>
                 <input name="detail" className="cd-input" placeholder="Tell us what we got wrong" maxLength={500} />
-                <button type="submit" className="cd-btn-sec w-full py-2.5">Send this to the team</button>
+                <SubmitButton className="cd-btn-sec w-full py-2.5" busyLabel="Working…">Send this to the team</SubmitButton>
               </form>
             </details>
           </>
@@ -77,7 +78,7 @@ export default async function ReviewPage({
             {reviewUrl && (
               <form action={goToReview}>
                 <input type="hidden" name="token" value={token} />
-                <button type="submit" className="cd-btn w-full py-3">Leave a review</button>
+                <SubmitButton className="cd-btn w-full py-3" busyLabel="Working…">Leave a review</SubmitButton>
               </form>
             )}
           </>

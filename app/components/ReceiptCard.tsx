@@ -69,27 +69,29 @@ export function ReceiptCard({
         <div style={{ borderTop: `1px dashed ${HAIR}` }} />
 
         {/* ── Items ── */}
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="text-left pb-1.5 text-[10px] font-bold uppercase" style={{ color: MUTED, letterSpacing: '0.1em' }}>Item</th>
-              <th className="text-right pb-1.5 text-[10px] font-bold uppercase" style={{ color: MUTED, letterSpacing: '0.1em' }}>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {view.lines.map((l, i) => (
-              <tr key={l.id} style={i === 0 ? { borderTop: `1px solid ${HAIR}` } : undefined}>
-                <td className="py-1.5 pr-3 text-sm" style={{ color: '#2D1907' }}>
-                  {noDash(l.description)}
-                  {l.quantity > 1 && <span style={{ color: MUTED }}> ×{l.quantity}</span>}
-                </td>
-                <td className="py-1.5 text-right text-sm whitespace-nowrap" style={{ color: '#2D1907' }}>
-                  RM {l.subtotal.toFixed(2)}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className="text-left pb-1.5 text-[10px] font-bold uppercase" style={{ color: MUTED, letterSpacing: '0.1em' }}>Item</th>
+                <th className="text-right pb-1.5 text-[10px] font-bold uppercase" style={{ color: MUTED, letterSpacing: '0.1em' }}>Amount</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {view.lines.map((l, i) => (
+                <tr key={l.id} style={i === 0 ? { borderTop: `1px solid ${HAIR}` } : undefined}>
+                  <td className="py-1.5 pr-3 text-sm" style={{ color: '#2D1907' }}>
+                    {noDash(l.description)}
+                    {l.quantity > 1 && <span style={{ color: MUTED }}> ×{l.quantity}</span>}
+                  </td>
+                  <td className="py-1.5 text-right text-sm whitespace-nowrap" style={{ color: '#2D1907' }}>
+                    RM {l.subtotal.toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         <div style={{ borderTop: `1px dashed ${HAIR}` }} />
 

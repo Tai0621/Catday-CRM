@@ -5,6 +5,7 @@ import { SEGMENTS } from '@/lib/segments'
 import { aiConfigured } from '@/lib/ai/provider'
 import { generateBriefNow } from './actions'
 import Link from 'next/link'
+import { SubmitButton } from '@/app/components/Pending'
 
 const seg = SEGMENTS.business
 const day = (k: string) => new Date(`${k}T12:00:00Z`).toLocaleDateString('en-MY', {
@@ -39,7 +40,7 @@ export default async function BriefPage() {
         {missing && configured && (
           <form action={generateBriefNow}>
             <input type="hidden" name="date" value={pending} />
-            <button type="submit" className="cd-btn text-sm whitespace-nowrap">Write {pending}</button>
+            <SubmitButton className="cd-btn text-sm whitespace-nowrap" busyLabel="Writing the brief…">Write {pending}</SubmitButton>
           </form>
         )}
       </div>

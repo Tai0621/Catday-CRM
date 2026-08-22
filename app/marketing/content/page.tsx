@@ -6,6 +6,7 @@ import { PairExport } from './PairExport'
 import { aiConfigured } from '@/lib/ai/provider'
 import { generateCaption, setDraftStatus, withdrawFromPool } from './actions'
 import Link from 'next/link'
+import { SubmitButton } from '@/app/components/Pending'
 
 // M3 · Content Studio.
 //
@@ -97,13 +98,13 @@ export default async function ContentStudioPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <form action={generateCaption}>
                       <input type="hidden" name="appointmentId" value={c.appointmentId} />
-                      <button type="submit" className="text-xs cd-btn-sec" disabled={!configured}>Rewrite</button>
+                      <SubmitButton className="text-xs cd-btn-sec" disabled={!configured} busyLabel="Working…">Rewrite</SubmitButton>
                     </form>
                     {(['Used', 'Discarded'] as const).map(s => (
                       <form key={s} action={setDraftStatus}>
                         <input type="hidden" name="appointmentId" value={c.appointmentId} />
                         <input type="hidden" name="status" value={s} />
-                        <button type="submit" className="text-xs cd-link">Mark {s.toLowerCase()}</button>
+                        <SubmitButton className="text-xs cd-link" busyLabel="Working…">Mark {s.toLowerCase()}</SubmitButton>
                       </form>
                     ))}
                     {c.draft.status !== 'Draft' && (
@@ -116,7 +117,7 @@ export default async function ContentStudioPage() {
               ) : (
                 <form action={generateCaption}>
                   <input type="hidden" name="appointmentId" value={c.appointmentId} />
-                  <button type="submit" className="cd-btn text-sm" disabled={!configured}>Draft a caption</button>
+                  <SubmitButton className="cd-btn text-sm" disabled={!configured} busyLabel="Working…">Draft a caption</SubmitButton>
                 </form>
               )}
 
@@ -124,9 +125,9 @@ export default async function ContentStudioPage() {
                 <Link href={`/customers/${c.customerId}`} className="text-xs cd-link">{c.customerName}</Link>
                 <form action={withdrawFromPool}>
                   <input type="hidden" name="catId" value={c.catId} />
-                  <button type="submit" className="text-xs" style={{ color: '#B14919' }}>
+                  <SubmitButton className="text-xs" style={{ color: '#B14919' }} busyLabel="Working…">
                     Withdraw {c.catName} from the content pool
-                  </button>
+                  </SubmitButton>
                 </form>
               </div>
             </div>

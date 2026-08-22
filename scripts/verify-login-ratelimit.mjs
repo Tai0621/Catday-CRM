@@ -43,7 +43,13 @@ try {
 
   // ── A different IP is unaffected — correct password logs in ──
   const freshOk = await attempt(process.env.APP_PASSWORD ?? '', FRESH_IP)
-  check('correct password from a fresh IP logs in', freshOk.status === 307 && loc(freshOk).endsWith('/'), `${freshOk.status} ${loc(freshOk)}`)
+  // Asserted as "not bounced back to /login", not as a specific destination.
+  // This checked for exactly '/' and broke when the owner's landing moved to
+  // the brief — but the claim here is about the RATE LIMITER, not about where
+  // login goes, and it should not fail again the next time that moves.
+  check('correct password from a fresh IP logs in',
+    freshOk.status === 307 && !loc(freshOk).includes('/login'),
+    `${freshOk.status} ${loc(freshOk)}`)
 
   // ── A successful login clears that IP's failure counter ──
   await attempt('definitely-wrong', FRESH_IP) // 1 failure

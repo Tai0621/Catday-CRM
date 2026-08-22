@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { recordStockMovement, isLow } from '@/lib/inventory'
 import { recordAudit } from '@/lib/audit'
 import { SEGMENTS } from '@/lib/segments'
+import { SubmitButton } from '@/app/components/Pending'
 
 const rm = (n: number) => `RM ${n.toLocaleString('en-MY', { maximumFractionDigits: 0 })}`
 const intOr = (v: FormDataEntryValue | null, d = 0) => { const n = parseInt((v as string) || '', 10); return Number.isFinite(n) ? n : d }
@@ -123,7 +124,7 @@ export default async function ProductsPage() {
         <div><label className="cd-label">Stock</label><input name="stockQty" type="number" min="0" defaultValue="10" className="cd-input" style={{ width: '5rem' }} /></div>
         <div><label className="cd-label">Reorder at</label><input name="reorderLevel" type="number" min="0" placeholder="—" className="cd-input" style={{ width: '5rem' }} /></div>
         <div><label className="cd-label">SKU</label><input name="sku" className="cd-input" style={{ width: '6rem' }} /></div>
-        <button type="submit" className="cd-btn">Add</button>
+        <SubmitButton className="cd-btn" busyLabel="Working…">Add</SubmitButton>
       </form>
 
       <div className="cd-card overflow-hidden">
@@ -155,7 +156,7 @@ export default async function ProductsPage() {
                           <input name="price" type="number" min="0" step="0.5" defaultValue={p.price} className="cd-input" style={{ width: '4.5rem' }} title="Sell price" />
                           <input name="costPrice" type="number" min="0" step="0.5" defaultValue={p.costPrice} className="cd-input" style={{ width: '4.5rem' }} title="Unit cost" />
                           <input name="reorderLevel" type="number" min="0" defaultValue={p.reorderLevel ?? ''} placeholder="—" className="cd-input" style={{ width: '4rem' }} title="Reorder level" />
-                          <button type="submit" className="cd-btn-sec text-xs">Save</button>
+                          <SubmitButton className="cd-btn-sec text-xs" busyLabel="Working…">Save</SubmitButton>
                         </form>
                       </td>
                       <td className="px-4 py-2.5">
@@ -168,13 +169,13 @@ export default async function ProductsPage() {
                             <option value="correction">Set to</option>
                           </select>
                           <input name="qty" type="number" min="0" defaultValue={0} className="cd-input" style={{ width: '3.75rem' }} />
-                          <button type="submit" className="cd-btn-sec text-xs">Apply</button>
+                          <SubmitButton className="cd-btn-sec text-xs" busyLabel="Working…">Apply</SubmitButton>
                         </form>
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         <form action={toggleProduct}>
                           <input type="hidden" name="id" value={p.id} />
-                          <button type="submit" className="text-xs cd-link">{p.active ? 'Retire' : 'Restore'}</button>
+                          <SubmitButton className="text-xs cd-link" busyLabel="Working…">{p.active ? 'Retire' : 'Restore'}</SubmitButton>
                         </form>
                       </td>
                     </tr>

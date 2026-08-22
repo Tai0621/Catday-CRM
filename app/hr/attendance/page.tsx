@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { getHrConfig, setHrConfig, entryMinutes, fmtDuration, clientIp } from '@/lib/hr'
 import { recordAudit } from '@/lib/audit'
 import { SEGMENTS } from '@/lib/segments'
+import { SubmitButton } from '@/app/components/Pending'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -136,7 +137,7 @@ export default async function AttendancePage() {
             Block clock-in from anywhere not on the list
           </label>
           <div className="flex justify-end">
-            <button type="submit" className="cd-btn text-sm">Save</button>
+            <SubmitButton className="cd-btn text-sm" busyLabel="Working…">Save</SubmitButton>
           </div>
         </form>
       </section>

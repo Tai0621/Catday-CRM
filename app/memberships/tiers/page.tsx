@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { TIER_QUALIFICATIONS, TIER_QUALIFICATION_LABELS, CARD_TYPES } from '@/lib/constants'
+import { SubmitButton } from '@/app/components/Pending'
 
 export default async function MembershipTiersPage() {
   await requireAuth()
@@ -139,7 +140,7 @@ export default async function MembershipTiersPage() {
             <label className="cd-label">Benefits (one per line)</label>
             <textarea name="benefits" rows={4} placeholder="Priority booking&#10;FOC grooming add-ons&#10;Member-only events" className="cd-input" style={{ resize: 'none' }} />
           </div>
-          <button type="submit" className="cd-btn">Create Tier</button>
+          <SubmitButton className="cd-btn" busyLabel="Working…">Create Tier</SubmitButton>
         </form>
       </div>
     </div>

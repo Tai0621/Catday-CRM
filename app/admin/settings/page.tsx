@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { SETTING_FIELDS, defaultFor } from '@/lib/config'
 import { SEGMENTS } from '@/lib/segments'
 import { PRODUCT_RELEASE } from '@/lib/version'
+import { SubmitButton } from '@/app/components/Pending'
 
 // Business Settings — the config seam. Editing these changes the app's
 // identity, currency, tax and operating hours without touching code. Blank a
@@ -94,7 +95,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         ))}
 
         <div className="flex items-center gap-3">
-          <button type="submit" className="cd-btn">Save settings</button>
+          <SubmitButton className="cd-btn" busyLabel="Working…">Save settings</SubmitButton>
           <span className="text-xs cd-muted">Changes take effect immediately across the app.</span>
         </div>
       </form>
