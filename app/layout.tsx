@@ -9,6 +9,7 @@ import { canAccess, homeFor, visiblePaths, navFor } from '@/lib/roles-store'
 import { getConfig } from '@/lib/config'
 import { EnvBanner } from './components/EnvBanner'
 import { Copilot } from './components/Copilot'
+import { CommandPalette } from './components/CommandPalette'
 import { isProduction } from '@/lib/environment'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
@@ -62,9 +63,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <div className="flex h-full overflow-hidden">
               <Nav role={session.kind === 'manager' ? 'Manager' : session.role} userName={session.name} visiblePaths={visible} staffNav={staffNav}
                 logoUrl={config.brand.logoDarkUrl} brandName={config.business.name} />
-              <main className="flex-1 overflow-y-auto p-6">{children}</main>
+              {/* pt-16 below the breakpoint clears the fixed floor bar; p-4
+                  rather than p-6 gives a phone back 16px of width. */}
+              <main className="flex-1 overflow-y-auto p-4 pt-16 md:p-6">{children}</main>
               {/* Signed-in only — the copilot reads business data. */}
               <Copilot />
+              {/* Cmd/Ctrl-K. Signed-in only; what it finds is decided server-side. */}
+              <CommandPalette />
             </div>
           ) : (
             <main>{children}</main>

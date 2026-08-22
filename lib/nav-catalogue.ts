@@ -171,6 +171,20 @@ export function segmentOf(href: string): string {
 }
 
 /**
+ * The human name of a tab's segment — "Customers · CRM", not "crm".
+ *
+ * `segmentOf` returns the KEY, which is right for grouping the role editor and
+ * wrong for anything a person reads. The command palette labels every result
+ * with where in the OS it came from, and "crm" is not that.
+ */
+export function segmentLabel(href: string): string {
+  const key = segmentOf(href)
+  if (key === 'pinned') return 'Overview'
+  if (key === 'ai') return AI_SECTION.header
+  return SEGMENTS.find(s => s.key === key)?.header ?? 'Other'
+}
+
+/**
  * Does `pathname` fall under one of `paths`?
  *
  * Prefix matching with a boundary, so `/rooms` grants `/rooms/calendar` and

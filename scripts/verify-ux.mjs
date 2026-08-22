@@ -117,7 +117,50 @@ check(`wide tables scroll inside their own container (${tablePages.length} pages
   unguarded.length === 0,
   `${unguarded.length} unguarded: ${unguarded.slice(0, 8).join(', ')}`)
 
-// ══ 6. Live: the landing actually lands there ══
+// ══ 6. The floor: the shell works below the tablet breakpoint ══
+//
+// The sidebar used to be an unconditional `w-56` with no breakpoint, so on a
+// 375px phone the page had 151px to live in — 103 after padding. Tablets are
+// the primary floor device and phones are used for photographs, so the shell
+// has to fold rather than squeeze.
+const nav = fs.readFileSync('app/components/Nav.tsx', 'utf8')
+check('the sidebar becomes a drawer below the breakpoint',
+  /md:static/.test(nav) && /-translate-x-full/.test(nav),
+  'the sidebar is still an unconditional column')
+check('…with a way to open it', /Open menu/.test(nav))
+check('…and a way to close it without navigating', /Close menu/.test(nav) && /Escape/.test(nav))
+check('the collapse preference survives a reload',
+  /localStorage\.setItem\(COLLAPSE_KEY/.test(nav),
+  'collapse was useState(false) and reset on every load')
+check('the drawer closes on navigation rather than covering the page it opened',
+  /setDrawer\(false\) \}, \[pathname\]\)/.test(nav))
+
+const layout = fs.readFileSync('app/layout.tsx', 'utf8')
+check('the page clears the fixed floor bar instead of hiding under it',
+  /pt-16 md:p-6|pt-16/.test(layout), 'main has no top padding below the breakpoint')
+
+// Touch targets on the screens used standing up.
+const FLOOR_SCREENS = [
+  'app/runsheet/[id]/checkin/page.tsx',
+  'app/runsheet/[id]/checkout/page.tsx',
+  'app/runsheet/[id]/log/page.tsx',
+]
+const smallChips = FLOOR_SCREENS.filter(f =>
+  /inline-block px-3 py-2 rounded-lg border text-sm/.test(fs.readFileSync(f, 'utf8')))
+check('the run sheet condition chips meet a 44px touch target',
+  smallChips.length === 0, `${smallChips.length} screens still on the ~36px chip`)
+
+const css = fs.readFileSync('app/globals.css', 'utf8')
+check('…because the target is a shared class, not a per-page fix',
+  /\.cd-chip\s*\{[^}]*min-height:\s*44px/.test(css))
+
+// The camera path — the one thing phones are actually for here.
+const upload = fs.readFileSync('app/components/MediaUpload.tsx', 'utf8')
+check('capture opens the camera directly on a phone', /capture: 'environment'/.test(upload))
+check('…but is not forced for documents, or a supplier’s emailed PDF could not be attached',
+  /accept === 'document' \? \{\} :/.test(upload))
+
+// ══ 7. Live: the landing actually lands there ══
 if (process.env.SKIP_LIVE !== '1') {
   const login = await fetch(`${BASE}/api/login`, {
     method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

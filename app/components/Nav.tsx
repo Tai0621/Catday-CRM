@@ -16,6 +16,15 @@ import {
 const segmentLinks = (s: NavSegment) => s.groups.flatMap(g => g.links)
 
 const STORE_KEY = 'cd-nav-open'
+const COLLAPSE_KEY = 'cd-nav-collapsed'
+
+// Below this the sidebar stops being a column and becomes a drawer.
+//
+// 768 rather than a phone width, because tablets are the primary floor device:
+// at 768 the fixed 224px sidebar leaves 544px, which is workable, and below it
+// the page had 151px to live in — 103px after padding. Groomers and boarding
+// carers are the people least likely to be at a desk and the ones this hurt.
+const DRAWER_BELOW = 768
 
 function isActive(href: string, pathname: string) {
   if (href === '/') return pathname === '/'
@@ -49,7 +58,34 @@ export function Nav({ role, userName, logoUrl, brandName, visiblePaths, staffNav
     .map(s => ({ ...s, groups: s.groups.map(g => ({ ...g, links: g.links.filter(allowed) })).filter(g => g.links.length > 0) }))
     .filter(s => s.groups.length > 0)
   const pathname = usePathname()
+
+  // Collapsed was `useState(false)`, so it re-expanded on every full load and
+  // the preference never survived. Read after mount, not during, or the server
+  // and client render different widths and hydration complains.
   const [collapsed, setCollapsed] = useState(false)
+  useEffect(() => {
+    try { setCollapsed(localStorage.getItem(COLLAPSE_KEY) === '1') } catch { /* private mode */ }
+  }, [])
+  const toggleCollapsed = () => {
+    setCollapsed(c => {
+      const next = !c
+      try { localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0') } catch { /* private mode */ }
+      return next
+    })
+  }
+
+  // The drawer, below DRAWER_BELOW only. Deliberately NOT persisted: a menu
+  // that reopens itself on every page is a menu covering the page.
+  const [drawer, setDrawer] = useState(false)
+  useEffect(() => { setDrawer(false) }, [pathname])
+  useEffect(() => {
+    if (!drawer) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDrawer(false) }
+    const onResize = () => { if (window.innerWidth >= DRAWER_BELOW) setDrawer(false) }
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('resize', onResize)
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('resize', onResize) }
+  }, [drawer])
 
   // Which drop-down holds the current page. Intelligence is one of them, so it
   // opens itself for the same reason a segment does: nobody should be looking at
@@ -106,16 +142,57 @@ export function Nav({ role, userName, logoUrl, brandName, visiblePaths, staffNav
   }
 
   return (
-    <aside className={`flex flex-col transition-all duration-200 ${collapsed ? 'w-14' : 'w-56'}`}
-      style={{ background: '#2D1907' }}>
+    <>
+      {/* ── The floor bar, below the breakpoint only ──
+          Fixed, so it survives the page scrolling under it, and tall enough to
+          clear a thumb. Above 768 it does not exist and nothing changes. */}
+      <div className="md:hidden fixed top-0 inset-x-0 z-30 flex items-center gap-3 px-3"
+        style={{ height: 52, background: '#2D1907', borderBottom: '1px solid rgba(236,219,182,0.15)' }}>
+        <button
+          onClick={() => setDrawer(true)}
+          aria-label="Open menu"
+          aria-expanded={drawer}
+          className="flex items-center justify-center rounded"
+          style={{ width: 40, height: 40, color: '#ECDBB6' }}>
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth={1.7} strokeLinecap="round" aria-hidden>
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={logoUrl} alt={brandName} className="h-6 w-auto select-none" style={{ pointerEvents: 'none' }} />
+      </div>
+
+      {drawer && (
+        <div className="md:hidden fixed inset-0 z-30" style={{ background: 'rgba(45,25,7,0.45)' }}
+          onClick={() => setDrawer(false)} aria-hidden />
+      )}
+
+      <aside
+        className={`flex flex-col transition-transform duration-200 md:transition-all
+          fixed inset-y-0 left-0 z-40 md:static md:translate-x-0
+          ${drawer ? 'translate-x-0' : '-translate-x-full'}
+          ${collapsed ? 'md:w-14' : 'md:w-56'} w-64`}
+        style={{ background: '#2D1907' }}>
       <div className="flex items-center justify-between px-3 py-4" style={{ borderBottom: '1px solid rgba(236,219,182,0.15)' }}>
         {!collapsed && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logoUrl} alt={brandName} className="h-7 w-auto select-none" style={{ pointerEvents: 'none' }} />
         )}
+        {/* Closes the drawer on the floor, collapses the column at a desk. */}
         <button
-          onClick={() => setCollapsed(c => !c)}
-          className="p-1 rounded ml-auto transition-colors flex items-center justify-center"
+          onClick={() => setDrawer(false)}
+          className="md:hidden p-1 rounded ml-auto flex items-center justify-center"
+          style={{ color: '#ECDBB6', opacity: 0.6 }}
+          aria-label="Close menu">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth={1.7} strokeLinecap="round" aria-hidden>
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+        <button
+          onClick={toggleCollapsed}
+          className="hidden md:flex p-1 rounded ml-auto transition-colors items-center justify-center"
           style={{ color: '#ECDBB6', opacity: 0.6 }}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
@@ -253,6 +330,7 @@ export function Nav({ role, userName, logoUrl, brandName, visiblePaths, staffNav
           </button>
         </form>
       </div>
-    </aside>
+      </aside>
+    </>
   )
 }

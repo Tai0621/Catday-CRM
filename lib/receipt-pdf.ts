@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage, type PDFImage } from 'pdf-lib'
+import fontkit from '@pdf-lib/fontkit'
 import type { ReceiptView } from './receipt'
 import { displayPhone } from './phone'
 
@@ -12,10 +13,27 @@ import { displayPhone } from './phone'
 // public link serves a PDF and not a page — a page is a door into the app, and
 // a customer has no business being handed one.
 //
-// Standard PDF fonts (Helvetica) rather than the brand's Inter/Space Mono: the
-// brand mark is carried by the logo image, and embedding two Google fonts would
-// add font binaries to the repo to letter a receipt. Standard fonts also mean
-// the file opens identically in every reader with nothing to download.
+// ── Typography ───────────────────────────────────────────────────────────────
+//
+// The brand's own Inter and Space Mono, embedded, because this is the one
+// artefact that leaves the building and it should not be lettered in Helvetica.
+// Both are SIL Open Font Licence 1.1, which permits embedding in a document;
+// the files come from @fontsource, whose package licence says so.
+//
+// A CORRECTION worth recording. The plan claimed embedding a real font would
+// also fix names the standard fonts cannot encode — a Malaysian business will
+// have customers called 陈美玲 — and that is NOT true. @fontsource ships
+// SUBSETTED files, and the latin subset has no CJK glyphs at all: fontkit
+// accepts the codepoints without complaint and draws .notdef, so the name comes
+// out as empty boxes instead of being stripped. Neither is a receipt.
+//
+// So `nameFor` below checks glyph coverage and falls back to the phone number
+// when the font cannot draw a name. A receipt reading "+60 12-345 6789" is
+// correct and useful; one reading "□□□" is not. Genuinely fixing it needs a
+// font with CJK coverage, which is several megabytes — noted, not done.
+//
+// Helvetica remains the fallback if a font file is ever missing, so a receipt
+// still renders rather than 500ing.
 
 const INK = rgb(0x2d / 255, 0x19 / 255, 0x07 / 255)
 const LINEN = rgb(0xf2 / 255, 0xed / 255, 0xe0 / 255)
@@ -98,6 +116,64 @@ async function loadLogo(doc: PDFDocument, logoUrl: string): Promise<PDFImage | n
   }
 }
 
+/** Brand fonts, with Helvetica as the fallback if a file cannot be read. */
+async function loadFonts(doc: PDFDocument) {
+  const at = (pkg: string, file: string) =>
+    path.join(process.cwd(), 'node_modules', '@fontsource', pkg, 'files', file)
+  try {
+    doc.registerFontkit(fontkit)
+    const [regular, bold, mono] = await Promise.all([
+      readFile(at('inter', 'inter-latin-400-normal.woff')),
+      readFile(at('inter', 'inter-latin-700-normal.woff')),
+      readFile(at('space-mono', 'space-mono-latin-700-normal.woff')),
+    ])
+    return {
+      regular: await doc.embedFont(regular, { subset: true }),
+      bold: await doc.embedFont(bold, { subset: true }),
+      mono: await doc.embedFont(mono, { subset: true }),
+      brand: true,
+    }
+  } catch (e) {
+    // Say so. A silent fall back to Helvetica still produces a receipt, which
+    // is right for the customer and means nobody would ever notice the brand
+    // font had stopped shipping.
+    console.warn('receipt: brand fonts unavailable, falling back to Helvetica —', (e as Error)?.message)
+    return {
+      regular: await doc.embedFont(StandardFonts.Helvetica),
+      bold: await doc.embedFont(StandardFonts.HelveticaBold),
+      mono: await doc.embedFont(StandardFonts.Courier),
+      brand: false,
+    }
+  }
+}
+
+/**
+ * A name the chosen font can actually draw, or the phone number instead.
+ *
+ * See the note at the top: an embedded latin subset does not contain CJK, and
+ * silently draws .notdef boxes for it. Falling back to the phone keeps the
+ * receipt correct for a customer whose name this font cannot letter.
+ */
+export function nameFor(
+  name: string | null | undefined,
+  phone: string,
+  font: PDFFont,
+): string {
+  const cleaned = pdfText(name ?? '')
+  if (!cleaned) return displayPhone(phone)
+  try {
+    // widthOfTextAtSize throws on a character the font cannot encode at all;
+    // a .notdef substitution does not throw, so check coverage directly.
+    const chars = [...cleaned].filter(c => c.trim())
+    const drawable = chars.every(c => {
+      try { return font.widthOfTextAtSize(c, 10) > 0 } catch { return false }
+    })
+    return drawable ? cleaned : displayPhone(phone)
+  } catch {
+    return displayPhone(phone)
+  }
+}
+
 export interface ReceiptBusiness {
   name: string
   tagline?: string
@@ -116,8 +192,7 @@ export async function renderReceiptPdf(
   doc.setSubject('Receipt')
   doc.setCreationDate(view.date)
 
-  const regular = await doc.embedFont(StandardFonts.Helvetica)
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold)
+  const { regular, bold, mono } = await loadFonts(doc)
   const logo = await loadLogo(doc, logoUrl)
 
   const [pw, ph] = A5
@@ -212,7 +287,7 @@ export async function renderReceiptPdf(
   // ── Who and when ──
   y -= 15
   text('RECEIPT', { size: 7.5, font: bold, color: MUTED })
-  rightAt(view.reference ?? view.id, 9, bold)
+  rightAt(view.reference ?? view.id, 9, mono)
 
   y -= 13
   text('Date', { size: 7.5, color: MUTED })
@@ -221,7 +296,7 @@ export async function renderReceiptPdf(
   if (view.customer) {
     y -= 13
     text('Customer', { size: 7.5, color: MUTED })
-    rightAt(view.customer.name ?? displayPhone(view.customer.phone), 8.5, regular)
+    rightAt(nameFor(view.customer.name, view.customer.phone, regular), 8.5, regular)
   }
 
   y -= 14

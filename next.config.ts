@@ -50,7 +50,16 @@ const nextConfig: NextConfig = {
   // `brand.logoUrl` SETTING, so which file it needs is decided by the owner at
   // runtime and cannot be listed at build time.
   outputFileTracingIncludes: {
-    '/r/[token]': ['./public/**/*.png', './public/**/*.jpg', './public/**/*.jpeg'],
+    '/r/[token]': [
+      './public/**/*.png', './public/**/*.jpg', './public/**/*.jpeg',
+      // The brand fonts are read off disk at request time, so tracing cannot
+      // see them from the import graph. Without this the receipt silently falls
+      // back to Helvetica in production only — the exact kind of downgrade
+      // nobody notices, because it still renders.
+      './node_modules/@fontsource/inter/files/inter-latin-400-normal.woff',
+      './node_modules/@fontsource/inter/files/inter-latin-700-normal.woff',
+      './node_modules/@fontsource/space-mono/files/space-mono-latin-700-normal.woff',
+    ],
   },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];

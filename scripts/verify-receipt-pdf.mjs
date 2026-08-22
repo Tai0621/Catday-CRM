@@ -83,6 +83,39 @@ async function cleanup() {
  */
 async function drawnText(bytes) {
   const doc = await PDFDocument.load(bytes)
+
+  // ── Why this is not just "decode the hex" ──
+  //
+  // With the brand fonts EMBEDDED AND SUBSET, pdf-lib writes glyph IDs, not
+  // character codes. Reading the hex as latin1 produced binary noise, and every
+  // content assertion below silently stopped checking anything. The font's
+  // ToUnicode CMap is the map back, and it is the only honest way to read what
+  // a person would actually see on the page.
+  // Resolved through the page's RESOURCES, not by BaseFont name. pdf-lib mints
+  // a fresh resource key per use — the stream says `/Inter-Regular-9742682568`
+  // while the descriptor says `/Inter-Regular-4525` — so matching on the font
+  // name finds nothing and every string decodes to noise.
+  const ctx0 = doc.context
+  const toUnicodeByFont = new Map()
+  for (const page of doc.getPages()) {
+    const fontDict = ctx0.lookup(page.node.Resources()?.get(PDFName.of('Font')))
+    if (!fontDict?.entries) continue
+    for (const [key, ref] of fontDict.entries()) {
+      const name = key.toString().replace(/^\//, '')
+      if (toUnicodeByFont.has(name)) continue
+      const font = ctx0.lookup(ref)
+      const stream = ctx0.lookup(font?.get?.(PDFName.of('ToUnicode')))
+      if (!(stream instanceof PDFRawStream)) continue
+      const cmap = Buffer.from(decodePDFRawStream(stream).decode()).toString('latin1')
+      const map = new Map()
+      for (const m of cmap.matchAll(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g)) {
+        const chars = m[2].match(/.{4}/g)?.map(h => String.fromCharCode(parseInt(h, 16))).join('') ?? ''
+        map.set(parseInt(m[1], 16), chars)
+      }
+      toUnicodeByFont.set(name, map)
+    }
+  }
+
   let content = ''
   for (const page of doc.getPages()) {
     const ctx = page.node.context
@@ -93,12 +126,33 @@ async function drawnText(bytes) {
       if (s instanceof PDFRawStream) content += Buffer.from(decodePDFRawStream(s).decode()).toString('latin1')
     }
   }
-  const hex = [...content.matchAll(/<([0-9A-Fa-f]+)>\s*Tj/g)]
-    .map(m => Buffer.from(m[1], 'hex').toString('latin1'))
+
+  // Walk the stream in order, tracking the font each string is set in — two
+  // fonts' glyph IDs mean different characters, so one merged map would decode
+  // the mono strings with the body font's table and quietly produce nonsense.
+  const hex = []
+  let current = null
+  for (const m of content.matchAll(/\/([A-Za-z0-9+._-]+)\s+[\d.]+\s+Tf|<([0-9A-Fa-f]+)>\s*Tj/g)) {
+    if (m[1]) { current = m[1]; continue }
+    const map = toUnicodeByFont.get(current)
+    const codes = m[2].match(/.{4}/g) ?? []
+    hex.push(map
+      ? codes.map(c => map.get(parseInt(c, 16)) ?? '').join('')
+      : Buffer.from(m[2], 'hex').toString('latin1'))
+  }
   const literal = [...content.matchAll(/\(((?:[^()\\]|\\.)*)\)\s*Tj/g)].map(m => m[1])
   const hasImage = doc.context.enumerateIndirectObjects()
     .some(([, o]) => o?.dict?.get?.(PDFName.of('Subtype'))?.toString() === '/Image')
-  return { doc, text: [...hex, ...literal].join('\n'), hasImage }
+
+  // Font names live in the object graph, NOT in the raw bytes — the first
+  // version of the font check grepped the file as latin1 and reported a
+  // fallback to Helvetica while Inter was embedded perfectly well, because the
+  // descriptors are inside a compressed object stream.
+  const fonts = doc.context.enumerateIndirectObjects()
+    .map(([, o]) => o?.get?.(PDFName.of('BaseFont'))?.toString())
+    .filter(Boolean)
+
+  return { doc, text: [...hex, ...literal].join('\n'), hasImage, fonts }
 }
 
 try {
@@ -142,7 +196,7 @@ try {
   const bytes = Buffer.from(await res.arrayBuffer())
   check('the body really is a PDF', bytes.subarray(0, 5).toString() === '%PDF-', bytes.subarray(0, 8).toString())
 
-  const { doc, text, hasImage } = await drawnText(bytes)
+  const { doc, text, hasImage, fonts } = await drawnText(bytes)
   check('it is one page', doc.getPageCount() === 1, String(doc.getPageCount()))
 
   // Before any "the receipt does NOT contain X" assertion below: prove the
@@ -206,17 +260,44 @@ try {
   check('the business is identified on the receipt', text.includes('this is a digital receipt'))
 
   // The RASTER branch is what production takes (brand.logoUrl defaults to a
-  // PNG), so it cannot go untested just because this demo happens to use an
-  // SVG. Point the setting at a PNG, prove the image is really embedded, and
-  // put the setting back in the finally below.
-  await pipe([exec(
-    `INSERT INTO Setting (key,value,updatedAt) VALUES ('brand.logoUrl',?,CURRENT_TIMESTAMP)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value`, [t('/catday-logo.png')])])
-  logoRestore = logoUrl
-  const withPng = await drawnText(Buffer.from(await (await fetch(`${BASE}/r/${tokenCash}`)).arrayBuffer()))
-  check('a PNG logo really is embedded in the PDF (the production path)', withPng.hasImage)
-  check('…and the wordmark steps aside when there is an image',
-    !withPng.text.includes('VELVET PAW'), 'both the logo and the wordmark rendered')
+  // PNG), so it cannot go untested just because this demo happens to use an SVG.
+  //
+  // The restore here is deliberately paranoid, because the naive version DID
+  // cause damage: an interrupted run left TEST_LOGO in the setting, the next run
+  // captured THAT as the prior value, and "restoring" it cemented Cat Day's logo
+  // onto the Velvet Paw demo. A suite that repairs itself into the wrong state
+  // is worse than one that fails. So a prior equal to the test value is never
+  // stored as something to restore.
+  const TEST_LOGO = '/catday-logo.png'
+  if (raster) {
+    // Already covered above — this tenant's own logo IS the raster path.
+  } else if (logoUrl === TEST_LOGO) {
+    check('the tenant logo was left on the test value by an earlier run', false,
+      'run: node scripts/restore-demo-identity.mjs')
+  } else {
+    logoRestore = logoUrl
+    await pipe([exec(
+      `INSERT INTO Setting (key,value,updatedAt) VALUES ('brand.logoUrl',?,CURRENT_TIMESTAMP)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`, [t(TEST_LOGO)])])
+    const withPng = await drawnText(Buffer.from(await (await fetch(`${BASE}/r/${tokenCash}`)).arrayBuffer()))
+    check('a PNG logo really is embedded in the PDF (the production path)', withPng.hasImage)
+    check('…and the wordmark steps aside when there is an image',
+      !withPng.text.includes('VELVET PAW'), 'both the logo and the wordmark rendered')
+  }
+
+  // ══ 4c. The brand's own fonts, not Helvetica ══
+  //
+  // A missing font file falls back to Helvetica rather than failing, which is
+  // right for the customer and invisible to us — so it is asserted rather than
+  // assumed. The embedded name appears in the PDF's font descriptors.
+  check('the receipt is lettered in the brand font, not Helvetica',
+    fonts.some(x => /Inter/.test(x)), `fonts embedded: ${fonts.join(', ') || 'none'}`)
+  check('…and the reference is set in the brand mono',
+    fonts.some(x => /SpaceMono/i.test(x)), `fonts embedded: ${fonts.join(', ') || 'none'}`)
+  check('…with no standard font left over', !fonts.some(x => /Helvetica|Courier/.test(x)),
+    fonts.join(', '))
+  check('the fonts are subset, not shipped whole',
+    bytes.length < 400_000, `${Math.round(bytes.length / 1024)}KB — a full font got embedded`)
 
   // ══ 5. The token is the guard ══
   const bad = await fetch(`${BASE}/r/${'0'.repeat(64)}`, { redirect: 'manual' })

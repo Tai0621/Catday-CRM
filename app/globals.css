@@ -188,3 +188,52 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .cd-unit { transition: none; }
 }
+
+/* Floor-screen touch target.
+   The run sheet's condition chips were px-3 py-2 (~36px tall). These are
+   tapped standing up, one-handed, often with a cat in the other arm — 44px is
+   the iOS minimum and 48dp the Android one, and 36 is neither. Shared as a
+   class rather than fixed per page so the next chip someone adds inherits it. */
+.cd-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(45, 25, 7, 0.2);
+  color: #2D1907;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  transition: background 120ms, border-color 120ms;
+}
+
+/* Keyboard focus, everywhere.
+   Before this, exactly one rule in the stylesheet drew a focus ring (.cd-unit).
+   Every other button, link, input and disclosure relied on the browser default,
+   which is nearly invisible against the cream surfaces and vanishes entirely on
+   the dark sidebar — so somebody navigating by keyboard could not see where
+   they were. `:where()` keeps specificity at zero so component styles still win
+   on everything except the outline itself. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* The rust ring is too dark to see on the sidebar's ink background. */
+aside :where(a, button, summary):focus-visible {
+  outline-color: #ECDBB6;
+}
+
+/* Reduced motion, properly.
+   Two rules honoured this before — the skeleton shimmer and the cabinet unit —
+   which left every other transition running for someone who has asked the
+   operating system for less movement. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

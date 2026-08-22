@@ -123,7 +123,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ id: st
             {ROOM_CONDITIONS.map((c, idx) => (
               <label key={c} className="cursor-pointer">
                 <input type="radio" name="roomCondition" value={c} defaultChecked={idx === 0} className="peer sr-only" />
-                <span className="inline-block px-3 py-2 rounded-lg border text-sm peer-checked:bg-[#729094] peer-checked:text-[#F2EDE0] peer-checked:border-[#729094]"
+                <span className="cd-chip peer-checked:bg-[#729094] peer-checked:text-[#F2EDE0] peer-checked:border-[#729094]"
                   style={{ borderColor: 'rgba(45,25,7,0.2)', color: '#2D1907' }}>{c}</span>
               </label>
             ))}
@@ -137,7 +137,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ id: st
             {CAT_CONDITIONS.map(c => (
               <label key={c} className="cursor-pointer">
                 <input type="checkbox" name="catCondition" value={c} className="peer sr-only" />
-                <span className="inline-block px-3 py-2 rounded-lg border text-sm peer-checked:bg-[#B14919] peer-checked:text-[#F2EDE0] peer-checked:border-[#B14919]"
+                <span className="cd-chip peer-checked:bg-[#B14919] peer-checked:text-[#F2EDE0] peer-checked:border-[#B14919]"
                   style={{ borderColor: 'rgba(45,25,7,0.2)', color: '#2D1907' }}>{c}</span>
               </label>
             ))}

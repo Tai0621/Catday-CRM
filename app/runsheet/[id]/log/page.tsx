@@ -111,7 +111,7 @@ function ChipGroup({ label, name, options, selected, multi }: {
         {options.map(o => (
           <label key={o} className="cursor-pointer">
             <input type={multi ? 'checkbox' : 'radio'} name={name} value={o} defaultChecked={chosen.has(o)} className="peer sr-only" />
-            <span className="inline-block px-3 py-2 rounded-lg border text-sm peer-checked:bg-[#729094] peer-checked:text-[#F2EDE0] peer-checked:border-[#729094]"
+            <span className="cd-chip peer-checked:bg-[#729094] peer-checked:text-[#F2EDE0] peer-checked:border-[#729094]"
               style={{ borderColor: 'rgba(45,25,7,0.2)', color: '#2D1907' }}>{o}</span>
           </label>
         ))}
